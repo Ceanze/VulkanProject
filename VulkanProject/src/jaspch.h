@@ -7,4 +7,4 @@
 
 #include <vulkan/vulkan.h>
 
-#define ERROR_CHECK(F, E) if(F != VK_SUCCESS) { JASE_ERROR(E); throw std::runtime_error(E); }
+#define ERROR_CHECK(F, E) if(F != VK_SUCCESS) { JAS_ERROR(E); throw std::runtime_error(E); }
