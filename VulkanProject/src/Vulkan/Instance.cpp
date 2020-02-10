@@ -42,6 +42,7 @@ void Instance::cleanup()
 	if (this->enableValidationLayers) {
 		DestroyDebugUtilsMessengerEXT(this->instance, this->debugMessenger, nullptr);
 	}
+	vkDestroySurfaceKHR(this->instance, this->surface, nullptr);
 	vkDestroyInstance(this->instance, nullptr);
 }
 

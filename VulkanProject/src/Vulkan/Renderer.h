@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/Window.h"
+#include "SwapChain.h"
 
 class Renderer
 {
@@ -14,6 +15,7 @@ public:
 
 private:
 	Window window;
+	SwapChain swapChain;
 
 	bool running = true;
 };

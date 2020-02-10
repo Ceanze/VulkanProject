@@ -22,6 +22,8 @@ void Renderer::init()
 	i.init(&this->window);
 	JAS_INFO("Initilized Instance!");
 
+	this->swapChain.init(this->window.getWidth(), this->window.getHeight());
+
 	JAS_INFO("Created Renderer!");
 }
 
@@ -36,5 +38,7 @@ void Renderer::run()
 
 void Renderer::shutdown()
 {
+	this->swapChain.cleanup();
+	Instance::get().cleanup();
 	this->window.cleanup();
 }
