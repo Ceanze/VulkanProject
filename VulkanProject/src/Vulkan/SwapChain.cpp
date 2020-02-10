@@ -73,7 +73,7 @@ void SwapChain::createSwapChain(unsigned int width, unsigned int height)
 	// Define the swap chain.
 	VkSwapchainCreateInfoKHR createInfo = {};
 	createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-	createInfo.surface = instance->getSurface();
+	createInfo.surface = instance.getSurface();
 	createInfo.minImageCount = this->numImages;
 	createInfo.imageFormat = surfaceFormat.format;
 	createInfo.imageColorSpace = surfaceFormat.colorSpace;
@@ -82,7 +82,7 @@ void SwapChain::createSwapChain(unsigned int width, unsigned int height)
 	// If you are rendering to a separate image first, for example post-process effects, then use VK_IMAGE_USAGE_TRANSFER_DST_BIT to transfer that image to the swap chain image.
 	createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-	QueueFamilyIndices indices = findQueueFamilies(instance->getPhysicalDevice(), instance->getSurface());
+	QueueFamilyIndices indices = findQueueFamilies(instance.getPhysicalDevice(), instance.getSurface());
 	uint32_t queueFamilyIndices[] = { indices.graphicsFamily.value(), indices.presentFamily.value() };
 
 	if (indices.graphicsFamily != indices.presentFamily) {
@@ -115,9 +115,9 @@ void SwapChain::fetchImages(uint32_t imageCount)
 	Instance& instance = Instance::get();
 
 	// Fetch images from the swap chain.
-	vkGetSwapchainImagesKHR(instance.getLogicalDevice(), this->swapChain, &imageCount, nullptr);
+	vkGetSwapchainImagesKHR(instance.getDevice(), this->swapChain, &imageCount, nullptr);
 	this->images.resize(imageCount);
-	vkGetSwapchainImagesKHR(instance.getLogicalDevice(), this->swapChain, &imageCount, this->images.data());
+	vkGetSwapchainImagesKHR(instance.getDevice(), this->swapChain, &imageCount, this->images.data());
 }
 
 void SwapChain::createImageViews(uint32_t imageCount)
@@ -139,40 +139,10 @@ void SwapChain::createImageViews(uint32_t imageCount)
 		viewInfo.subresourceRange.layerCount = 1;
 
 		VkImageView imageView;
-		VkResult result = vkCreateImageView(instance->getLogicalDevice(), &viewInfo, nullptr, &imageView);
+		VkResult result = vkCreateImageView(instance.getDevice(), &viewInfo, nullptr, &imageView);
 		ERROR_CHECK(result, "Failed to create texture image view for swap chain!");
 		this->imageViews[i] = imageView;
 	}
-}
-
-SwapChain::SwapChainSupportDetails SwapChain::querySwapChainSupport(VkPhysicalDevice device, VkSurfaceKHR surface)
-{
-	SwapChainSupportDetails details = {};
-
-	// Fetch the surface capabilities.
-	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &details.capabilities);
-
-	// Get the number of surface formats.
-	uint32_t formatCount;
-	vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, nullptr);
-
-	// Fetch all surface formats.
-	if (formatCount != 0) {
-		details.formats.resize(formatCount);
-		vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, details.formats.data());
-	}
-
-	// Get the number of surface present modes.
-	uint32_t presentModeCount;
-	vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, nullptr);
-
-	// Fetch all the surface present modes.
-	if (presentModeCount != 0) {
-		details.presentModes.resize(presentModeCount);
-		vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, details.presentModes.data());
-	}
-
-	return details;
 }
 
 uint32_t SwapChain::calcNumSwapChainImages(SwapChainSupportDetails& swapChainSupport)

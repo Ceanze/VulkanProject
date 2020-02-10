@@ -352,6 +352,4 @@ MigrationBackup/
 
 
 # Custom
-*.vcxproj
-*.vcxproj.user
 *.sln
