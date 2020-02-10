@@ -1,5 +1,6 @@
 #include "jaspch.h"
 #include "Renderer.h"
+#include "Vulkan/Instance.h"
 
 #include <GLFW/glfw3.h>
 
@@ -17,7 +18,11 @@ void Renderer::init()
 
 	this->window.init(1280, 720, "Vulkan Project");
 
-	JAS_INFO("Created renderer!");
+	Instance& i = Instance::get();
+	i.init(&this->window);
+	JAS_INFO("Initilized Instance!");
+
+	JAS_INFO("Created Renderer!");
 }
 
 void Renderer::run()
@@ -26,6 +31,7 @@ void Renderer::run()
 	{
 		glfwPollEvents();
 	}
+
 }
 
 void Renderer::shutdown()
