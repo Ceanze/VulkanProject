@@ -1,0 +1,29 @@
+instance (instance, device, physical device, debug (val., ext. layers))
+window (glfw window)
+swapchain (surface, swapchain, swapchain imageviews)
+renderpass (renderpass)
+shaders (shadermodule)
+descriptors (KOMMER SEN)
+pipeline (pipeline)
+framebuffer (creates framebuffer per frame automagically)
+commandBuffer (records commands with own functions)
+[factory] commandPool (creates commandBuffers)
+image (creates images)
+imageViews (creates imageviews, handle to image)
+texture2D (uses image and imageViews)'
+sampler2D (you know)
+SSBO
+UBO
+pushConstant (pipelineLayout needs this!)
+renderer (creates the necessary things, holds pipelines, uses commands buffers)
+
+
+barrier?
+semaphores?
+fences?
+memoryHandler (allocates necessary)?
+depthResources?
+
+Descriptors:
+    DescriptorSets
+    och saker
