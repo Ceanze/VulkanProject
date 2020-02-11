@@ -19,7 +19,7 @@ Framebuffer::Framebuffer(size_t numFrameBuffers, VkRenderPass renderpass, const 
 		framebufferInfo.attachmentCount = attachments.size();
 		framebufferInfo.pAttachments = attachments.data();
 
-		ERROR_CHECK(vkCreateFramebuffer(Instance::get().getDevice, &framebufferInfo, nullptr, &this->framebuffers[i]), "Failed to create framebuffer");
+		ERROR_CHECK(vkCreateFramebuffer(Instance::get().getDevice(), &framebufferInfo, nullptr, &this->framebuffers[i]), "Failed to create framebuffer");
 	}
 }
 

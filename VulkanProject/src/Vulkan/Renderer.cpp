@@ -19,7 +19,6 @@ void Renderer::init()
 	this->window.init(1280, 720, "Vulkan Project");
 
 	Instance::get().init(&this->window);
-	ERROR_CHECK_REFTEST("Testing", this);
 	this->swapChain.init(this->window.getWidth(), this->window.getHeight());
 
 	JAS_INFO("Created Renderer!");
