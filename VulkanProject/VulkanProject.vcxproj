@@ -103,6 +103,8 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="src\Core\Logger.h" />
+    <ClInclude Include="src\Vulkan\CommandBuffer.h" />
+    <ClInclude Include="src\Vulkan\CommandPool.h" />
     <ClInclude Include="src\Vulkan\Buffer.h" />
     <ClInclude Include="src\Vulkan\Instance.h" />
     <ClInclude Include="src\Vulkan\Memory.h" />
@@ -121,6 +123,8 @@
     </ClCompile>
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\Vulkan\Buffer.cpp" />
+    <ClCompile Include="src\Vulkan\CommandBuffer.cpp" />
+    <ClCompile Include="src\Vulkan\CommandPool.cpp" />
     <ClCompile Include="src\Vulkan\Instance.cpp" />
     <ClCompile Include="src\Vulkan\Memory.cpp" />
     <ClCompile Include="src\Vulkan\Pipeline\Shader.cpp" />
