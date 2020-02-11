@@ -2,6 +2,7 @@
 
 #include "Core/Window.h"
 #include "SwapChain.h"
+#include "Pipeline/Shader.h"
 
 class Renderer
 {
@@ -16,6 +17,7 @@ public:
 private:
 	Window window;
 	SwapChain swapChain;
+	Shader shader;
 
 	bool running = true;
 };

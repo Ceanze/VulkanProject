@@ -42,7 +42,7 @@ static SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device, Vk
 	return details;
 }
 
-
+// Find queue families with graphics and present support
 static QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface)
 {
 	QueueFamilyIndices indices;
@@ -76,4 +76,19 @@ static QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device, VkSurfaceKH
 
 	// Logic to find queue family indices to populate struct with
 	return indices;
+}
+
+// Find the desired queues index in the list of families
+static uint32_t findQueueIndex(VkQueueFlagBits queueFamily, VkPhysicalDevice device)
+{
+	// Get the queue families.
+	uint32_t queueFamilyCount = 0;
+	vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
+	std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+	vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
+
+	for (size_t i = 0; i < queueFamilies.size(); i++) {
+		if (queueFamilies[i].queueFlags & queueFamily)
+			return i;
+	}
 }
