@@ -107,6 +107,8 @@
     <ClInclude Include="src\Vulkan\CommandPool.h" />
     <ClInclude Include="src\Vulkan\Buffer.h" />
     <ClInclude Include="src\Vulkan\Framebuffer.h" />
+    <ClInclude Include="src\Vulkan\Image.h" />
+    <ClInclude Include="src\Vulkan\ImageView.h" />
     <ClInclude Include="src\Vulkan\Instance.h" />
     <ClInclude Include="src\Vulkan\Memory.h" />
     <ClInclude Include="src\Vulkan\Pipeline\Shader.h" />
@@ -127,6 +129,8 @@
     <ClCompile Include="src\Vulkan\Framebuffer.cpp" />
     <ClCompile Include="src\Vulkan\CommandBuffer.cpp" />
     <ClCompile Include="src\Vulkan\CommandPool.cpp" />
+    <ClCompile Include="src\Vulkan\Image.cpp" />
+    <ClCompile Include="src\Vulkan\ImageView.cpp" />
     <ClCompile Include="src\Vulkan\Instance.cpp" />
     <ClCompile Include="src\Vulkan\Memory.cpp" />
     <ClCompile Include="src\Vulkan\Pipeline\Shader.cpp" />
