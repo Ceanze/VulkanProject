@@ -3,6 +3,7 @@
 #include "Vulkan/Instance.h"
 
 #include <GLFW/glfw3.h>
+#include "Pipeline/Renderpass.h"
 
 Renderer::Renderer()
 {
@@ -24,6 +25,18 @@ void Renderer::init()
 	this->shader.addStage(Shader::VERTEX, "testVertex.spv");
 	this->shader.addStage(Shader::FRAGMENT, "testFragment.spv");
 	this->shader.init();
+
+	RenderPass renderPass;
+	renderPass.addDefaultColorAttachment(VK_FORMAT_B8G8R8A8_SRGB);
+	renderPass.addDefaultDepthAttachment();
+	RenderPass::SubpassInfo subpassInfo;
+	subpassInfo.colorAttachmentIndices = { 0 };
+	subpassInfo.depthStencilAttachmentIndex = { 1 };
+	renderPass.addSubpass(subpassInfo);
+	renderPass.addDefaultSubpassDependency();
+	renderPass.init();
+
+	renderPass.cleanup();
 
 	JAS_INFO("Created Renderer!");
 }

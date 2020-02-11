@@ -12,43 +12,29 @@ RenderPass::~RenderPass()
 {
 }
 
-void RenderPass::addDepthAttachment(VkAttachmentDescription desc)
-{
-	this->attachments.push_back(desc);
-
-	VkAttachmentReference colorAttachmentRef = {};
-	colorAttachmentRef.attachment = (uint32_t)(this->attachments.size()-1);
-	colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-	this->attachmentRefs.push_back(colorAttachmentRef);
-}
-
 void RenderPass::addColorAttachment(VkAttachmentDescription desc)
 {
 	this->attachments.push_back(desc);
 
 	VkAttachmentReference colorAttachmentRef = {};
 	colorAttachmentRef.attachment = (uint32_t)(this->attachments.size() - 1);
+	colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+	this->attachmentRefs[colorAttachmentRef.attachment] = colorAttachmentRef;
+}
+
+void RenderPass::addDepthAttachment(VkAttachmentDescription desc)
+{
+	this->attachments.push_back(desc);
+
+	VkAttachmentReference colorAttachmentRef = {};
+	colorAttachmentRef.attachment = (uint32_t)(this->attachments.size()-1);
 	colorAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-	this->attachmentRefs.push_back(colorAttachmentRef);
+
+	this->attachmentRefs[colorAttachmentRef.attachment] = colorAttachmentRef;
 }
 
-void RenderPass::addSubpass()
-{
-	VkSubpassDescription subpassDesc = {};
-	subpassDesc.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-	subpassDesc.colorAttachmentCount = 1;
-	//subpassDesc.pColorAttachments = &colorAttachmentRef;
-	//subpassDesc.pDepthStencilAttachment = &depthAttachmentRef;
-
-	subpasses.push_back(subpassDesc);
-}
-
-void RenderPass::addSubpassDependency(VkSubpassDependency dependency)
-{
-	this->subpassDependencies.push_back(dependency);
-}
-
-void RenderPass::init(VkFormat swapChainImageFormat)
+void RenderPass::addDefaultColorAttachment(VkFormat swapChainImageFormat)
 {
 	VkAttachmentDescription colorAttachment = {};
 	colorAttachment.format = swapChainImageFormat;
@@ -59,7 +45,11 @@ void RenderPass::init(VkFormat swapChainImageFormat)
 	colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 	colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+	addColorAttachment(colorAttachment);
+}
 
+void RenderPass::addDefaultDepthAttachment()
+{
 	VkAttachmentDescription depthAttachment = {};
 	depthAttachment.format = findDepthFormat(Instance::get().getPhysicalDevice());
 	depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -69,35 +59,97 @@ void RenderPass::init(VkFormat swapChainImageFormat)
 	depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 	depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+	addDepthAttachment(depthAttachment);
+}
 
-	VkAttachmentReference colorAttachmentRef = {};
-	colorAttachmentRef.attachment = 0;
-	colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+void RenderPass::addSubpass(SubpassInfo info)
+{
+	SubpassInternal tmp;
+	this->subpasseInternals.push_back(tmp);
+	SubpassInternal& subpassInternal = this->subpasseInternals.back();
 
-	VkAttachmentReference depthAttachmentRef = {};
-	depthAttachmentRef.attachment = 1;
-	depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+	// Fill vectors with attachment references.
+	for(uint32_t i : info.inputAttachmentIndices)
+		subpassInternal.inputAttachments.push_back(getRef(i));
+	for (uint32_t i : info.colorAttachmentIndices)
+		subpassInternal.colorAttachments.push_back(getRef(i));
+	for (uint32_t i : info.preserveAttachments)
+		subpassInternal.preserveAttachments.push_back(i);
 
-	VkSubpassDescription subpass = {};
-	subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-	subpass.colorAttachmentCount = 1;
-	subpass.pColorAttachments = &colorAttachmentRef;
-	subpass.pDepthStencilAttachment = &depthAttachmentRef;
+	if(info.depthStencilAttachmentIndex != -1)
+		subpassInternal.depthStencilAttachment = getRef(info.depthStencilAttachmentIndex);
+	if (info.resolveAttachmentIndex != -1)
+		subpassInternal.resolveAttachment = getRef(info.resolveAttachmentIndex);
+}
 
+void RenderPass::addSubpassDependency(VkSubpassDependency dependency)
+{
+	this->subpassDependencies.push_back(dependency);
+}
+
+void RenderPass::addDefaultSubpassDependency()
+{
+	VkSubpassDependency dependency = {};
+	dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+	dependency.dstSubpass = 0;
+	dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	dependency.srcAccessMask = 0;
+	dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+	addSubpassDependency(dependency);
+}
+
+void RenderPass::init()
+{
+	// Check if data is set.
+	JAS_ASSERT(this->attachments.empty() == false, "RenderPass need at least one attachment!"); // This is not the case in the documentation, but I think it should.
+	JAS_ASSERT(this->subpasseInternals.empty() == false, "RenderPass need at least one subpass!");
+	if (this->subpassDependencies.empty())
+		JAS_WARN("RenderPass has no subpass dependency.");
+
+	// Construct the subpasses.
+	std::vector<VkSubpassDescription> subpasses;
+	for (auto& sub : this->subpasseInternals)
+	{
+		VkSubpassDescription subpassDesc = {};
+		subpassDesc.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+		subpassDesc.inputAttachmentCount = static_cast<uint32_t>(sub.inputAttachments.size());
+		subpassDesc.pInputAttachments = sub.inputAttachments.data();
+		subpassDesc.colorAttachmentCount = static_cast<uint32_t>(sub.colorAttachments.size());
+		subpassDesc.pColorAttachments = sub.colorAttachments.data();
+		subpassDesc.preserveAttachmentCount = static_cast<uint32_t>(sub.preserveAttachments.size());
+		subpassDesc.pPreserveAttachments = sub.preserveAttachments.data();
+
+		subpasses.push_back(subpassDesc);
+	}
+
+	// Create the render pass.
 	VkRenderPassCreateInfo renderPassInfo = {};
 	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
 	renderPassInfo.attachmentCount = static_cast<uint32_t>(this->attachments.size());
 	renderPassInfo.pAttachments = this->attachments.data();
-	renderPassInfo.subpassCount = 1;
-	renderPassInfo.pSubpasses = &subpass;
-	renderPassInfo.dependencyCount = subpassDependencies.size();
-	renderPassInfo.pDependencies = subpassDependencies.data();
+	renderPassInfo.subpassCount = static_cast<uint32_t>(subpasses.size());
+	renderPassInfo.pSubpasses = subpasses.data();
+	renderPassInfo.dependencyCount = static_cast<uint32_t>(this->subpassDependencies.size());
+	renderPassInfo.pDependencies = this->subpassDependencies.data();
 
 	VkResult result = vkCreateRenderPass(Instance::get().getDevice(), &renderPassInfo, nullptr, &this->renderPass);
-	ERROR_CHECK(result == VK_SUCCESS, "Failed to create render pass!");
+	JAS_ASSERT(result == VK_SUCCESS, "Failed to create render pass!");
 }
 
 void RenderPass::cleanup()
 {
 	vkDestroyRenderPass(Instance::get().getDevice(), this->renderPass, nullptr);
+}
+
+VkRenderPass RenderPass::getRenderPass()
+{
+	return this->renderPass;
+}
+
+VkAttachmentReference RenderPass::getRef(uint32_t index)
+{
+	auto it = this->attachmentRefs.find(index);
+	JAS_ASSERT(it != this->attachmentRefs.end(), "Try to reference an attachment which does not exist!");
+	return it->second;
 }
