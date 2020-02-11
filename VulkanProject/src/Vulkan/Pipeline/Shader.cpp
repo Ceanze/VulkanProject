@@ -71,6 +71,15 @@ VkPipelineShaderStageCreateInfo Shader::getShaderCreateInfo(Type type) const
 	return it->second.stageCreateInfo;
 }
 
+std::vector<VkPipelineShaderStageCreateInfo> Shader::getShaderCreateInfos()
+{
+	std::vector<VkPipelineShaderStageCreateInfo> infos;
+	for (auto stage : this->shaderStages)
+		infos.push_back(stage.second.stageCreateInfo);
+	
+	return infos;
+}
+
 std::string Shader::getName() const
 {
 	return std::string();
