@@ -106,6 +106,7 @@
     <ClInclude Include="src\Vulkan\Buffer.h" />
     <ClInclude Include="src\Vulkan\Instance.h" />
     <ClInclude Include="src\Vulkan\Memory.h" />
+    <ClInclude Include="src\Vulkan\Pipeline\Shader.h" />
     <ClInclude Include="src\Vulkan\Renderer.h" />
     <ClInclude Include="src\Vulkan\VulkanCommon.h" />
     <ClInclude Include="src\Core\Window.h" />
@@ -122,6 +123,7 @@
     <ClCompile Include="src\Vulkan\Buffer.cpp" />
     <ClCompile Include="src\Vulkan\Instance.cpp" />
     <ClCompile Include="src\Vulkan\Memory.cpp" />
+    <ClCompile Include="src\Vulkan\Pipeline\Shader.cpp" />
     <ClCompile Include="src\Vulkan\Renderer.cpp" />
     <ClCompile Include="src\Vulkan\SwapChain.cpp" />
   </ItemGroup>
