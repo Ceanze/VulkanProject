@@ -24,6 +24,10 @@ void Renderer::init()
 
 	this->swapChain.init(this->window.getWidth(), this->window.getHeight());
 
+	this->shader.addStage(Shader::VERTEX, "testVertex.spv");
+	this->shader.addStage(Shader::FRAGMENT, "testFragment.spv");
+	this->shader.init();
+
 	JAS_INFO("Created Renderer!");
 }
 
@@ -38,6 +42,7 @@ void Renderer::run()
 
 void Renderer::shutdown()
 {
+	this->shader.cleanup();
 	this->swapChain.cleanup();
 	Instance::get().cleanup();
 	this->window.cleanup();
