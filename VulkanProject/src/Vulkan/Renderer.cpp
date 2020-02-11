@@ -18,9 +18,7 @@ void Renderer::init()
 
 	this->window.init(1280, 720, "Vulkan Project");
 
-	Instance& i = Instance::get();
-	i.init(&this->window);
-	JAS_INFO("Initilized Instance!");
+	Instance::get().init(&this->window);
 
 	this->swapChain.init(this->window.getWidth(), this->window.getHeight());
 

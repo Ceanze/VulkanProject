@@ -34,6 +34,8 @@ void Instance::init(Window* window)
 	this->createSurface(window);
 	this->pickPhysicalDevice();
 	this->createLogicalDevice();
+
+	JAS_INFO("Initilized Instance!");
 }
 
 void Instance::cleanup()
