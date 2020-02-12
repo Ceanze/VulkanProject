@@ -1,6 +1,8 @@
 #include "jaspch.h"
 #include "CommandBuffer.h"
 #include "Instance.h"
+#include "Pipeline/Renderpass.h"
+#include "Pipeline/Pipeline.h"
 
 CommandBuffer::CommandBuffer() :
 	pool(VK_NULL_HANDLE), buffer(VK_NULL_HANDLE)
@@ -48,14 +50,12 @@ void CommandBuffer::begin()
 	ERROR_CHECK(vkBeginCommandBuffer(this->buffer, &beginInfo), "Failed to begin recording command buffer!");
 }
 
-void CommandBuffer::cmdBeginRenderPass(RenderPass* renderPass, Framebuffer* framebuffer, VkExtent2D extent, VkClearValue clearColor)
-{
-	ERROR_CHECK(!VK_SUCCESS, "Begin render pass is not complete yet! Please add the necessary code first!");
-	
+void CommandBuffer::cmdBeginRenderPass(RenderPass* renderPass, VkFramebuffer framebuffer, VkExtent2D extent, VkClearValue clearColor)
+{	
 	VkRenderPassBeginInfo renderPassInfo = {};
 	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-	//renderPassInfo.renderPass = renderPass->getRenderPass();
-	//renderPassInfo.framebuffer = framebuffer->getFramebuffer();
+	renderPassInfo.renderPass = renderPass->getRenderPass();
+	renderPassInfo.framebuffer = framebuffer;
 	renderPassInfo.renderArea.offset = { 0, 0 };
 	renderPassInfo.renderArea.extent = extent;
 	renderPassInfo.clearValueCount = 1;
@@ -67,9 +67,7 @@ void CommandBuffer::cmdBeginRenderPass(RenderPass* renderPass, Framebuffer* fram
 
 void CommandBuffer::cmdBindPipeline(Pipeline* pipeline)
 {
-	ERROR_CHECK(!VK_SUCCESS, "Bind pipeline is not complete yet! Please add the necessary code first!");
-	// CHANGE VK_PIPELINE_BIND_POINT_GRAPHICS TO GET IT FROM PIPELINE!!!
-	//vkCmdBindPipeline(this->buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->getPipeline());
+	vkCmdBindPipeline(this->buffer, (VkPipelineBindPoint)pipeline->getType(), pipeline->getPipeline());
 }
 
 void CommandBuffer::cmdDraw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)

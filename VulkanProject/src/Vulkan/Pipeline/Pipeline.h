@@ -27,6 +27,8 @@ public:
 	void setGraphicsPipelineInfo(VkExtent2D extent, RenderPass* renderPass);
 	// Overwrites the selected default pipeline infos, has to be done before init
 	void setPipelineInfo(PipelineInfoFlag flags, PipelineInfo info);
+	VkPipeline getPipeline() const { return this->pipeline; }
+	Type getType() const { return this->type; }
 
 private:
 	void createGraphicsPipeline();

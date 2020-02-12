@@ -2,6 +2,7 @@
 #include "Pipeline.h"
 #include "../Instance.h"
 #include "Shader.h"
+#include "Renderpass.h"
 
 // TODO: Add support for addition of descriptors and push constants for both graphics and compute pipeline.
 
