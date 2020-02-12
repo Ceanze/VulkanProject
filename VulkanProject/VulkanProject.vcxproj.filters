@@ -39,7 +39,13 @@
     <ClInclude Include="src\Vulkan\Memory.h">
       <Filter>Vulkan</Filter>
     </ClInclude>
-    <ClInclude Include="src\Vulkan\Pipeline\Renderpass.h">
+    <ClInclude Include="src\Vulkan\Pipeline\Pipeline.h">
+      <Filter>Vulkan\Pipeline</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Vulkan\Pipeline\PipelineInfo.h">
+      <Filter>Vulkan\Pipeline</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Vulkan\Pipeline\RenderPass.h">
       <Filter>Vulkan\Pipeline</Filter>
     </ClInclude>
     <ClInclude Include="src\Vulkan\Pipeline\Shader.h">
@@ -54,10 +60,10 @@
     <ClInclude Include="src\Vulkan\VulkanCommon.h">
       <Filter>Vulkan</Filter>
     </ClInclude>
+    <ClInclude Include="src\Vulkan\framebuffer.h">
+      <Filter>Vulkan</Filter>
+    </ClInclude>
     <ClInclude Include="src\jaspch.h" />
-    <ClInclude Include="src\Vulkan\Pipeline\Pipeline.h" />
-    <ClInclude Include="src\Vulkan\Pipeline\PipelineInfo.h" />
-    <ClInclude Include="src\Vulkan\Framebuffer.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Core\Logger.cpp">
@@ -87,7 +93,10 @@
     <ClCompile Include="src\Vulkan\Memory.cpp">
       <Filter>Vulkan</Filter>
     </ClCompile>
-    <ClCompile Include="src\Vulkan\Pipeline\Renderpass.cpp">
+    <ClCompile Include="src\Vulkan\Pipeline\Pipeline.cpp">
+      <Filter>Vulkan\Pipeline</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Vulkan\Pipeline\RenderPass.cpp">
       <Filter>Vulkan\Pipeline</Filter>
     </ClCompile>
     <ClCompile Include="src\Vulkan\Pipeline\Shader.cpp">
@@ -99,9 +108,10 @@
     <ClCompile Include="src\Vulkan\SwapChain.cpp">
       <Filter>Vulkan</Filter>
     </ClCompile>
+    <ClCompile Include="src\Vulkan\framebuffer.cpp">
+      <Filter>Vulkan</Filter>
+    </ClCompile>
     <ClCompile Include="src\jaspch.cpp" />
     <ClCompile Include="src\main.cpp" />
-    <ClCompile Include="src\Vulkan\Pipeline\Pipeline.cpp" />
-    <ClCompile Include="src\Vulkan\Framebuffer.cpp" />
   </ItemGroup>
 </Project>
