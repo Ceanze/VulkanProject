@@ -3,11 +3,19 @@
 
 #include "Instance.h"
 
-Framebuffer::Framebuffer(size_t numFrameBuffers, VkRenderPass renderpass, const std::vector<VkImageView>& attachments, uint32_t width, uint32_t height, uint32_t layers)
+Framebuffer::Framebuffer()
+{
+}
+
+Framebuffer::~Framebuffer()
+{
+}
+
+void Framebuffer::init(size_t numFrameBuffers, VkRenderPass renderpass, const std::vector<VkImageView>& attachments, uint32_t width, uint32_t height, uint32_t layers)
 {
 	this->framebuffers.resize(numFrameBuffers);
 
-	for (size_t i = 0; i < numFrameBuffers; i++) 
+	for (size_t i = 0; i < numFrameBuffers; i++)
 	{
 		VkFramebufferCreateInfo framebufferInfo = {};
 		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
@@ -21,10 +29,6 @@ Framebuffer::Framebuffer(size_t numFrameBuffers, VkRenderPass renderpass, const 
 
 		ERROR_CHECK(vkCreateFramebuffer(Instance::get().getDevice(), &framebufferInfo, nullptr, &this->framebuffers[i]), "Failed to create framebuffer");
 	}
-}
-
-Framebuffer::~Framebuffer()
-{
 }
 
 std::vector<VkFramebuffer> Framebuffer::getFramebuffers()

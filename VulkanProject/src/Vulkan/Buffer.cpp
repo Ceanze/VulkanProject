@@ -4,14 +4,24 @@
 #include "Instance.h"
 
 
-Buffer::Buffer(VkDeviceSize size, VkBufferUsageFlags usage, const std::vector<uint32_t>& queueFamilyIndices)
+Buffer::Buffer()
+{
+
+}
+
+Buffer::~Buffer()
+{
+
+}
+
+void Buffer::init(VkDeviceSize size, VkBufferUsageFlags usage, const std::vector<uint32_t>& queueFamilyIndices)
 {
 	VkBufferCreateInfo createInfo = {};
 	createInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
 	createInfo.size = size;
 	createInfo.usage = usage;
 
-	if(!queueFamilyIndices.empty())
+	if (!queueFamilyIndices.empty())
 		createInfo.sharingMode = VK_SHARING_MODE_CONCURRENT;
 	else
 		createInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -20,11 +30,6 @@ Buffer::Buffer(VkDeviceSize size, VkBufferUsageFlags usage, const std::vector<ui
 	createInfo.pQueueFamilyIndices = queueFamilyIndices.data();
 
 	ERROR_CHECK(vkCreateBuffer(Instance::get().getDevice(), &createInfo, nullptr, &this->buffer), "Failed to create buffer");
-}
-
-Buffer::~Buffer()
-{
-
 }
 
 void Buffer::bindBufferMemory(VkDeviceMemory memory, VkDeviceSize offset)

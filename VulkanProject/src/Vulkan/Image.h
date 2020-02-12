@@ -7,8 +7,10 @@ class Buffer;
 class Image
 {
 public:
-	Image(uint32_t width, uint32_t height, VkFormat format, VkImageUsageFlags usage, const std::vector<uint32_t>& queueFamilyIndices);
+	Image();
 	~Image();
+
+	void init(uint32_t width, uint32_t height, VkFormat format, VkImageUsageFlags usage, const std::vector<uint32_t>& queueFamilyIndices);
 
 	void bindImageMemory(VkDeviceMemory memory, VkDeviceSize offset);
 

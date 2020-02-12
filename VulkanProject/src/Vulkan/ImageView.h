@@ -5,8 +5,10 @@
 class ImageView
 {
 public:
-	ImageView(VkImage image, VkImageViewType type, VkFormat format);
+	ImageView();
 	~ImageView();
+
+	void init(VkImage image, VkImageViewType type, VkFormat format);
 
 	void cleanup();
 private:
