@@ -3,6 +3,7 @@
 #include "Core/Window.h"
 #include "SwapChain.h"
 #include "Pipeline/Shader.h"
+#include "Pipeline/Pipeline.h"
 
 class Renderer
 {
