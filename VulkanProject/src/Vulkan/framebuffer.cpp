@@ -1,5 +1,5 @@
 #include "jaspch.h"
-#include "framebuffer.h"
+#include "Framebuffer.h"
 
 #include "Instance.h"
 

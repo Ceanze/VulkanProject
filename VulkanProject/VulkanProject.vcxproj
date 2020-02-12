@@ -107,6 +107,7 @@
     <ClInclude Include="src\Vulkan\Buffer.h" />
     <ClInclude Include="src\Vulkan\CommandBuffer.h" />
     <ClInclude Include="src\Vulkan\CommandPool.h" />
+    <ClInclude Include="src\Vulkan\Framebuffer.h" />
     <ClInclude Include="src\Vulkan\Image.h" />
     <ClInclude Include="src\Vulkan\ImageView.h" />
     <ClInclude Include="src\Vulkan\Instance.h" />
@@ -118,7 +119,6 @@
     <ClInclude Include="src\Vulkan\Renderer.h" />
     <ClInclude Include="src\Vulkan\SwapChain.h" />
     <ClInclude Include="src\Vulkan\VulkanCommon.h" />
-    <ClInclude Include="src\Vulkan\framebuffer.h" />
     <ClInclude Include="src\jaspch.h" />
   </ItemGroup>
   <ItemGroup>
@@ -127,6 +127,7 @@
     <ClCompile Include="src\Vulkan\Buffer.cpp" />
     <ClCompile Include="src\Vulkan\CommandBuffer.cpp" />
     <ClCompile Include="src\Vulkan\CommandPool.cpp" />
+    <ClCompile Include="src\Vulkan\Framebuffer.cpp" />
     <ClCompile Include="src\Vulkan\Image.cpp" />
     <ClCompile Include="src\Vulkan\ImageView.cpp" />
     <ClCompile Include="src\Vulkan\Instance.cpp" />
@@ -136,7 +137,6 @@
     <ClCompile Include="src\Vulkan\Pipeline\Shader.cpp" />
     <ClCompile Include="src\Vulkan\Renderer.cpp" />
     <ClCompile Include="src\Vulkan\SwapChain.cpp" />
-    <ClCompile Include="src\Vulkan\framebuffer.cpp" />
     <ClCompile Include="src\jaspch.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
