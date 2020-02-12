@@ -19,6 +19,7 @@ public:
 	void cleanup();
 
 	VkPipelineShaderStageCreateInfo getShaderCreateInfo(Type type) const;
+	std::vector<VkPipelineShaderStageCreateInfo> getShaderCreateInfos();
 	std::string getName() const;
 	uint32_t getId() const;
 

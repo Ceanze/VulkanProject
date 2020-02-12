@@ -3,7 +3,6 @@
 #include <vulkan/vulkan.h>
 
 class RenderPass;
-class Framebuffer;
 class Pipeline;
 
 class CommandBuffer
@@ -20,7 +19,7 @@ public:
 	
 	// Record command functions
 	void begin();
-	void cmdBeginRenderPass(RenderPass* renderPass, Framebuffer* framebuffer, VkExtent2D extent, VkClearValue clearColor);
+	void cmdBeginRenderPass(RenderPass* renderPass, VkFramebuffer framebuffer, VkExtent2D extent, VkClearValue clearColor);
 	void cmdBindPipeline(Pipeline* pipeline);
 	void cmdDraw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance);
 	void cmdDrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, uint32_t vertexOffset, uint32_t firstInstance);

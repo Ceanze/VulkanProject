@@ -112,6 +112,8 @@
     <ClInclude Include="src\Vulkan\Instance.h" />
     <ClInclude Include="src\Vulkan\Memory.h" />
     <ClInclude Include="src\Vulkan\Pipeline\Renderpass.h" />
+    <ClInclude Include="src\Vulkan\Pipeline\Pipeline.h" />
+    <ClInclude Include="src\Vulkan\Pipeline\PipelineInfo.h" />
     <ClInclude Include="src\Vulkan\Pipeline\Shader.h" />
     <ClInclude Include="src\Vulkan\Renderer.h" />
     <ClInclude Include="src\Vulkan\SwapChain.h" />
@@ -129,6 +131,7 @@
     <ClCompile Include="src\Vulkan\ImageView.cpp" />
     <ClCompile Include="src\Vulkan\Instance.cpp" />
     <ClCompile Include="src\Vulkan\Memory.cpp" />
+    <ClCompile Include="src\Vulkan\Pipeline\Pipeline.cpp" />
     <ClCompile Include="src\Vulkan\Pipeline\Renderpass.cpp" />
     <ClCompile Include="src\Vulkan\Pipeline\Shader.cpp" />
     <ClCompile Include="src\Vulkan\Renderer.cpp" />
