@@ -1,7 +1,7 @@
 #include "jaspch.h"
 #include "CommandBuffer.h"
 #include "Instance.h"
-#include "Pipeline/Renderpass.h"
+#include "Pipeline/RenderPass.h"
 #include "Pipeline/Pipeline.h"
 
 CommandBuffer::CommandBuffer() :
