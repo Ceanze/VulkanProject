@@ -107,8 +107,6 @@
     <ClInclude Include="src\Vulkan\Buffer.h" />
     <ClInclude Include="src\Vulkan\CommandBuffer.h" />
     <ClInclude Include="src\Vulkan\CommandPool.h" />
-    <ClInclude Include="src\Vulkan\Buffer.h" />
-    <ClInclude Include="src\Vulkan\Framebuffer.h" />
     <ClInclude Include="src\Vulkan\Image.h" />
     <ClInclude Include="src\Vulkan\ImageView.h" />
     <ClInclude Include="src\Vulkan\Instance.h" />
