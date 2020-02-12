@@ -57,6 +57,8 @@ void Renderer::init()
 		imageViews.push_back(this->swapChain.getImageViews()[i]);
 		this->framebuffers[i].init(this->swapChain.getNumImages(), &this->renderPass, imageViews, this->swapChain.getExtent());
 	}
+
+	this->frame.init(&this->swapChain);
 }
 
 void Renderer::run()
@@ -72,76 +74,21 @@ void Renderer::run()
 		cmdBuffs[i]->end();
 	}
 
-	static std::vector<VkSemaphore> imageAvailableSemaphores = {};
-	static std::vector<VkSemaphore> renderFinishedSemaphores = {};
-
-	imageAvailableSemaphores.resize(this->swapChain.getNumImages());
-	renderFinishedSemaphores.resize(this->swapChain.getNumImages());
-
-	for (int i = 0; i < this->swapChain.getNumImages(); i++) {
-		VkSemaphoreCreateInfo createInfo = {};
-		createInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-		vkCreateSemaphore(Instance::get().getDevice(), &createInfo, nullptr, &imageAvailableSemaphores[i]);
-		vkCreateSemaphore(Instance::get().getDevice(), &createInfo, nullptr, &renderFinishedSemaphores[i]);
-	}
-
-	static uint32_t currentFrame = 0;
-
 	while (running && this->window.isOpen())
 	{
 		glfwPollEvents();
 
-		vkDeviceWaitIdle(Instance::get().getDevice());
-
-		uint32_t imageIndex = 0;
-		vkAcquireNextImageKHR(Instance::get().getDevice(), this->swapChain.getSwapChain(), UINT64_MAX, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
-
-		VkSubmitInfo submitInfo = {};
-		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-		VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-
-		VkSemaphore waitSemaphores[] = { imageAvailableSemaphores[currentFrame] };
-		submitInfo.waitSemaphoreCount = 1;
-		submitInfo.pWaitSemaphores = waitSemaphores;
-
-		VkSemaphore signalSemaphores[] = { renderFinishedSemaphores[currentFrame] };
-		submitInfo.signalSemaphoreCount = 1;
-		submitInfo.pSignalSemaphores = signalSemaphores;
-
-		submitInfo.pWaitDstStageMask = waitStages;
-		submitInfo.commandBufferCount = 1;
-		VkCommandBuffer buffer = cmdBuffs[imageIndex]->getCommandBuffer();
-		submitInfo.pCommandBuffers = &buffer;
-		
-		ERROR_CHECK(vkQueueSubmit(Instance::get().getGraphicsQueue(), 1, &submitInfo, VK_NULL_HANDLE), "Failed to sumbit commandbuffer!");
-
-		VkPresentInfoKHR presentInfo = {};
-		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-		presentInfo.waitSemaphoreCount = 1;
-		presentInfo.pWaitSemaphores = signalSemaphores;
-
-		presentInfo.swapchainCount = 1;
-		VkSwapchainKHR swapchain = this->swapChain.getSwapChain();
-		presentInfo.pSwapchains = &swapchain;
-		presentInfo.pImageIndices = &imageIndex;
-
-		ERROR_CHECK(vkQueuePresentKHR(Instance::get().getPresentQueue(), &presentInfo), "Failed to present image!");
-		currentFrame = (currentFrame + 1) % this->swapChain.getNumImages();
+		this->frame.beginFrame();
+		this->frame.submit(Instance::get().getGraphicsQueue(), cmdBuffs);
+		this->frame.endFrame();
 	}
-
-	vkDeviceWaitIdle(Instance::get().getDevice());
-
-	for (int i = 0; i < this->swapChain.getNumImages(); i++) {
-		vkDestroySemaphore(Instance::get().getDevice(), imageAvailableSemaphores[i], nullptr);
-		vkDestroySemaphore(Instance::get().getDevice(), renderFinishedSemaphores[i], nullptr);
-	}
-
 }
 
 void Renderer::shutdown()
 {
 	vkDeviceWaitIdle(Instance::get().getDevice());
 
+	this->frame.cleanup();
 	this->commandPool.cleanup();
 	for (auto& framebuffer : this->framebuffers)
 		framebuffer.cleanup();

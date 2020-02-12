@@ -8,6 +8,7 @@
 #include "CommandPool.h"
 #include "CommandBuffer.h"
 #include "Buffers/Framebuffer.h"
+#include "Frame.h"
 
 class Renderer
 {
@@ -20,6 +21,9 @@ public:
 	void shutdown();
 
 private:
+	uint32_t beginFrame();
+	void endFrame(uint32_t imageIndex);
+
 	Window window;
 	SwapChain swapChain;
 	Shader shader;
@@ -27,6 +31,7 @@ private:
 	RenderPass renderPass;
 	CommandPool commandPool;
 	std::vector<Framebuffer> framebuffers;
+	Frame frame;
 
 	bool running = true;
 };
