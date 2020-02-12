@@ -9,6 +9,7 @@ void Frame::init(SwapChain* swapChain)
 {
 	this->swapChain = swapChain;
 	this->numImages = swapChain->getNumImages();
+	this->framesInFlight = 2; // Unsure of purpose
 	this->currentFrame = 0;
 
 	createSyncObjects();
@@ -37,17 +38,32 @@ void Frame::submit(VkQueue queue, CommandBuffer** commandBuffers)
 	submitInfo.pWaitDstStageMask = waitStages;
 	submitInfo.commandBufferCount = 1;
 
-	ERROR_CHECK(vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE), "Failed to sumbit commandbuffer!");
-
+	vkResetFences(Instance::get().getDevice(), 1, &this->inFlightFences[this->currentFrame]);
+	ERROR_CHECK(vkQueueSubmit(queue, 1, &submitInfo, this->inFlightFences[this->currentFrame]), "Failed to sumbit commandbuffer!");
 }
 
-void Frame::beginFrame()
+bool Frame::beginFrame()
 {
-	vkDeviceWaitIdle(Instance::get().getDevice());
-	vkAcquireNextImageKHR(Instance::get().getDevice(), this->swapChain->getSwapChain(), UINT64_MAX, this->imageAvailableSemaphores[this->currentFrame], VK_NULL_HANDLE, &this->imageIndex);
+	vkWaitForFences(Instance::get().getDevice(), 1, &this->inFlightFences[this->currentFrame], VK_TRUE, UINT64_MAX);
+	VkResult result = vkAcquireNextImageKHR(Instance::get().getDevice(), this->swapChain->getSwapChain(), UINT64_MAX, this->imageAvailableSemaphores[this->currentFrame], VK_NULL_HANDLE, &this->imageIndex);
+
+	// Check if window has been resized
+	if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+		return false;
+	}
+	JAS_ASSERT(result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR, "Failed to aquire swap chain image!");
+	
+	// Check if previous frame is using this image
+	if (this->imagesInFlight[this->imageIndex] != VK_NULL_HANDLE) {
+		vkWaitForFences(Instance::get().getDevice(), 1, &this->imagesInFlight[this->imageIndex], VK_TRUE, UINT64_MAX);
+	}
+	// Marked image as being used by this frame
+	this->imagesInFlight[this->imageIndex] = this->imagesInFlight[this->currentFrame];
+
+	return true;
 }
 
-void Frame::endFrame()
+bool Frame::endFrame()
 {
 	VkSemaphore waitSemaphores[] = { this->imageAvailableSemaphores[this->currentFrame] };
 	VkSemaphore signalSemaphores[] = { this->renderFinishedSemaphores[this->currentFrame] };
@@ -62,27 +78,42 @@ void Frame::endFrame()
 	presentInfo.pSwapchains = &swapchain;
 	presentInfo.pImageIndices = &this->imageIndex;
 
-	ERROR_CHECK(vkQueuePresentKHR(Instance::get().getPresentQueue(), &presentInfo), "Failed to present image!");
-	this->currentFrame = (this->currentFrame + 1) % this->numImages;
+	VkResult result = vkQueuePresentKHR(Instance::get().getPresentQueue(), &presentInfo);
+
+	// Check if window has been resized
+	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+		return false;
+	}
+	JAS_ASSERT(result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR, "Failed to present image!");
+
+	this->currentFrame = (this->currentFrame + 1) % this->framesInFlight;
+	return true;
 }
 
 void Frame::createSyncObjects()
 {
-	this->imageAvailableSemaphores.resize(this->numImages);
-	this->renderFinishedSemaphores.resize(this->numImages);
+	this->imageAvailableSemaphores.resize(this->framesInFlight);
+	this->renderFinishedSemaphores.resize(this->framesInFlight);
+	this->inFlightFences.resize(this->framesInFlight);
+	this->imagesInFlight.resize(this->numImages, VK_NULL_HANDLE);
 
-	for (int i = 0; i < this->numImages; i++) {
-		VkSemaphoreCreateInfo createInfo = {};
-		createInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-		ERROR_CHECK(vkCreateSemaphore(Instance::get().getDevice(), &createInfo, nullptr, &this->imageAvailableSemaphores[i]), "Failed to create semaphore");
-		ERROR_CHECK(vkCreateSemaphore(Instance::get().getDevice(), &createInfo, nullptr, &this->renderFinishedSemaphores[i]), "Failed to create semaphore");
+	for (int i = 0; i < this->framesInFlight; i++) {
+		VkSemaphoreCreateInfo SemaCreateInfo = {};
+		SemaCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+		VkFenceCreateInfo fenceCreateInfo = {};
+		fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+		fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+		ERROR_CHECK(vkCreateSemaphore(Instance::get().getDevice(), &SemaCreateInfo, nullptr, &this->imageAvailableSemaphores[i]), "Failed to create semaphore");
+		ERROR_CHECK(vkCreateSemaphore(Instance::get().getDevice(), &SemaCreateInfo, nullptr, &this->renderFinishedSemaphores[i]), "Failed to create semaphore");
+		ERROR_CHECK(vkCreateFence(Instance::get().getDevice(), &fenceCreateInfo, nullptr, &this->inFlightFences[i]), "Failed to create fence");
 	}
 }
 
 void Frame::destroySyncObjects()
 {
-	for (int i = 0; i < this->numImages; i++) {
+	for (int i = 0; i < this->framesInFlight; i++) {
 		vkDestroySemaphore(Instance::get().getDevice(), this->imageAvailableSemaphores[i], nullptr);
 		vkDestroySemaphore(Instance::get().getDevice(), this->renderFinishedSemaphores[i], nullptr);
+		vkDestroyFence(Instance::get().getDevice(), this->inFlightFences[i], nullptr);
 	}
 }

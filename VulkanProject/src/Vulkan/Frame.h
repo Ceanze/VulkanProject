@@ -14,14 +14,17 @@ public:
 
 	void submit(VkQueue queue, CommandBuffer** commandBuffers);
 
-	void beginFrame();
-	void endFrame();
+	bool beginFrame();
+	bool endFrame();
 private:
 	void createSyncObjects();
 	void destroySyncObjects();
 
 	std::vector<VkSemaphore> imageAvailableSemaphores;
 	std::vector<VkSemaphore> renderFinishedSemaphores;
+	std::vector<VkFence> inFlightFences;
+	std::vector<VkFence> imagesInFlight;
+	uint32_t framesInFlight;
 	uint32_t currentFrame;
 	uint32_t imageIndex;
 	uint32_t numImages;
