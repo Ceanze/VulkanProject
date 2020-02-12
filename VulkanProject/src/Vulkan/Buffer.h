@@ -6,8 +6,10 @@
 class Buffer
 {
 public:
-	Buffer(VkDeviceSize size, VkBufferUsageFlags usage, const std::vector<uint32_t>& queueFamilyIndices);
+	Buffer();
 	~Buffer();
+
+	void init(VkDeviceSize size, VkBufferUsageFlags usage, const std::vector<uint32_t>& queueFamilyIndices);
 
 	void bindBufferMemory(VkDeviceMemory memory, VkDeviceSize offset);
 

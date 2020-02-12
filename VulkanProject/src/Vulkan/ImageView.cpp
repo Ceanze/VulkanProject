@@ -4,7 +4,15 @@
 
 
 
-ImageView::ImageView(VkImage image, VkImageViewType type, VkFormat format)
+ImageView::ImageView()
+{
+}
+
+ImageView::~ImageView()
+{
+}
+
+void ImageView::init(VkImage image, VkImageViewType type, VkFormat format)
 {
 	VkImageViewCreateInfo createInfo = {};
 	createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -25,10 +33,6 @@ ImageView::ImageView(VkImage image, VkImageViewType type, VkFormat format)
 	createInfo.subresourceRange.layerCount = 1;
 
 	ERROR_CHECK(vkCreateImageView(Instance::get().getDevice(), &createInfo, nullptr, &this->imageView), "Failed to create image view!");
-}
-
-ImageView::~ImageView()
-{
 }
 
 void ImageView::cleanup()

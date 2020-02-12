@@ -2,7 +2,15 @@
 #include "Image.h"
 #include "Instance.h"
 
-Image::Image(uint32_t width, uint32_t height, VkFormat format, VkImageUsageFlags usage, const std::vector<uint32_t>& queueFamilyIndices)
+Image::Image()
+{
+}
+
+Image::~Image()
+{
+}
+
+void Image::init(uint32_t width, uint32_t height, VkFormat format, VkImageUsageFlags usage, const std::vector<uint32_t>& queueFamilyIndices)
 {
 	VkImageCreateInfo imageInfo = {};
 	imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -18,7 +26,7 @@ Image::Image(uint32_t width, uint32_t height, VkFormat format, VkImageUsageFlags
 	imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	imageInfo.usage = usage;
 	imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-	
+
 	if (!queueFamilyIndices.empty())
 		imageInfo.sharingMode = VK_SHARING_MODE_CONCURRENT;
 	else
@@ -29,11 +37,6 @@ Image::Image(uint32_t width, uint32_t height, VkFormat format, VkImageUsageFlags
 
 
 	ERROR_CHECK(vkCreateImage(Instance::get().getDevice(), &imageInfo, nullptr, &this->image), "Failed to create image!");
-}
-
-Image::~Image()
-{
-
 }
 
 void Image::bindImageMemory(VkDeviceMemory memory, VkDeviceSize offset)
