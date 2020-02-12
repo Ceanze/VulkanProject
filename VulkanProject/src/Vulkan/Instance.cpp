@@ -1,5 +1,5 @@
 #include "jaspch.h"
-#include "Instance.h"
+#include "Vulkan/Instance.h"
 #include "Vulkan/VulkanCommon.h"
 #include "Core/Window.h"
 
@@ -61,6 +61,16 @@ VkDevice Instance::getDevice()
 VkPhysicalDevice Instance::getPhysicalDevice()
 {
 	return this->physicalDevice;
+}
+
+VkQueue Instance::getGraphicsQueue() const
+{
+	return this->graphicsQueue;
+}
+
+VkQueue Instance::getPresentQueue() const
+{
+	return this->presentQueue;
 }
 
 VKAPI_ATTR VkBool32 VKAPI_CALL Instance::debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData)

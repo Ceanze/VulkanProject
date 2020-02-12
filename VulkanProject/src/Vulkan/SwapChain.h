@@ -16,6 +16,7 @@ public:
 	VkSwapchainKHR getSwapChain() const;
 	VkExtent2D getExtent() const;
 	VkFormat getImageFormat() const;
+	std::vector<VkImageView> getImageViews() const;
 
 private:
 	void createSwapChain(unsigned int width, unsigned int height);

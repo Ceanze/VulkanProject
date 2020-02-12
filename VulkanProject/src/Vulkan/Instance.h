@@ -19,6 +19,9 @@ public:
 	VkDevice getDevice();
 	VkPhysicalDevice getPhysicalDevice();
 
+	VkQueue getGraphicsQueue() const;
+	VkQueue getPresentQueue() const;
+
 private:
 	Instance();
 	Instance(Instance& other) = delete;

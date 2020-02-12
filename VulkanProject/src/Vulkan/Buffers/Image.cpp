@@ -1,6 +1,6 @@
 #include "jaspch.h"
 #include "Image.h"
-#include "Instance.h"
+#include "Vulkan/Instance.h"
 
 Image::Image()
 {

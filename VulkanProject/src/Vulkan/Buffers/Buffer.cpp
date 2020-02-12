@@ -1,7 +1,7 @@
 #include "jaspch.h"
 
 #include "Buffer.h"
-#include "Instance.h"
+#include "Vulkan/Instance.h"
 
 
 Buffer::Buffer()

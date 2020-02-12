@@ -1,7 +1,7 @@
 #include "jaspch.h"
 
 #include "Memory.h"
-#include "Instance.h"
+#include "Vulkan/Instance.h"
 
 Memory::Memory(VkDeviceSize size, uint32_t memoryTypeIndex)
 {

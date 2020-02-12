@@ -3,18 +3,20 @@
 #include "jaspch.h"
 #include <vulkan/vulkan.h>
 
+class RenderPass;
+
 class Framebuffer
 {
 public:
 	Framebuffer();
 	~Framebuffer();
 
-	void init(size_t numFrameBuffers, VkRenderPass renderpass, const std::vector<VkImageView>& attachments, uint32_t width, uint32_t height, uint32_t layers);
+	void init(size_t numFrameBuffers, RenderPass* renderpass, const std::vector<VkImageView>& attachments, VkExtent2D extent);
 
-	std::vector<VkFramebuffer> getFramebuffers();
+	VkFramebuffer getFramebuffer();
 
 	void cleanup();
 
 private:
-	std::vector<VkFramebuffer> framebuffers;
+	VkFramebuffer framebuffer;
 };

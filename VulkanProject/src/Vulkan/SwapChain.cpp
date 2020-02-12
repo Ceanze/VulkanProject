@@ -2,7 +2,7 @@
 #include "SwapChain.h"
 
 #include "../Core/Logger.h"
-#include "Instance.h"
+#include "Vulkan/Instance.h"
 
 SwapChain::SwapChain()
 {
@@ -55,6 +55,11 @@ VkExtent2D SwapChain::getExtent() const
 VkFormat SwapChain::getImageFormat() const
 {
 	return this->imageFormat;
+}
+
+std::vector<VkImageView> SwapChain::getImageViews() const
+{
+	return this->imageViews;
 }
 
 void SwapChain::createSwapChain(unsigned int width, unsigned int height)

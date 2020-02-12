@@ -1,7 +1,7 @@
 #include "jaspch.h"
 #include "CommandPool.h"
 #include "VulkanCommon.h"
-#include "Instance.h"
+#include "Vulkan/Instance.h"
 #include "CommandBuffer.h"
 
 CommandPool::CommandPool() :

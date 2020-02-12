@@ -4,6 +4,10 @@
 #include "SwapChain.h"
 #include "Pipeline/Shader.h"
 #include "Pipeline/Pipeline.h"
+#include "Pipeline/RenderPass.h"
+#include "CommandPool.h"
+#include "CommandBuffer.h"
+#include "Buffers/Framebuffer.h"
 
 class Renderer
 {
@@ -19,6 +23,10 @@ private:
 	Window window;
 	SwapChain swapChain;
 	Shader shader;
+	Pipeline pipeline;
+	RenderPass renderPass;
+	CommandPool commandPool;
+	std::vector<Framebuffer> framebuffers;
 
 	bool running = true;
 };
