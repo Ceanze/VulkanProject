@@ -21,8 +21,11 @@ public:
 	void init(Type type, Shader* shader);
 	void cleanup();
 
+	// Enables or disables wireframe at creation time
 	void setWireframe(bool enable);
+	// Sets the necessary information for the graphics pipeline
 	void setGraphicsPipelineInfo(VkExtent2D extent, RenderPass* renderPass);
+	// Overwrites the selected default pipeline infos, has to be done before init
 	void setPipelineInfo(PipelineInfoFlag flags, PipelineInfo info);
 
 private:
@@ -36,6 +39,7 @@ private:
 	Shader* shader;
 	VkExtent2D extent;
 	Type type;
+	bool graphicsPipelineInitilized = false;
 
 	// Pipeline create info
 	PipelineInfo graphicsPipelineInfo;

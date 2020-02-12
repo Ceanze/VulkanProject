@@ -45,16 +45,34 @@ void Pipeline::setGraphicsPipelineInfo(VkExtent2D extent, RenderPass* renderPass
 {
 	this->renderPass = renderPass;
 	this->extent = extent;
+	this->graphicsPipelineInitilized = true;
 }
 
 void Pipeline::setPipelineInfo(PipelineInfoFlag flags, PipelineInfo info)
 {
-	this->graphicsPipelineInfo = info;
-	this->graphicsPipelineInfoFlags = flags;
+	this->graphicsPipelineInfoFlags = this->graphicsPipelineInfoFlags | flags;
+
+	if (flags & PipelineInfoFlag::VERTEX_INPUT)
+		this->graphicsPipelineInfo.vertexInputInfo = info.vertexInputInfo;
+	if (flags & PipelineInfoFlag::RASTERIZATION)
+		this->graphicsPipelineInfo.rasterizer = info.rasterizer;
+	if (flags & PipelineInfoFlag::MULTISAMPLE)
+		this->graphicsPipelineInfo.multisampling = info.multisampling;
+	if (flags & PipelineInfoFlag::DEAPTH_STENCIL)
+		this->graphicsPipelineInfo.depthStencil = info.depthStencil;
+	if (flags & PipelineInfoFlag::COLOR_BLEND_ATTACHMENT)
+		this->graphicsPipelineInfo.colorBlendAttachment = info.colorBlendAttachment;
+	if (flags & PipelineInfoFlag::COLOR_BLEND)
+		this->graphicsPipelineInfo.colorBlending = info.colorBlending;
 }
 
 void Pipeline::createGraphicsPipeline()
 {
+	if (!this->graphicsPipelineInitilized) {
+		JAS_ERROR("Couldn't create graphics pipeline: Renderpass and extent not set! To set this use the setGraphicsPipelineInfo function call.");
+		return;
+	}
+
 	VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
 	inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
 	inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
