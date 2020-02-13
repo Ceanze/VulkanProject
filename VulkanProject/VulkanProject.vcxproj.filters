@@ -48,6 +48,12 @@
     <ClInclude Include="src\Vulkan\Memory.h">
       <Filter>Vulkan</Filter>
     </ClInclude>
+    <ClInclude Include="src\Vulkan\Pipeline\DescriptorManager.h">
+      <Filter>Vulkan\Pipeline</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Vulkan\Pipeline\Descriptors.h">
+      <Filter>Vulkan\Pipeline</Filter>
+    </ClInclude>
     <ClInclude Include="src\Vulkan\Pipeline\Pipeline.h">
       <Filter>Vulkan\Pipeline</Filter>
     </ClInclude>
@@ -70,6 +76,9 @@
       <Filter>Vulkan</Filter>
     </ClInclude>
     <ClInclude Include="src\jaspch.h" />
+    <ClInclude Include="src\Vulkan\Pipeline\DescriptorLayout.h">
+      <Filter>Vulkan\Pipeline</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Core\Logger.cpp">
@@ -105,6 +114,9 @@
     <ClCompile Include="src\Vulkan\Memory.cpp">
       <Filter>Vulkan</Filter>
     </ClCompile>
+    <ClCompile Include="src\Vulkan\Pipeline\DescriptorManager.cpp">
+      <Filter>Vulkan\Pipeline</Filter>
+    </ClCompile>
     <ClCompile Include="src\Vulkan\Pipeline\Pipeline.cpp">
       <Filter>Vulkan\Pipeline</Filter>
     </ClCompile>
@@ -122,5 +134,6 @@
     </ClCompile>
     <ClCompile Include="src\jaspch.cpp" />
     <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\Vulkan\Pipeline\DescriptorLayout.cpp" />
   </ItemGroup>
 </Project>

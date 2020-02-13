@@ -21,7 +21,7 @@ void Buffer::init(VkDeviceSize size, VkBufferUsageFlags usage, const std::vector
 	createInfo.size = size;
 	createInfo.usage = usage;
 
-	if (!queueFamilyIndices.empty())
+	if (queueFamilyIndices.size() > 1)
 		createInfo.sharingMode = VK_SHARING_MODE_CONCURRENT;
 	else
 		createInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -37,7 +37,7 @@ void Buffer::bindBufferMemory(VkDeviceMemory memory, VkDeviceSize offset)
 	ERROR_CHECK(vkBindBufferMemory(Instance::get().getDevice(), this->buffer, memory, 0), "Failed to bind memory");
 }
 
-VkBuffer Buffer::getbuffer() const
+VkBuffer Buffer::getBuffer() const
 {
 	return this->buffer;
 }

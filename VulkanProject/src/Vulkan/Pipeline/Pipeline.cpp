@@ -3,6 +3,7 @@
 #include "../Instance.h"
 #include "Shader.h"
 #include "RenderPass.h"
+#include "DescriptorLayout.h"
 
 // TODO: Add support for addition of descriptors and push constants for both graphics and compute pipeline.
 
@@ -32,6 +33,12 @@ void Pipeline::cleanup()
 	VkDevice device = Instance::get().getDevice();
 	vkDestroyPipeline(device, this->pipeline, nullptr);
 	vkDestroyPipelineLayout(device, this->pipelineLayout, nullptr);
+}
+
+void Pipeline::setDescriptorLayouts(const std::vector<DescriptorLayout>& descriptorLayouts)
+{
+	for (auto& layout : descriptorLayouts)
+		this->layouts.push_back(layout.getLayout());
 }
 
 void Pipeline::setWireframe(bool enable)
@@ -111,8 +118,8 @@ void Pipeline::createGraphicsPipeline()
 	// Used to set up uniform buffers and push constants
 	VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
 	pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-	pipelineLayoutInfo.setLayoutCount = 0; // descriptor.getSetLayouts().size();
-	pipelineLayoutInfo.pSetLayouts = nullptr; // descriptor.getSetLayouts().data(); // Uniform buffer objects, images, etc.
+	pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(this->layouts.size());
+	pipelineLayoutInfo.pSetLayouts = this->layouts.empty() ? nullptr : this->layouts.data();
 	pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
 	pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
 

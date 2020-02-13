@@ -42,6 +42,8 @@ void Renderer::init()
 	this->renderPass.addSubpassDependency(subpassDependency);
 	this->renderPass.init();
 
+	setupPreTEMP();
+	this->pipeline.setDescriptorLayouts(this->descManager.getLayouts());
 	this->pipeline.setGraphicsPipelineInfo(this->swapChain.getExtent(), &this->renderPass);
 	this->pipeline.init(Pipeline::Type::GRAPHICS, &this->shader);
 	JAS_INFO("Created Renderer!");
@@ -59,6 +61,8 @@ void Renderer::init()
 	}
 
 	this->frame.init(&this->swapChain);
+
+	setupPostTEMP();
 }
 
 void Renderer::run()
@@ -69,6 +73,9 @@ void Renderer::run()
 		cmdBuffs[i]->begin();
 		cmdBuffs[i]->cmdBeginRenderPass(&this->renderPass, this->framebuffers[i].getFramebuffer(), this->swapChain.getExtent(), {0.0f, 0.0f, 0.0f, 1.0f});
 		cmdBuffs[i]->cmdBindPipeline(&this->pipeline);
+		std::vector<VkDescriptorSet> sets = { this->descManager.getSet(i, 0) };
+		std::vector<uint32_t> offsets;
+		cmdBuffs[i]->cmdBindDescriptorSets(&this->pipeline, 0, sets, offsets);
 		cmdBuffs[i]->cmdDraw(3, 1, 0, 0);
 		cmdBuffs[i]->cmdEndRenderPass();
 		cmdBuffs[i]->end();
@@ -88,6 +95,12 @@ void Renderer::shutdown()
 {
 	vkDeviceWaitIdle(Instance::get().getDevice());
 
+	this->buffer.cleanup();
+	this->buffer2.cleanup();
+	this->memory.cleanup();
+	this->memory2.cleanup();
+	this->descManager.cleanup();
+
 	this->frame.cleanup();
 	this->commandPool.cleanup();
 	for (auto& framebuffer : this->framebuffers)
@@ -98,4 +111,64 @@ void Renderer::shutdown()
 	this->swapChain.cleanup();
 	Instance::get().cleanup();
 	this->window.cleanup();
+}
+
+void Renderer::setupPreTEMP()
+{
+	this->descLayout.add(new UBO(VK_SHADER_STAGE_VERTEX_BIT, 1, nullptr));
+	this->descLayout.add(new UBO(VK_SHADER_STAGE_VERTEX_BIT, 1, nullptr));
+	this->descLayout.init();
+
+	this->descManager.addLayout(this->descLayout);
+	this->descManager.init(this->swapChain.getNumImages());
+}
+
+void Renderer::setupPostTEMP()
+{
+	glm::vec4 color[3] = { {1.0f, 0.0f, 1.0f, 1.0f}, {0.0f, 1.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 1.0f, 1.0f} };
+	glm::vec2 position[3] = { {0.0f, -0.7f}, {0.5f, 0.5f}, {-0.7f, 0.5f} };
+	uint32_t size = sizeof(glm::vec4) * 3;
+	uint32_t size2 = sizeof(glm::vec2) * 3;
+
+	// Create buffer
+	std::vector<uint32_t> queueIndices = { findQueueIndex(VK_QUEUE_GRAPHICS_BIT, Instance::get().getPhysicalDevice()) };
+	this->buffer.init(size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, queueIndices);
+	this->buffer2.init(size2, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, queueIndices);
+	
+	// Create memory
+	VkMemoryRequirements memReq = this->buffer.getMemReq();
+	VkMemoryRequirements memReq2 = this->buffer2.getMemReq();
+	uint32_t memoryTypeIndex = findMemoryType(Instance::get().getPhysicalDevice(), memReq.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+	this->memory.init(memReq.size + memReq2.size, memoryTypeIndex);
+	this->buffer.bindBufferMemory(this->memory.getMemory(), 0);
+	
+	this->buffer2.bindBufferMemory(this->memory.getMemory(), size);
+	/*
+	memoryTypeIndex = findMemoryType(Instance::get().getPhysicalDevice(), memReq2.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+	this->memory2.init(memReq2.size, memoryTypeIndex);
+	this->buffer2.bindBufferMemory(this->memory2.getMemory(), 0);
+	*/
+	// Update buffer
+	void* ptrGpu;
+	// Color
+	VkResult result = vkMapMemory(Instance::get().getDevice(), this->memory.getMemory(), 0, VK_WHOLE_SIZE, 0, &ptrGpu);
+	JAS_ASSERT(result == VK_SUCCESS, "Failed to map memory for buffer!");
+	memcpy(ptrGpu, &color[0], size);
+	vkUnmapMemory(Instance::get().getDevice(), this->memory.getMemory());
+	vkDeviceWaitIdle(Instance::get().getDevice());
+
+	// Position
+	result = vkMapMemory(Instance::get().getDevice(), this->memory.getMemory(), size, VK_WHOLE_SIZE, 0, &ptrGpu);
+	JAS_ASSERT(result == VK_SUCCESS, "Failed to map memory for buffer!");
+	memcpy(ptrGpu, &position[0], size2);
+	vkUnmapMemory(Instance::get().getDevice(), this->memory.getMemory());
+	vkDeviceWaitIdle(Instance::get().getDevice());
+	
+	// Update descriptor
+	for (size_t i = 0; i < this->swapChain.getNumImages(); i++)
+	{
+		this->descManager.updateBufferDesc(0, 0, this->buffer.getBuffer(), 0, size);
+		this->descManager.updateBufferDesc(0, 1, this->buffer2.getBuffer(), 0, size2);
+		this->descManager.updateSets(i);
+	}
 }

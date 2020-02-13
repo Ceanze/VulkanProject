@@ -10,6 +10,11 @@
 #include "Buffers/Framebuffer.h"
 #include "Frame.h"
 
+// TEMP
+#include "Buffers/Buffer.h"
+#include "Memory.h"
+#include "Pipeline/DescriptorManager.h"
+
 class Renderer
 {
 public:
@@ -20,10 +25,9 @@ public:
 	void run();
 	void shutdown();
 
+	void setupPreTEMP();
+	void setupPostTEMP();
 private:
-	uint32_t beginFrame();
-	void endFrame(uint32_t imageIndex);
-
 	Window window;
 	SwapChain swapChain;
 	Shader shader;
@@ -34,4 +38,12 @@ private:
 	Frame frame;
 
 	bool running = true;
+
+	// TEMP
+	Buffer buffer;
+	Memory memory;
+	Buffer buffer2;
+	Memory memory2;
+	DescriptorLayout descLayout;
+	DescriptorManager descManager;
 };

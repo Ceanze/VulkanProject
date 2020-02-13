@@ -3,6 +3,7 @@
 #include <vulkan/vulkan.h>
 #include "PipelineInfo.h"
 
+class DescriptorLayout;
 class RenderPass;
 class Shader;
 
@@ -21,6 +22,8 @@ public:
 	void init(Type type, Shader* shader);
 	void cleanup();
 
+	// Set the layouts which will be used
+	void setDescriptorLayouts(const std::vector<DescriptorLayout>& descriptorLayouts);
 	// Enables or disables wireframe at creation time
 	void setWireframe(bool enable);
 	// Sets the necessary information for the graphics pipeline
@@ -29,6 +32,7 @@ public:
 	void setPipelineInfo(PipelineInfoFlag flags, PipelineInfo info);
 	VkPipeline getPipeline() const { return this->pipeline; }
 	Type getType() const { return this->type; }
+	VkPipelineLayout getPipelineLayout() const { return this->pipelineLayout; }
 
 private:
 	void createGraphicsPipeline();
@@ -42,6 +46,7 @@ private:
 	VkExtent2D extent;
 	Type type;
 	bool graphicsPipelineInitilized = false;
+	std::vector<VkDescriptorSetLayout> layouts;
 
 	// Pipeline create info
 	PipelineInfo graphicsPipelineInfo;

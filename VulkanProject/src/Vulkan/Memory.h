@@ -5,8 +5,10 @@
 class Memory
 {
 public:
-	Memory(VkDeviceSize size, uint32_t memoryTypeIndex);
+	Memory();
 	~Memory();
+
+	void init(VkDeviceSize size, uint32_t memoryTypeIndex);
 
 	VkDeviceMemory getMemory();
 

@@ -13,7 +13,7 @@ public:
 
 	void bindBufferMemory(VkDeviceMemory memory, VkDeviceSize offset);
 
-	VkBuffer getbuffer() const;
+	VkBuffer getBuffer() const;
 	VkMemoryRequirements getMemReq() const;
 
 	void cleanup();
