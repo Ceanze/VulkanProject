@@ -3,7 +3,7 @@
 
 layout(location = 0) out vec2 fragUV;
 
-layout(binding = 0) uniform Data
+layout(set=0, binding = 0) readonly buffer Data
 {
     vec2 uv[3];
     vec2 positions[3];

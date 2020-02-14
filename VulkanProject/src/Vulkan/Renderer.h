@@ -44,6 +44,7 @@ private:
 	// TEMP
 	Buffer buffer;
 	Memory memory;
+	Memory memoryTexture;
 	Buffer stagingBuffer;
 	Texture texture;
 	Sampler sampler;

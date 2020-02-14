@@ -103,6 +103,7 @@ void Renderer::shutdown()
 	this->descManager.cleanup();
 	this->texture.cleanup();
 	this->sampler.cleanup();
+	this->memoryTexture.cleanup();
 
 	this->frame.cleanup();
 	this->commandPool.cleanup();
@@ -118,7 +119,7 @@ void Renderer::shutdown()
 
 void Renderer::setupPreTEMP()
 {
-	this->descLayout.add(new UBO(VK_SHADER_STAGE_VERTEX_BIT, 1, nullptr));
+	this->descLayout.add(new SSBO(VK_SHADER_STAGE_VERTEX_BIT, 1, nullptr));
 	this->descLayout.add(new IMG(VK_SHADER_STAGE_FRAGMENT_BIT, 1, nullptr));
 	this->descLayout.init();
 
@@ -132,8 +133,9 @@ void Renderer::setupPostTEMP()
 	int channels;
 	stbi_uc* img = stbi_load("..\\assets\\Textures\\svenskt.jpg", &width, &height, &channels, 4);
 	glm::vec2 uvs[3] = { {0.0f, 0.0f}, {0.0f, 1.0f}, {1.0f, 1.0f} };
-	glm::vec2 position[3] = { {0.0f, 0.5f}, {0.0f, 0.0f}, {0.5f, 0.0f} };
+	glm::vec2 position[3] = { {0.0f, -0.5f}, {0.0f, 0.0f}, {0.5f, 0.0f} };
 	uint32_t size = sizeof(glm::vec2) * 3;
+	uint32_t size2 = sizeof(glm::vec2) * 3;
 
 	std::vector<uint32_t> queueIndices = { findQueueIndex(VK_QUEUE_GRAPHICS_BIT, Instance::get().getPhysicalDevice()) };
 
@@ -142,21 +144,23 @@ void Renderer::setupPostTEMP()
 	this->sampler.init(VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT);
 
 	// Create buffer
-	this->buffer.init(size * 2, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, queueIndices);
+	this->buffer.init(size + size2, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, queueIndices);
 	this->stagingBuffer.init(width * height * 4, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, queueIndices);
 	
 	// Create memory
 	this->memory.bindBuffer(&this->buffer);
-	this->memory.bindBuffer(&this->stagingBuffer);
-	this->memory.bindTexture(&this->texture);
 	this->memory.init(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+	this->memoryTexture.bindBuffer(&this->stagingBuffer);
+	this->memoryTexture.bindTexture(&this->texture);
+	this->memoryTexture.init(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
 	this->texture.getImageView().init(this->texture.getVkImage(), VK_IMAGE_VIEW_TYPE_2D, VK_FORMAT_R8G8B8A8_UNORM);
 
 	// Update buffer
 	this->memory.directTransfer(&this->buffer, (void*)&uvs[0], size, 0);
-	this->memory.directTransfer(&this->buffer, (void*)&position[0], size, size);
-	this->memory.directTransfer(&this->stagingBuffer, (void*)img, width * height * 4, size * 2);
+	this->memory.directTransfer(&this->buffer, (void*)&position[0], size2, size);
+	this->memoryTexture.directTransfer(&this->stagingBuffer, (void*)img, width * height * 4, 0);
 
 	// Transistion image
 	Image::TransistionDesc desc;
@@ -174,7 +178,7 @@ void Renderer::setupPostTEMP()
 	// Update descriptor
 	for (size_t i = 0; i < this->swapChain.getNumImages(); i++)
 	{
-		this->descManager.updateBufferDesc(0, 0, this->buffer.getBuffer(), 0, size * 2);
+		this->descManager.updateBufferDesc(0, 0, this->buffer.getBuffer(), 0, size + size2);
 		this->descManager.updateImageDesc(0, 1, image.getLayout(), this->texture.getVkImageView(), this->sampler.getSampler());
 		this->descManager.updateSets(i);
 	}
