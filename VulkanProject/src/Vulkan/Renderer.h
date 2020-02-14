@@ -14,6 +14,8 @@
 #include "Buffers/Buffer.h"
 #include "Buffers/Memory.h"
 #include "Pipeline/DescriptorManager.h"
+#include "Texure.h"
+#include "Sampler.h"
 
 class Renderer
 {
@@ -42,7 +44,9 @@ private:
 	// TEMP
 	Buffer buffer;
 	Memory memory;
-	Buffer buffer2;
+	Buffer stagingBuffer;
+	Texture texture;
+	Sampler sampler;
 	DescriptorLayout descLayout;
 	DescriptorManager descManager;
 };

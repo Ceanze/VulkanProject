@@ -31,6 +31,49 @@ void CommandPool::cleanup()
 	this->buffers.clear();
 }
 
+VkQueue CommandPool::getQueue() const
+{
+	switch (this->queueFamily)
+	{
+	case Queue::GRAPHICS:
+		return Instance::get().getGraphicsQueue();
+	default:
+		JAS_ASSERT(false, "Only graphics queue is currently supported!");
+	}
+}
+
+CommandBuffer* CommandPool::beginSingleTimeCommand()
+{
+	VkCommandBufferAllocateInfo allocInfo = {};
+	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	allocInfo.commandPool = pool;
+	allocInfo.commandBufferCount = 1;
+
+	CommandBuffer* buffer = createCommandBuffer();
+
+	buffer->begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+
+	return buffer;
+}
+
+void CommandPool::endSingleTimeCommand(CommandBuffer* buffer)
+{
+	buffer->end();
+
+	VkCommandBuffer commandBuffer = buffer->getCommandBuffer();
+	VkSubmitInfo submitInfo = {};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &commandBuffer;
+
+	vkQueueSubmit(getQueue(), 1, &submitInfo, VK_NULL_HANDLE);
+	vkQueueWaitIdle(getQueue());
+
+	vkFreeCommandBuffers(Instance::get().getDevice(), this->pool, 1, &commandBuffer);
+	removeCommandBuffer(buffer);
+}
+
 // Creates one (1) command buffer only
 CommandBuffer* CommandPool::createCommandBuffer()
 {

@@ -7,6 +7,7 @@
 typedef uint32_t Offset;
 
 class Buffer;
+class Texture;
 
 class Memory
 {
@@ -15,6 +16,7 @@ public:
 	~Memory();
 
 	void bindBuffer(Buffer* buffer);
+	void bindTexture(Texture* texture);
 	void directTransfer(Buffer* buffer, const void* data, uint32_t size, Offset bufferOffset);
 
 	void init(VkMemoryPropertyFlags memProp);
@@ -24,6 +26,7 @@ public:
 	void cleanup();
 private:
 	VkDeviceMemory memory;
-	std::unordered_map<Buffer*, Offset> offsets;
+	std::unordered_map<Buffer*, Offset> bufferOffsets;
+	std::unordered_map<Texture*, Offset> textureOffsets;
 	Offset currentOffset;
 };

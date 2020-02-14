@@ -62,7 +62,7 @@
       <PrecompiledHeaderFile>jaspch.h</PrecompiledHeaderFile>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>JAS_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>src;..\libs\glfw\include;..\libs\spdlog\include;..\libs\glm;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>src;..\libs\glfw\include;..\libs\spdlog\include;..\libs\glm;..\libs\stb;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
       <MinimalRebuild>false</MinimalRebuild>
@@ -83,7 +83,7 @@
       <PrecompiledHeaderFile>jaspch.h</PrecompiledHeaderFile>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>JAS_RELEASE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>src;..\libs\glfw\include;..\libs\spdlog\include;..\libs\glm;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>src;..\libs\glfw\include;..\libs\spdlog\include;..\libs\glm;..\libs\stb;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
@@ -121,7 +121,9 @@
     <ClInclude Include="src\Vulkan\Pipeline\RenderPass.h" />
     <ClInclude Include="src\Vulkan\Pipeline\Shader.h" />
     <ClInclude Include="src\Vulkan\Renderer.h" />
+    <ClInclude Include="src\Vulkan\Sampler.h" />
     <ClInclude Include="src\Vulkan\SwapChain.h" />
+    <ClInclude Include="src\Vulkan\Texure.h" />
     <ClInclude Include="src\Vulkan\VulkanCommon.h" />
     <ClInclude Include="src\jaspch.h" />
   </ItemGroup>
@@ -143,7 +145,9 @@
     <ClCompile Include="src\Vulkan\Pipeline\RenderPass.cpp" />
     <ClCompile Include="src\Vulkan\Pipeline\Shader.cpp" />
     <ClCompile Include="src\Vulkan\Renderer.cpp" />
+    <ClCompile Include="src\Vulkan\Sampler.cpp" />
     <ClCompile Include="src\Vulkan\SwapChain.cpp" />
+    <ClCompile Include="src\Vulkan\Texure.cpp" />
     <ClCompile Include="src\jaspch.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>

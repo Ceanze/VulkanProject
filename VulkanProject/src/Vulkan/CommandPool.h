@@ -21,6 +21,10 @@ public:
 	void init(Queue queueFamily);
 	void cleanup();
 	Queue getQueueFamily() const { return this->queueFamily; }
+	VkQueue getQueue() const;
+
+	CommandBuffer* beginSingleTimeCommand();
+	void endSingleTimeCommand(CommandBuffer* buffer);
 
 	CommandBuffer* createCommandBuffer();
 	std::vector<CommandBuffer*> createCommandBuffers(uint32_t count);

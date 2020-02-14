@@ -18,7 +18,7 @@ public:
 	void createCommandBuffer();
 	
 	// Record command functions
-	void begin();
+	void begin(VkCommandBufferUsageFlags flags);
 	void cmdBeginRenderPass(RenderPass* renderPass, VkFramebuffer framebuffer, VkExtent2D extent, VkClearValue clearColor);
 	void cmdBindPipeline(Pipeline* pipeline);
 	void cmdBindDescriptorSets(Pipeline* pipeline, uint32_t firstSet, const std::vector<VkDescriptorSet>& sets, const std::vector<uint32_t>& offsets);

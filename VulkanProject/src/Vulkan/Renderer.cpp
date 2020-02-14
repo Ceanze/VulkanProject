@@ -3,6 +3,8 @@
 #include "Vulkan/Instance.h"
 
 #include <GLFW/glfw3.h>
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb/stb_image.h>
 
 Renderer::Renderer()
 {
@@ -70,7 +72,7 @@ void Renderer::run()
 	CommandBuffer* cmdBuffs[3];
 	for (int i = 0; i < this->swapChain.getNumImages(); i++) {
 		cmdBuffs[i] = this->commandPool.createCommandBuffer();
-		cmdBuffs[i]->begin();
+		cmdBuffs[i]->begin(0);
 		cmdBuffs[i]->cmdBeginRenderPass(&this->renderPass, this->framebuffers[i].getFramebuffer(), this->swapChain.getExtent(), {0.0f, 0.0f, 0.0f, 1.0f});
 		cmdBuffs[i]->cmdBindPipeline(&this->pipeline);
 		std::vector<VkDescriptorSet> sets = { this->descManager.getSet(i, 0) };
@@ -96,9 +98,11 @@ void Renderer::shutdown()
 	vkDeviceWaitIdle(Instance::get().getDevice());
 
 	this->buffer.cleanup();
-	//this->buffer2.cleanup();
+	this->stagingBuffer.cleanup();
 	this->memory.cleanup();
 	this->descManager.cleanup();
+	this->texture.cleanup();
+	this->sampler.cleanup();
 
 	this->frame.cleanup();
 	this->commandPool.cleanup();
@@ -115,7 +119,7 @@ void Renderer::shutdown()
 void Renderer::setupPreTEMP()
 {
 	this->descLayout.add(new UBO(VK_SHADER_STAGE_VERTEX_BIT, 1, nullptr));
-	this->descLayout.add(new UBO(VK_SHADER_STAGE_VERTEX_BIT, 1, nullptr));
+	this->descLayout.add(new IMG(VK_SHADER_STAGE_FRAGMENT_BIT, 1, nullptr));
 	this->descLayout.init();
 
 	this->descManager.addLayout(this->descLayout);
@@ -124,30 +128,54 @@ void Renderer::setupPreTEMP()
 
 void Renderer::setupPostTEMP()
 {
-	glm::vec4 color[3] = { {1.0f, 0.0f, 1.0f, 1.0f}, {0.0f, 1.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 1.0f, 1.0f} };
-	glm::vec2 position[3] = { {0.0f, -0.7f}, {0.5f, 0.5f}, {-0.7f, 0.5f} };
-	uint32_t size = sizeof(glm::vec4) * 3;
-	uint32_t size2 = sizeof(glm::vec2) * 3;
+	int width, height;
+	int channels;
+	stbi_uc* img = stbi_load("..\\assets\\Textures\\svenskt.jpg", &width, &height, &channels, 4);
+	glm::vec2 uvs[3] = { {0.0f, 0.0f}, {0.0f, 1.0f}, {1.0f, 1.0f} };
+	glm::vec2 position[3] = { {0.0f, 0.5f}, {0.0f, 0.0f}, {0.5f, 0.0f} };
+	uint32_t size = sizeof(glm::vec2) * 3;
+
+	std::vector<uint32_t> queueIndices = { findQueueIndex(VK_QUEUE_GRAPHICS_BIT, Instance::get().getPhysicalDevice()) };
+
+	// Create texture and sampler
+	this->texture.init(width, height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, queueIndices);
+	this->sampler.init(VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT);
 
 	// Create buffer
-	std::vector<uint32_t> queueIndices = { findQueueIndex(VK_QUEUE_GRAPHICS_BIT, Instance::get().getPhysicalDevice()) };
-	this->buffer.init(size + size2, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, queueIndices);
+	this->buffer.init(size * 2, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, queueIndices);
+	this->stagingBuffer.init(width * height * 4, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, queueIndices);
 	
 	// Create memory
 	this->memory.bindBuffer(&this->buffer);
+	this->memory.bindBuffer(&this->stagingBuffer);
+	this->memory.bindTexture(&this->texture);
 	this->memory.init(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
-	// Update buffer
-	void* ptrGpu;
+	this->texture.getImageView().init(this->texture.getVkImage(), VK_IMAGE_VIEW_TYPE_2D, VK_FORMAT_R8G8B8A8_UNORM);
 
-	this->memory.directTransfer(&this->buffer, (void*)&color[0], size, 0);
-	this->memory.directTransfer(&this->buffer, (void*)&position[0], size2, size);
+	// Update buffer
+	this->memory.directTransfer(&this->buffer, (void*)&uvs[0], size, 0);
+	this->memory.directTransfer(&this->buffer, (void*)&position[0], size, size);
+	this->memory.directTransfer(&this->stagingBuffer, (void*)img, width * height * 4, size * 2);
+
+	// Transistion image
+	Image::TransistionDesc desc;
+	desc.format = VK_FORMAT_R8G8B8A8_UNORM;
+	desc.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	desc.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+	desc.pool = &this->commandPool;
+	Image& image = this->texture.getImage();
+	image.transistionLayout(desc);
+	image.copyBufferToImage(&this->stagingBuffer, &this->commandPool);
+	desc.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+	desc.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	image.transistionLayout(desc);
 
 	// Update descriptor
 	for (size_t i = 0; i < this->swapChain.getNumImages(); i++)
 	{
-		this->descManager.updateBufferDesc(0, 0, this->buffer.getBuffer(), 0, size + size2);
-		//this->descManager.updateBufferDesc(0, 1, this->buffer2.getBuffer(), 0, size2);
+		this->descManager.updateBufferDesc(0, 0, this->buffer.getBuffer(), 0, size * 2);
+		this->descManager.updateImageDesc(0, 1, image.getLayout(), this->texture.getVkImageView(), this->sampler.getSampler());
 		this->descManager.updateSets(i);
 	}
 }
