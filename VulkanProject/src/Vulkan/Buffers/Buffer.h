@@ -3,6 +3,8 @@
 
 #include <vulkan/vulkan.h>
 
+class Memory;
+
 class Buffer
 {
 public:
@@ -11,9 +13,7 @@ public:
 
 	void init(VkDeviceSize size, VkBufferUsageFlags usage, const std::vector<uint32_t>& queueFamilyIndices);
 
-	void bindBufferMemory(VkDeviceMemory memory, VkDeviceSize offset);
-
-	VkBuffer getbuffer() const;
+	VkBuffer getBuffer() const;
 	VkMemoryRequirements getMemReq() const;
 
 	void cleanup();

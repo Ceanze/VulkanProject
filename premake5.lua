@@ -58,7 +58,8 @@ project "VulkanProject"
         "%{prj.name}/src",
         "libs/glfw/include",
         "libs/spdlog/include",
-        "libs/glm"
+        "libs/glm",
+        "libs/stb"
     }
 
     libdirs

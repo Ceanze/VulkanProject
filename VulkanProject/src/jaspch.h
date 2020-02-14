@@ -12,6 +12,9 @@
 // Vulkan
 #include <vulkan/vulkan.h>
 
+// Externals
+#include <glm/glm.hpp>
+
 // Custom
 #include "Core/Logger.h"
 

@@ -40,11 +40,11 @@ void CommandBuffer::createCommandBuffer()
 	ERROR_CHECK(vkAllocateCommandBuffers(Instance::get().getDevice(), &allocInfo, &this->buffer), "Failed to allocate command buffer!");
 }
 
-void CommandBuffer::begin()
+void CommandBuffer::begin(VkCommandBufferUsageFlags flags)
 {
 	VkCommandBufferBeginInfo beginInfo = {};
 	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-	beginInfo.flags = 0; // Optional
+	beginInfo.flags = flags; // Optional
 	beginInfo.pInheritanceInfo = nullptr; // Optional
 
 	ERROR_CHECK(vkBeginCommandBuffer(this->buffer, &beginInfo), "Failed to begin recording command buffer!");
@@ -68,6 +68,12 @@ void CommandBuffer::cmdBeginRenderPass(RenderPass* renderPass, VkFramebuffer fra
 void CommandBuffer::cmdBindPipeline(Pipeline* pipeline)
 {
 	vkCmdBindPipeline(this->buffer, (VkPipelineBindPoint)pipeline->getType(), pipeline->getPipeline());
+}
+
+void CommandBuffer::cmdBindDescriptorSets(Pipeline* pipeline, uint32_t firstSet, const std::vector<VkDescriptorSet>& sets, const std::vector<uint32_t>& offsets)
+{
+	vkCmdBindDescriptorSets(this->buffer, (VkPipelineBindPoint)pipeline->getType(),
+		pipeline->getPipelineLayout(), 0, sets.size(), sets.data(), offsets.size(), offsets.data());
 }
 
 void CommandBuffer::cmdDraw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
