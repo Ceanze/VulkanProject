@@ -32,11 +32,6 @@ void Buffer::init(VkDeviceSize size, VkBufferUsageFlags usage, const std::vector
 	ERROR_CHECK(vkCreateBuffer(Instance::get().getDevice(), &createInfo, nullptr, &this->buffer), "Failed to create buffer");
 }
 
-void Buffer::bindBufferMemory(VkDeviceMemory memory, VkDeviceSize offset)
-{
-	ERROR_CHECK(vkBindBufferMemory(Instance::get().getDevice(), this->buffer, memory, 0), "Failed to bind memory");
-}
-
 VkBuffer Buffer::getBuffer() const
 {
 	return this->buffer;

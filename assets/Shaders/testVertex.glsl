@@ -6,10 +6,6 @@ layout(location = 0) out vec3 fragColor;
 layout(binding = 0) uniform Color
 {
     vec4 colors[3];
-};
-
-layout(binding = 1) uniform Pos
-{
     vec2 positions[3];
 };
 

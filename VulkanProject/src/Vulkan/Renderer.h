@@ -12,7 +12,7 @@
 
 // TEMP
 #include "Buffers/Buffer.h"
-#include "Memory.h"
+#include "Buffers/Memory.h"
 #include "Pipeline/DescriptorManager.h"
 
 class Renderer
@@ -43,7 +43,6 @@ private:
 	Buffer buffer;
 	Memory memory;
 	Buffer buffer2;
-	Memory memory2;
 	DescriptorLayout descLayout;
 	DescriptorManager descManager;
 };

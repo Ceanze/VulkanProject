@@ -96,9 +96,8 @@ void Renderer::shutdown()
 	vkDeviceWaitIdle(Instance::get().getDevice());
 
 	this->buffer.cleanup();
-	this->buffer2.cleanup();
+	//this->buffer2.cleanup();
 	this->memory.cleanup();
-	this->memory2.cleanup();
 	this->descManager.cleanup();
 
 	this->frame.cleanup();
@@ -132,43 +131,23 @@ void Renderer::setupPostTEMP()
 
 	// Create buffer
 	std::vector<uint32_t> queueIndices = { findQueueIndex(VK_QUEUE_GRAPHICS_BIT, Instance::get().getPhysicalDevice()) };
-	this->buffer.init(size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, queueIndices);
-	this->buffer2.init(size2, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, queueIndices);
+	this->buffer.init(size + size2, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, queueIndices);
 	
 	// Create memory
-	VkMemoryRequirements memReq = this->buffer.getMemReq();
-	VkMemoryRequirements memReq2 = this->buffer2.getMemReq();
-	uint32_t memoryTypeIndex = findMemoryType(Instance::get().getPhysicalDevice(), memReq.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-	this->memory.init(memReq.size + memReq2.size, memoryTypeIndex);
-	this->buffer.bindBufferMemory(this->memory.getMemory(), 0);
-	
-	this->buffer2.bindBufferMemory(this->memory.getMemory(), size);
-	/*
-	memoryTypeIndex = findMemoryType(Instance::get().getPhysicalDevice(), memReq2.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-	this->memory2.init(memReq2.size, memoryTypeIndex);
-	this->buffer2.bindBufferMemory(this->memory2.getMemory(), 0);
-	*/
+	this->memory.bindBuffer(&this->buffer);
+	this->memory.init(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
 	// Update buffer
 	void* ptrGpu;
-	// Color
-	VkResult result = vkMapMemory(Instance::get().getDevice(), this->memory.getMemory(), 0, VK_WHOLE_SIZE, 0, &ptrGpu);
-	JAS_ASSERT(result == VK_SUCCESS, "Failed to map memory for buffer!");
-	memcpy(ptrGpu, &color[0], size);
-	vkUnmapMemory(Instance::get().getDevice(), this->memory.getMemory());
-	vkDeviceWaitIdle(Instance::get().getDevice());
 
-	// Position
-	result = vkMapMemory(Instance::get().getDevice(), this->memory.getMemory(), size, VK_WHOLE_SIZE, 0, &ptrGpu);
-	JAS_ASSERT(result == VK_SUCCESS, "Failed to map memory for buffer!");
-	memcpy(ptrGpu, &position[0], size2);
-	vkUnmapMemory(Instance::get().getDevice(), this->memory.getMemory());
-	vkDeviceWaitIdle(Instance::get().getDevice());
-	
+	this->memory.directTransfer(&this->buffer, (void*)&color[0], size, 0);
+	this->memory.directTransfer(&this->buffer, (void*)&position[0], size2, size);
+
 	// Update descriptor
 	for (size_t i = 0; i < this->swapChain.getNumImages(); i++)
 	{
-		this->descManager.updateBufferDesc(0, 0, this->buffer.getBuffer(), 0, size);
-		this->descManager.updateBufferDesc(0, 1, this->buffer2.getBuffer(), 0, size2);
+		this->descManager.updateBufferDesc(0, 0, this->buffer.getBuffer(), 0, size + size2);
+		//this->descManager.updateBufferDesc(0, 1, this->buffer2.getBuffer(), 0, size2);
 		this->descManager.updateSets(i);
 	}
 }
