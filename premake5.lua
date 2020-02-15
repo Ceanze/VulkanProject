@@ -59,7 +59,8 @@ project "VulkanProject"
         "libs/glfw/include",
         "libs/spdlog/include",
         "libs/glm",
-        "libs/stb"
+        "libs/stb",
+        "libs/glTF"
     }
 
     libdirs
