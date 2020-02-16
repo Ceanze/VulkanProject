@@ -53,6 +53,16 @@ void GLTFTest::init()
 	setupPreTEMP();
 	this->pipeline.setDescriptorLayouts(this->descManager.getLayouts());
 	this->pipeline.setGraphicsPipelineInfo(this->swapChain.getExtent(), &this->renderPass);
+	PipelineInfo pipInfo;
+	pipInfo.vertexInputInfo = {};
+	pipInfo.vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+	auto bindingDescription = Vertex::getBindingDescription();
+	auto attributeDescriptions = Vertex::getAttributeDescriptions();
+	pipInfo.vertexInputInfo.vertexBindingDescriptionCount = 1;
+	pipInfo.vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
+	pipInfo.vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
+	pipInfo.vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
+	this->pipeline.setPipelineInfo(PipelineInfoFlag::VERTEX_INPUT, pipInfo);
 	this->pipeline.init(Pipeline::Type::GRAPHICS, &this->shader);
 	JAS_INFO("Created Renderer!");
 
@@ -90,7 +100,8 @@ void GLTFTest::cleanup()
 	vkDeviceWaitIdle(Instance::get().getDevice());
 
 	this->bufferUniform.cleanup();
-	this->bufferPos.cleanup();
+	this->bufferVert.cleanup();
+	this->bufferInd.cleanup();
 	this->memory.cleanup();
 	this->descManager.cleanup();
 
@@ -108,7 +119,7 @@ void GLTFTest::cleanup()
 
 void GLTFTest::setupPreTEMP()
 {
-	this->descLayout.add(new SSBO(VK_SHADER_STAGE_VERTEX_BIT, 1, nullptr)); // Positions
+	//this->descLayout.add(new SSBO(VK_SHADER_STAGE_VERTEX_BIT, 1, nullptr)); // Positions
 	this->descLayout.add(new UBO(VK_SHADER_STAGE_VERTEX_BIT, 1, nullptr)); // Uniforms
 	this->descLayout.init();
 
@@ -132,7 +143,7 @@ void GLTFTest::setupPostTEMP()
 	tinygltf::Mesh& mesh = this->model.meshes[node.mesh];
 	JAS_INFO("	->Mesh: ", node.name.c_str());
 	tinygltf::Primitive& primitive = mesh.primitives[0]; // Take first primitive. This holds the attributes, material, indices and the topology type (mode)
-	JAS_ASSERT(primitive.mode == TINYGLTF_MODE_TRIANGLES, "Only support topology type TRIANGLES!");
+	JAS_ASSERT(primitive.mode == TINYGLTF_MODE_TRIANGLES, "Only support topology type TRIANGLE_LIST!");
 	JAS_INFO("	  mode: TRIANGLES");
 
 	// Indices (Assume it uses indices)
@@ -148,24 +159,29 @@ void GLTFTest::setupPostTEMP()
 	tinygltf::Buffer& positionsBuffer = model.buffers[positionsView.buffer];
 	JAS_INFO("	  ->Fetched positions");
 	unsigned char* positions = &positionsBuffer.data.at(0) + positionsView.byteOffset;
+
+	// Texture coordinates
+	tinygltf::Accessor& texCoordsAccessor = model.accessors[primitive.attributes["TEXCOORD_0"]];
+	tinygltf::BufferView& texCoordsView = model.bufferViews[texCoordsAccessor.bufferView];
+	tinygltf::Buffer& texCoordsBuffer = model.buffers[texCoordsView.buffer];
+	JAS_INFO("	  ->Fetched texCoords");
+	unsigned char* texCoords = &texCoordsBuffer.data.at(0) + texCoordsView.byteOffset;
 	
 	JAS_ASSERT(indicesAccessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT, "Indices component type need to be unsigned short!");
-	size_t posSize = indicesAccessor.count * sizeof(float) * 3;
+	size_t indSize = indicesAccessor.count * sizeof(unsigned short); // Should be indicesView.byteLength
+	size_t vertSize = positionsAccessor.count * sizeof(Vertex);
 
-	// Create new position vector to hold all positions that the indices cover.
-	unsigned char* finalPositions = new unsigned char[posSize];
-	memset(finalPositions, 0, posSize);
-	for (size_t i = 0; i < indicesAccessor.count; i++)
+	// Fill vertex data.
+	std::vector<Vertex> vertices(positionsAccessor.count);
+	for (size_t i = 0; i < positionsAccessor.count; i++)
 	{
-		size_t indexInd = i * sizeof(unsigned short);
-		unsigned short index = *(indices + indexInd);
-		size_t offsetPosPre = index * sizeof(float) * 3;
-		size_t offsetPos = i * sizeof(float) * 3;
-		JAS_ASSERT(offsetPosPre < positionsView.byteLength, "Out of range!");
-		JAS_ASSERT(offsetPos < posSize, "Out of range!");
-		memcpy(finalPositions + offsetPos, positions + offsetPosPre, sizeof(float) * 3);
+		size_t offset = i * sizeof(float) * 3;
+		memcpy(&vertices[i].pos[0], positions + offset, sizeof(float) * 3);
+		offset = i * sizeof(float) * 2;
+		memcpy(&vertices[i].uv[0], texCoords + offset, sizeof(float) * 2);
 	}
 
+	// Set uniform data.
 	glm::mat4 proj = glm::perspective(glm::radians(45.0f), (float)this->window.getWidth() / (float)this->window.getHeight(), 1.0f, 150.0f);
 	glm::mat4 view = glm::lookAt(glm::vec3{ 0.0f, 0.0f, 10.f }, glm::vec3{ 0.0f, 0.0f, 0.0f }, glm::vec3{ 0.f, -1.f, 0.f });
 	glm::mat4 model = glm::mat4(1.0f);
@@ -174,21 +190,23 @@ void GLTFTest::setupPostTEMP()
 
 	// Create the buffer and memory
 	std::vector<uint32_t> queueIndices = { findQueueIndex(VK_QUEUE_GRAPHICS_BIT, Instance::get().getPhysicalDevice()) };
-	this->bufferPos.init(posSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, queueIndices);
+	this->bufferVert.init(vertSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, queueIndices);
+	this->bufferInd.init(indSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, queueIndices);
 	this->bufferUniform.init(unsiformBufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, queueIndices);
-	this->memory.bindBuffer(&this->bufferPos);
+	this->memory.bindBuffer(&this->bufferVert);
+	this->memory.bindBuffer(&this->bufferInd);
 	this->memory.bindBuffer(&this->bufferUniform);
 	this->memory.init(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
-	// Transfer the data to the buffer.
-	this->memory.directTransfer(&this->bufferPos, (void*)finalPositions, (uint32_t)posSize, 0);
+	// Transfer the data to the buffers.
+	this->memory.directTransfer(&this->bufferVert, (void*)vertices.data(), (uint32_t)vertSize, 0);
+	this->memory.directTransfer(&this->bufferInd, (void*)indices, (uint32_t)indSize, 0);
 	this->memory.directTransfer(&this->bufferUniform, (void*)&mvp[0][0], unsiformBufferSize, 0);
 
 	// Update descriptor
 	for (size_t i = 0; i < this->swapChain.getNumImages(); i++)
 	{
-		this->descManager.updateBufferDesc(0, 0, this->bufferPos.getBuffer(), 0, posSize);
-		this->descManager.updateBufferDesc(0, 1, this->bufferUniform.getBuffer(), 0, unsiformBufferSize);
+		this->descManager.updateBufferDesc(0, 0, this->bufferUniform.getBuffer(), 0, unsiformBufferSize);
 		this->descManager.updateSets(i);
 	}
 
@@ -198,10 +216,14 @@ void GLTFTest::setupPostTEMP()
 		this->cmdBuffs[i]->begin(0);
 		this->cmdBuffs[i]->cmdBeginRenderPass(&this->renderPass, this->framebuffers[i].getFramebuffer(), this->swapChain.getExtent(), { 0.0f, 0.0f, 0.0f, 1.0f });
 		this->cmdBuffs[i]->cmdBindPipeline(&this->pipeline);
+		VkBuffer vertexBuffers[] = { this->bufferVert.getBuffer() };
+		VkDeviceSize vertOffsets[] = { 0 };
+		this->cmdBuffs[i]->cmdBindVertexBuffers(0, 1, vertexBuffers, vertOffsets);
+		this->cmdBuffs[i]->cmdBindIndexBuffer(this->bufferInd.getBuffer(), 0, VK_INDEX_TYPE_UINT16); // Unsinged short
 		std::vector<VkDescriptorSet> sets = { this->descManager.getSet(i, 0) };
 		std::vector<uint32_t> offsets;
 		this->cmdBuffs[i]->cmdBindDescriptorSets(&this->pipeline, 0, sets, offsets);
-		this->cmdBuffs[i]->cmdDraw(indicesAccessor.count, 1, 0, 0);
+		this->cmdBuffs[i]->cmdDrawIndexed(indicesAccessor.count, 1, 0, 0, 0);
 		this->cmdBuffs[i]->cmdEndRenderPass();
 		this->cmdBuffs[i]->end();
 	}

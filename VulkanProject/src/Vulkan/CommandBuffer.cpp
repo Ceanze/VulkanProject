@@ -70,6 +70,16 @@ void CommandBuffer::cmdBindPipeline(Pipeline* pipeline)
 	vkCmdBindPipeline(this->buffer, (VkPipelineBindPoint)pipeline->getType(), pipeline->getPipeline());
 }
 
+void CommandBuffer::cmdBindVertexBuffers(uint32_t firstBinding, uint32_t bindingCount, const VkBuffer* buffers, const VkDeviceSize* offsets)
+{
+	vkCmdBindVertexBuffers(this->buffer, firstBinding, bindingCount, buffers, offsets);
+}
+
+void CommandBuffer::cmdBindIndexBuffer(VkBuffer buffer, VkDeviceSize offset, VkIndexType indexType)
+{
+	vkCmdBindIndexBuffer(this->buffer, buffer, offset, indexType);
+}
+
 void CommandBuffer::cmdBindDescriptorSets(Pipeline* pipeline, uint32_t firstSet, const std::vector<VkDescriptorSet>& sets, const std::vector<uint32_t>& offsets)
 {
 	vkCmdBindDescriptorSets(this->buffer, (VkPipelineBindPoint)pipeline->getType(),

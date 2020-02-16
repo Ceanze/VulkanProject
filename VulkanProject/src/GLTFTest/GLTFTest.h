@@ -30,6 +30,33 @@ public:
 	void cleanup();
 
 private:
+	struct Vertex
+	{
+		glm::vec3 pos;
+		glm::vec2 uv;
+
+		static VkVertexInputBindingDescription getBindingDescription() {
+			VkVertexInputBindingDescription bindingDescription = {};
+			bindingDescription.binding = 0;
+			bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+			bindingDescription.stride = sizeof(Vertex);
+			return bindingDescription;
+		}
+
+		static std::array<VkVertexInputAttributeDescription, 2> getAttributeDescriptions() {
+			std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions = {};
+			attributeDescriptions[0].binding = 0;
+			attributeDescriptions[0].location = 0;
+			attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
+			attributeDescriptions[0].offset = offsetof(Vertex, pos);
+			attributeDescriptions[1].binding = 0;
+			attributeDescriptions[1].location = 1;
+			attributeDescriptions[1].format = VK_FORMAT_R32G32_SFLOAT;
+			attributeDescriptions[1].offset = offsetof(Vertex, uv);
+			return attributeDescriptions;
+		}
+	};
+
 	void setupPreTEMP();
 	void setupPostTEMP();
 
@@ -56,7 +83,8 @@ private:
 	tinygltf::TinyGLTF loader;
 
 	CommandBuffer* cmdBuffs[3];
-	Buffer bufferPos;
+	Buffer bufferInd;
+	Buffer bufferVert;
 	Buffer bufferUniform;
 	Memory memory; // Holds vertex and index data.
 };
