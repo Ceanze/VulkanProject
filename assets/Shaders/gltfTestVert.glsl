@@ -6,13 +6,15 @@ layout(location = 1) in vec2 inUv;
 
 layout(location = 0) out vec2 fragUv;
 
-layout(set=0, binding = 0) uniform Mvp
+layout(set=0, binding = 0) uniform UboData
 {
-    mat4 mvp;
+    mat4 world;
+    mat4 view;
+    mat4 proj;
 };
 
 
 void main() {
-    gl_Position = mvp*vec4(inPosition, 1.0);
+    gl_Position = proj * view * world * vec4(inPosition, 1.0);
     fragUv = inUv;
 }

@@ -58,10 +58,18 @@ private:
 		}
 	};
 
+	struct UboData
+	{
+		glm::mat4 world;
+		glm::mat4 view;
+		glm::mat4 proj;
+	};
+
 	void setupPreTEMP();
 	void setupPostTEMP();
 
 	void loadModel(const std::string& filePath);
+	glm::mat4 getViewFromCamera(float dt);
 
 private:
 	Window window;

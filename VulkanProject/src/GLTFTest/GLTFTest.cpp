@@ -11,6 +11,7 @@
 #include <GLFW/glfw3.h>
 
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/rotate_vector.hpp>
 
 GLTFTest::GLTFTest()
 {
@@ -112,13 +113,25 @@ void GLTFTest::init()
 
 void GLTFTest::run()
 {
+	float dt = 0.0f;
 	while (running && this->window.isOpen())
 	{
 		glfwPollEvents();
 
+		auto startTime = std::chrono::high_resolution_clock::now();
+
+		// Update view matrix
+		glm::mat4 newView = getViewFromCamera(dt);
+		this->memory.directTransfer(&this->bufferUniform, (void*)&newView[0][0], (uint32_t)sizeof(newView), (Offset)offsetof(UboData, view));
+		vkDeviceWaitIdle(Instance::get().getDevice()); // This is bad!!
+
+		// Render
 		this->frame.beginFrame();
 		this->frame.submit(Instance::get().getGraphicsQueue(), this->cmdBuffs);
 		this->frame.endFrame();
+
+		auto endTime = std::chrono::high_resolution_clock::now();
+		dt = std::chrono::duration<float>(endTime - startTime).count();
 	}
 }
 
@@ -211,11 +224,11 @@ void GLTFTest::setupPostTEMP()
 	}
 
 	// Set uniform data.
-	glm::mat4 proj = glm::perspective(glm::radians(45.0f), (float)this->window.getWidth() / (float)this->window.getHeight(), 1.0f, 150.0f);
-	glm::mat4 view = glm::lookAt(glm::vec3{ 0.0f, 0.0f, 10.f }, glm::vec3{ 0.0f, 0.0f, 0.0f }, glm::vec3{ 0.f, -1.f, 0.f });
-	glm::mat4 model = glm::mat4(1.0f);
-	glm::mat4 mvp = proj * view * model;
-	uint32_t unsiformBufferSize = sizeof(glm::mat4);
+	UboData uboData;
+	uboData.proj = glm::perspective(glm::radians(45.0f), (float)this->window.getWidth() / (float)this->window.getHeight(), 1.0f, 150.0f);
+	uboData.view = glm::lookAt(glm::vec3{ 0.0f, 0.0f, 10.f }, glm::vec3{ 0.0f, 0.0f, 0.0f }, glm::vec3{ 0.f, -1.f, 0.f });
+	uboData.world = glm::mat4(1.0f);
+	uint32_t unsiformBufferSize = sizeof(UboData);
 
 	// Create the buffer and memory
 	std::vector<uint32_t> queueIndices = { findQueueIndex(VK_QUEUE_GRAPHICS_BIT, Instance::get().getPhysicalDevice()) };
@@ -228,9 +241,11 @@ void GLTFTest::setupPostTEMP()
 	this->memory.init(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
 	// Transfer the data to the buffers.
+	// TODO: Vertex and index buffers should use staging and be sent to the gpu by the command buffer instead!
 	this->memory.directTransfer(&this->bufferVert, (void*)vertices.data(), (uint32_t)vertSize, 0);
 	this->memory.directTransfer(&this->bufferInd, (void*)indices, (uint32_t)indSize, 0);
-	this->memory.directTransfer(&this->bufferUniform, (void*)&mvp[0][0], unsiformBufferSize, 0);
+
+	this->memory.directTransfer(&this->bufferUniform, (void*)&uboData, unsiformBufferSize, 0);
 
 	// Update descriptor
 	for (size_t i = 0; i < this->swapChain.getNumImages(); i++)
@@ -284,4 +299,79 @@ void GLTFTest::loadModel(const std::string& filePath)
 	}
 	
 	JAS_ASSERT(ret, "Failed to parse glTF\n");
+}
+
+glm::mat4 GLTFTest::getViewFromCamera(float dt)
+{
+	auto isKeyPressed = [&](int key)->bool {
+		return glfwGetKey(this->window.getNativeWindow(), key) == GLFW_PRESS;
+	};
+
+	static glm::vec3 pos(0.0f, 0.0f, -10.0f);
+	static glm::vec3 dir(0.0f, 0.0f, 1.0f);
+	static glm::vec3 up(0.0f, -1.0f, 0.0f);
+	static glm::vec3 GLOBAL_UP(0.0f, -1.0f, 0.0f);
+
+	const float DEFAULT_SPEED = 8.0f;
+	const float SPEED_FACTOR = 2.0f;
+	const float DEFAUTL_ROT_SPEED = 3.1415f / 180.f * 90.0f; // 90 degrees per second.
+	float speed = DEFAULT_SPEED * dt;
+	float rotSpeed = DEFAUTL_ROT_SPEED * dt;
+
+	if (isKeyPressed(GLFW_KEY_LEFT_SHIFT))
+		speed = DEFAULT_SPEED * SPEED_FACTOR * dt;
+
+	if (isKeyPressed(GLFW_KEY_A))
+	{
+		glm::vec3 right = glm::normalize(glm::cross(up, dir));
+		pos = pos - right * speed;
+	}
+	if (isKeyPressed(GLFW_KEY_D))
+	{
+		glm::vec3 right = glm::normalize(glm::cross(up, dir));
+		pos = pos + right * speed;
+	}
+	if (isKeyPressed(GLFW_KEY_W))
+	{
+		pos = pos + dir * speed;
+	}
+	if (isKeyPressed(GLFW_KEY_S))
+	{
+		pos = pos - dir * speed;
+	}
+
+	if (isKeyPressed(GLFW_KEY_LEFT))
+	{
+		glm::vec3 right = glm::normalize(glm::cross(up, dir));
+		right = glm::rotate(right, -rotSpeed, GLOBAL_UP);
+		if (glm::length(up - GLOBAL_UP) > 0.0001f)
+			up = glm::rotate(up, -rotSpeed, GLOBAL_UP);
+		up = glm::normalize(up);
+		dir = glm::normalize(glm::cross(right, up));
+	}
+	if (isKeyPressed(GLFW_KEY_RIGHT))
+	{
+		glm::vec3 right = glm::normalize(glm::cross(up, dir));
+		right = glm::rotate(right, rotSpeed, GLOBAL_UP);
+		if (glm::length(up - GLOBAL_UP) > 0.0001f)
+			up = glm::rotate(up, rotSpeed, GLOBAL_UP);
+		up = glm::normalize(up);
+		dir = glm::normalize(glm::cross(right, up));
+	}
+	if (isKeyPressed(GLFW_KEY_UP))
+	{
+		glm::vec3 right = glm::normalize(glm::cross(up, dir));
+		up = glm::rotate(up, rotSpeed, right);
+		up = glm::normalize(up);
+		dir = glm::normalize(glm::cross(right, up));
+	}
+	if (isKeyPressed(GLFW_KEY_DOWN))
+	{
+		glm::vec3 right = glm::normalize(glm::cross(up, dir));
+		up = glm::rotate(up, -rotSpeed, right);
+		up = glm::normalize(up);
+		dir = glm::normalize(glm::cross(right, up));
+	}
+
+	return glm::lookAt(pos, pos + dir, up);
 }
