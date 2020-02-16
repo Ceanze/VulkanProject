@@ -19,7 +19,7 @@ public:
 	
 	// Record command functions
 	void begin(VkCommandBufferUsageFlags flags);
-	void cmdBeginRenderPass(RenderPass* renderPass, VkFramebuffer framebuffer, VkExtent2D extent, VkClearValue clearColor);
+	void cmdBeginRenderPass(RenderPass* renderPass, VkFramebuffer framebuffer, VkExtent2D extent, const std::vector<VkClearValue>& clearValues);
 	void cmdBindPipeline(Pipeline* pipeline);
 	void cmdBindVertexBuffers(uint32_t firstBinding, uint32_t bindingCount, const VkBuffer* buffers, const VkDeviceSize* offsets);
 	void cmdBindIndexBuffer(VkBuffer buffer, VkDeviceSize offset, VkIndexType indexType);

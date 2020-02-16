@@ -35,9 +35,11 @@ void GLTFTest::init()
 
 	// Add attachments
 	this->renderPass.addDefaultColorAttachment(this->swapChain.getImageFormat());
+	this->renderPass.addDefaultDepthAttachment();
 
 	RenderPass::SubpassInfo subpassInfo;
-	subpassInfo.colorAttachmentIndices = { 0 };
+	subpassInfo.colorAttachmentIndices = { 0 }; // One color attachment
+	subpassInfo.depthStencilAttachmentIndex = 1; // Depth attachment
 	this->renderPass.addSubpass(subpassInfo);
 
 	VkSubpassDependency subpassDependency = {};
@@ -50,10 +52,37 @@ void GLTFTest::init()
 	this->renderPass.addSubpassDependency(subpassDependency);
 	this->renderPass.init();
 
+	this->commandPool.init(CommandPool::Queue::GRAPHICS);
+	JAS_INFO("Created Command Pool!");
+
 	setupPreTEMP();
+
+	// Depth texture
+	VkFormat depthFormat = findDepthFormat(Instance::get().getPhysicalDevice());
+	std::vector<uint32_t> queueIndices = { findQueueIndex(VK_QUEUE_GRAPHICS_BIT, Instance::get().getPhysicalDevice()) };
+	this->depthTexture.init(this->swapChain.getExtent().width, this->swapChain.getExtent().height,
+		depthFormat, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, queueIndices);
+
+	// Bind image to memory.
+	this->imageMemory.bindTexture(&this->depthTexture);
+	this->imageMemory.init(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+	// Create image view for the depth texture.
+	this->depthTexture.getImageView().init(this->depthTexture.getVkImage(), VK_IMAGE_VIEW_TYPE_2D, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
+
+	// Transistion image
+	Image::TransistionDesc desc;
+	desc.format = VK_FORMAT_R8G8B8A8_UNORM;
+	desc.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	desc.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+	desc.pool = &this->commandPool;
+	this->depthTexture.getImage().transistionLayout(desc);
+
+	// Pipeline
 	this->pipeline.setDescriptorLayouts(this->descManager.getLayouts());
 	this->pipeline.setGraphicsPipelineInfo(this->swapChain.getExtent(), &this->renderPass);
 	PipelineInfo pipInfo;
+	// Vertex input info
 	pipInfo.vertexInputInfo = {};
 	pipInfo.vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 	auto bindingDescription = Vertex::getBindingDescription();
@@ -66,15 +95,13 @@ void GLTFTest::init()
 	this->pipeline.init(Pipeline::Type::GRAPHICS, &this->shader);
 	JAS_INFO("Created Renderer!");
 
-	this->commandPool.init(CommandPool::Queue::GRAPHICS);
-	JAS_INFO("Created Command Pool!");
-
 	this->framebuffers.resize(this->swapChain.getNumImages());
 
 	for (size_t i = 0; i < this->swapChain.getNumImages(); i++)
 	{
 		std::vector<VkImageView> imageViews;
-		imageViews.push_back(this->swapChain.getImageViews()[i]);
+		imageViews.push_back(this->swapChain.getImageViews()[i]);  // Add color attachment
+		imageViews.push_back(this->depthTexture.getVkImageView()); // Add depth image view
 		this->framebuffers[i].init(this->swapChain.getNumImages(), &this->renderPass, imageViews, this->swapChain.getExtent());
 	}
 
@@ -99,6 +126,9 @@ void GLTFTest::cleanup()
 {
 	vkDeviceWaitIdle(Instance::get().getDevice());
 
+	this->depthTexture.cleanup();
+	this->imageMemory.cleanup();
+
 	this->bufferUniform.cleanup();
 	this->bufferVert.cleanup();
 	this->bufferInd.cleanup();
@@ -119,7 +149,6 @@ void GLTFTest::cleanup()
 
 void GLTFTest::setupPreTEMP()
 {
-	//this->descLayout.add(new SSBO(VK_SHADER_STAGE_VERTEX_BIT, 1, nullptr)); // Positions
 	this->descLayout.add(new UBO(VK_SHADER_STAGE_VERTEX_BIT, 1, nullptr)); // Uniforms
 	this->descLayout.init();
 
@@ -214,7 +243,13 @@ void GLTFTest::setupPostTEMP()
 	for (int i = 0; i < this->swapChain.getNumImages(); i++) {
 		this->cmdBuffs[i] = this->commandPool.createCommandBuffer();
 		this->cmdBuffs[i]->begin(0);
-		this->cmdBuffs[i]->cmdBeginRenderPass(&this->renderPass, this->framebuffers[i].getFramebuffer(), this->swapChain.getExtent(), { 0.0f, 0.0f, 0.0f, 1.0f });
+		std::vector<VkClearValue> clearValues = {};
+		VkClearValue value;
+		value.color = { 0.0f, 0.0f, 0.0f, 1.0f };
+		clearValues.push_back(value);
+		value.depthStencil = { 1.0f, 0 };
+		clearValues.push_back(value);
+		this->cmdBuffs[i]->cmdBeginRenderPass(&this->renderPass, this->framebuffers[i].getFramebuffer(), this->swapChain.getExtent(), clearValues);
 		this->cmdBuffs[i]->cmdBindPipeline(&this->pipeline);
 		VkBuffer vertexBuffers[] = { this->bufferVert.getBuffer() };
 		VkDeviceSize vertOffsets[] = { 0 };

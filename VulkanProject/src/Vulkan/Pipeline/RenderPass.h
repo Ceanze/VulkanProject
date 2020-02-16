@@ -41,7 +41,9 @@ private:
 		std::vector<VkAttachmentReference> inputAttachments;
 		std::vector<VkAttachmentReference> colorAttachments;
 		std::vector<uint32_t> preserveAttachments;
+		bool hasDepthStencilAttachment = false;
 		VkAttachmentReference depthStencilAttachment = {};
+		bool hasResolveAttachment = false;
 		VkAttachmentReference resolveAttachment = {};
 	};
 

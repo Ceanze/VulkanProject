@@ -12,7 +12,7 @@ ImageView::~ImageView()
 {
 }
 
-void ImageView::init(VkImage image, VkImageViewType type, VkFormat format)
+void ImageView::init(VkImage image, VkImageViewType type, VkFormat format, VkImageAspectFlags aspectMask)
 {
 	VkImageViewCreateInfo createInfo = {};
 	createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -26,7 +26,7 @@ void ImageView::init(VkImage image, VkImageViewType type, VkFormat format)
 	createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
 	createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
 
-	createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	createInfo.subresourceRange.aspectMask = aspectMask;
 	createInfo.subresourceRange.baseMipLevel = 0;
 	createInfo.subresourceRange.levelCount = 1;
 	createInfo.subresourceRange.baseArrayLayer = 0;

@@ -50,7 +50,7 @@ void CommandBuffer::begin(VkCommandBufferUsageFlags flags)
 	ERROR_CHECK(vkBeginCommandBuffer(this->buffer, &beginInfo), "Failed to begin recording command buffer!");
 }
 
-void CommandBuffer::cmdBeginRenderPass(RenderPass* renderPass, VkFramebuffer framebuffer, VkExtent2D extent, VkClearValue clearColor)
+void CommandBuffer::cmdBeginRenderPass(RenderPass* renderPass, VkFramebuffer framebuffer, VkExtent2D extent, const std::vector<VkClearValue>& clearValues)
 {	
 	VkRenderPassBeginInfo renderPassInfo = {};
 	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -58,8 +58,8 @@ void CommandBuffer::cmdBeginRenderPass(RenderPass* renderPass, VkFramebuffer fra
 	renderPassInfo.framebuffer = framebuffer;
 	renderPassInfo.renderArea.offset = { 0, 0 };
 	renderPassInfo.renderArea.extent = extent;
-	renderPassInfo.clearValueCount = 1;
-	renderPassInfo.pClearValues = &clearColor;
+	renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+	renderPassInfo.pClearValues = clearValues.data();
 	renderPassInfo.pNext = nullptr;
 
 	vkCmdBeginRenderPass(this->buffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);

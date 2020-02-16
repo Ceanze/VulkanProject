@@ -18,6 +18,7 @@
 
 #include "Vulkan/Buffers/Buffer.h"
 #include "Vulkan/Buffers/Memory.h"
+#include "Vulkan/Texure.h"
 
 class GLTFTest
 {
@@ -86,5 +87,7 @@ private:
 	Buffer bufferInd;
 	Buffer bufferVert;
 	Buffer bufferUniform;
+	Texture depthTexture;
 	Memory memory; // Holds vertex and index data.
+	Memory imageMemory;
 };

@@ -73,7 +73,11 @@ void Renderer::run()
 	for (int i = 0; i < this->swapChain.getNumImages(); i++) {
 		cmdBuffs[i] = this->commandPool.createCommandBuffer();
 		cmdBuffs[i]->begin(0);
-		cmdBuffs[i]->cmdBeginRenderPass(&this->renderPass, this->framebuffers[i].getFramebuffer(), this->swapChain.getExtent(), {0.0f, 0.0f, 0.0f, 1.0f});
+		std::vector<VkClearValue> clearValues = {};
+		VkClearValue value;
+		value.color = { 0.0f, 0.0f, 0.0f, 1.0f };
+		clearValues.push_back(value);
+		cmdBuffs[i]->cmdBeginRenderPass(&this->renderPass, this->framebuffers[i].getFramebuffer(), this->swapChain.getExtent(), clearValues);
 		cmdBuffs[i]->cmdBindPipeline(&this->pipeline);
 		std::vector<VkDescriptorSet> sets = { this->descManager.getSet(i, 0) };
 		std::vector<uint32_t> offsets;
@@ -155,7 +159,7 @@ void Renderer::setupPostTEMP()
 	this->memoryTexture.bindTexture(&this->texture);
 	this->memoryTexture.init(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
-	this->texture.getImageView().init(this->texture.getVkImage(), VK_IMAGE_VIEW_TYPE_2D, VK_FORMAT_R8G8B8A8_UNORM);
+	this->texture.getImageView().init(this->texture.getVkImage(), VK_IMAGE_VIEW_TYPE_2D, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT);
 
 	// Update buffer
 	this->memory.directTransfer(&this->buffer, (void*)&uvs[0], size, 0);

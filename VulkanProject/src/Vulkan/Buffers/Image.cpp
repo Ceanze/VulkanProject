@@ -28,7 +28,7 @@ void Image::init(uint32_t width, uint32_t height, VkFormat format, VkImageUsageF
 	imageInfo.arrayLayers = 1;
 	imageInfo.format = format;
 	//If you want to be able to directly access texels in the memory of the image, then you must use VK_IMAGE_TILING_LINEAR
-	imageInfo.tiling = VK_IMAGE_TILING_LINEAR;
+	imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
 	imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	imageInfo.usage = usage;
 	imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;

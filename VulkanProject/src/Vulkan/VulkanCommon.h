@@ -132,5 +132,5 @@ static uint32_t findMemoryType(VkPhysicalDevice physicalDevice, uint32_t typeFil
 		}
 	}
 
-	throw std::runtime_error("failed to find suitable memory type!");
+	JAS_ASSERT(false, "Failed to find suitable memory type!");
 }
