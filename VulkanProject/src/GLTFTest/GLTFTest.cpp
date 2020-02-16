@@ -172,7 +172,9 @@ void GLTFTest::setupPreTEMP()
 void GLTFTest::setupPostTEMP()
 {
 	const std::string filePath = "..\\assets\\Models\\Cube\\Cube.gltf";
+	//const std::string filePath = "..\\assets\\Models\\FlightHelmet\\FlightHelmet.gltf";
 	loadModel(filePath);
+
 	JAS_INFO("Loaded model");
 
 	JAS_INFO("Processing data...");
@@ -214,6 +216,7 @@ void GLTFTest::setupPostTEMP()
 	size_t vertSize = positionsAccessor.count * sizeof(Vertex);
 
 	// Fill vertex data.
+	JAS_INFO("Construct vertex data");
 	std::vector<Vertex> vertices(positionsAccessor.count);
 	for (size_t i = 0; i < positionsAccessor.count; i++)
 	{
@@ -299,6 +302,144 @@ void GLTFTest::loadModel(const std::string& filePath)
 	}
 	
 	JAS_ASSERT(ret, "Failed to parse glTF\n");
+
+	loadTextures(this->model);
+	loadMaterials(this->model);
+	loadScenes(this->model);
+}
+
+void GLTFTest::loadTextures(tinygltf::Model& model)
+{
+	// TODO: Load all textures into memory and index them when needed.
+	JAS_INFO("Textures:");
+	if (model.textures.empty()) JAS_INFO(" ->No textures");
+	for (size_t textureIndex = 0; textureIndex < model.textures.size(); textureIndex++)
+	{
+		tinygltf::Texture& texture = model.textures[textureIndex];
+		tinygltf::Image& image = model.images[texture.source];
+		JAS_INFO(" ->[{0}] name: {1} uri: {2}", textureIndex, texture.name.c_str(), image.uri.c_str());
+	}
+
+	// TODO: Load all samplers into memory and index them when needed.
+	JAS_INFO("Samplers:");
+	if (model.samplers.empty()) JAS_INFO(" ->No samplers");
+	for (size_t samplersIndex = 0; samplersIndex < model.samplers.size(); samplersIndex++)
+	{
+		tinygltf::Sampler& samplers = model.samplers[samplersIndex];
+		JAS_INFO(" ->[{0}] name: {1}", samplersIndex, samplers.name.c_str());
+	}
+}
+
+void GLTFTest::loadMaterials(tinygltf::Model& model)
+{
+	// TODO: Load all materials into memory and index them when needed.
+	JAS_INFO("Materials:");
+	if (model.materials.empty()) JAS_INFO(" ->No materials");
+	for (size_t materialIndex = 0; materialIndex < model.materials.size(); materialIndex++)
+	{
+		tinygltf::Material& material = model.materials[materialIndex];
+		JAS_INFO(" ->[{0}] name: {1}", materialIndex, material.name.c_str());
+	}
+}
+
+void GLTFTest::loadScenes(tinygltf::Model& model)
+{
+	for (auto& scene : model.scenes)
+	{
+		JAS_INFO("Scene: {0}", scene.name.c_str());
+		// Load each node in the scene
+		for (size_t nodeIndex = 0; nodeIndex < scene.nodes.size(); nodeIndex++)
+		{
+			tinygltf::Node& node = model.nodes[scene.nodes[nodeIndex]];
+			loadNode(node, " ");
+		}
+	}
+}
+
+void GLTFTest::loadNode(tinygltf::Node& node, std::string indents)
+{
+	//TODO: Load attribute buffers and index buffer into memory for use.
+	JAS_INFO("{0}->Node [{1}]", indents.c_str(), node.name.c_str());
+
+	if (!node.scale.empty())
+		JAS_INFO("{0} ->Has scale: ({1}, {2}, {3})", indents.c_str(), node.scale[0], node.scale[1], node.scale[2]);
+	if (!node.translation.empty())
+		JAS_INFO("{0} ->Has translation: ({1}, {2}, {3})", indents.c_str(), node.translation[0], node.translation[1], node.translation[2]);
+	if (!node.rotation.empty())
+		JAS_INFO("{0} ->Has rotation: ({1}, {2}, {3}, {4})", indents.c_str(), node.rotation[0], node.rotation[1], node.rotation[2], node.rotation[3]);
+	if (!node.matrix.empty())
+		JAS_INFO("{0} ->Has matrix!", indents.c_str());
+
+	// Check if it has a mesh
+	if (node.mesh != -1)
+	{
+		tinygltf::Mesh& mesh = model.meshes[node.mesh];
+		tinygltf::Primitive& primitive = mesh.primitives[0]; // Take first primitive. This holds the attributes, material, indices and the topology type (mode)
+		JAS_ASSERT(primitive.mode == TINYGLTF_MODE_TRIANGLES, "Only support topology type TRIANGLE_LIST!");
+
+		if (primitive.material != -1)
+		{
+			JAS_WARN("{0}  ->Has material!", indents.c_str());
+		}
+
+		// Check if it has indices
+		if (primitive.indices != -1)
+		{
+			JAS_WARN("{0}  ->Has indices!", indents.c_str());
+			tinygltf::Accessor& accessor = model.accessors[primitive.indices];
+			tinygltf::BufferView& bufferView = model.bufferViews[accessor.bufferView];
+			tinygltf::Buffer& buffer = model.buffers[bufferView.buffer];
+			unsigned char* indicesData = &buffer.data.at(0) + bufferView.byteOffset;
+			size_t compSize = 0;
+			switch (accessor.componentType)
+			{
+			case TINYGLTF_COMPONENT_TYPE_BYTE:				compSize = sizeof(int8_t);		JAS_INFO("{0}   ->Component type: BYTE", indents.c_str()); break;
+			case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:		compSize = sizeof(uint8_t);		JAS_INFO("{0}   ->Component type: UNSIGNED_BYTE", indents.c_str()); break;
+			case TINYGLTF_COMPONENT_TYPE_DOUBLE:			compSize = sizeof(double);		JAS_INFO("{0}   ->Component type: DOUBLE", indents.c_str()); break;
+			case TINYGLTF_COMPONENT_TYPE_FLOAT:				compSize = sizeof(float);		JAS_INFO("{0}   ->Component type: FLOAT", indents.c_str()); break;
+			case TINYGLTF_COMPONENT_TYPE_INT:				compSize = sizeof(int32_t);		JAS_INFO("{0}   ->Component type: INT", indents.c_str()); break;
+			case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:		compSize = sizeof(uint32_t);	JAS_INFO("{0}   ->Component type: UNSIGNED_INT", indents.c_str()); break;
+			case TINYGLTF_COMPONENT_TYPE_SHORT:				compSize = sizeof(int16_t);		JAS_INFO("{0}   ->Component type: SHORT", indents.c_str()); break;
+			case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:	compSize = sizeof(uint16_t);	JAS_INFO("{0}   ->Component type: UNSIGNED_SHORT", indents.c_str()); break;
+			}
+			JAS_INFO("{0}   ->Component type size: {1} bytes", indents.c_str(), compSize);
+			JAS_INFO("{0}   ->Type: 0x{1:b}", indents.c_str(), accessor.type);
+			JAS_INFO("{0}   ->Count: {1}", indents.c_str(), accessor.count);
+		}
+
+		JAS_INFO("{0}  ->Attributes", indents.c_str());
+		for (auto& attrib : primitive.attributes)
+		{
+			JAS_WARN("{0}   ->Attribute: {1}", indents.c_str(), attrib.first.c_str());
+			tinygltf::Accessor& accessor = model.accessors[attrib.second];
+			tinygltf::BufferView& bufferView = model.bufferViews[accessor.bufferView];
+			tinygltf::Buffer& buffer = model.buffers[bufferView.buffer];
+			unsigned char* attribData = &buffer.data.at(0) + bufferView.byteOffset;
+			size_t compSize = 0;
+			switch (accessor.componentType)
+			{
+			case TINYGLTF_COMPONENT_TYPE_BYTE:				compSize = sizeof(int8_t);		JAS_INFO("{0}    ->Component type: BYTE", indents.c_str()); break;
+			case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:		compSize = sizeof(uint8_t);		JAS_INFO("{0}    ->Component type: UNSIGNED_BYTE", indents.c_str()); break;
+			case TINYGLTF_COMPONENT_TYPE_DOUBLE:			compSize = sizeof(double);		JAS_INFO("{0}    ->Component type: DOUBLE", indents.c_str()); break;
+			case TINYGLTF_COMPONENT_TYPE_FLOAT:				compSize = sizeof(float);		JAS_INFO("{0}    ->Component type: FLOAT", indents.c_str()); break;
+			case TINYGLTF_COMPONENT_TYPE_INT:				compSize = sizeof(int32_t);		JAS_INFO("{0}    ->Component type: INT", indents.c_str()); break;
+			case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:		compSize = sizeof(uint32_t);	JAS_INFO("{0}    ->Component type: UNSIGNED_INT", indents.c_str()); break;
+			case TINYGLTF_COMPONENT_TYPE_SHORT:				compSize = sizeof(int16_t);		JAS_INFO("{0}    ->Component type: SHORT", indents.c_str()); break;
+			case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:	compSize = sizeof(uint16_t);	JAS_INFO("{0}    ->Component type: UNSIGNED_SHORT", indents.c_str()); break;
+			}
+			JAS_INFO("{0}    ->Component type size: {1} bytes", indents.c_str(), compSize);
+			JAS_INFO("{0}    ->Type: 0x{1:b}", indents.c_str(), accessor.type);
+			JAS_INFO("{0}    ->Count: {1}", indents.c_str(), accessor.count);
+		}
+	}
+
+	if(!node.children.empty())
+		JAS_INFO("{0} ->Children:", indents.c_str());
+	for (size_t childIndex = 0; childIndex < node.children.size(); childIndex++)
+	{
+		tinygltf::Node& child = model.nodes[node.children[childIndex]];
+		loadNode(child, indents+"  ");
+	}
 }
 
 glm::mat4 GLTFTest::getViewFromCamera(float dt)

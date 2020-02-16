@@ -69,6 +69,10 @@ private:
 	void setupPostTEMP();
 
 	void loadModel(const std::string& filePath);
+	void loadTextures(tinygltf::Model& model);
+	void loadMaterials(tinygltf::Model& model);
+	void loadScenes(tinygltf::Model& model);
+	void loadNode(tinygltf::Node& node, std::string indents);
 	glm::mat4 getViewFromCamera(float dt);
 
 private:
