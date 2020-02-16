@@ -85,6 +85,7 @@
       <Filter>Vulkan</Filter>
     </ClInclude>
     <ClInclude Include="src\jaspch.h" />
+    <ClInclude Include="src\GLTFTest\GLTFTest.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Core\Logger.cpp">
@@ -149,5 +150,6 @@
     </ClCompile>
     <ClCompile Include="src\jaspch.cpp" />
     <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\GLTFTest\GLTFTest.cpp" />
   </ItemGroup>
 </Project>

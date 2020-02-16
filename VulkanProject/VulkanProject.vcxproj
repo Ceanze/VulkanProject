@@ -104,6 +104,7 @@
   <ItemGroup>
     <ClInclude Include="src\Core\Logger.h" />
     <ClInclude Include="src\Core\Window.h" />
+    <ClInclude Include="src\GLTFTest\GLTFTest.h" />
     <ClInclude Include="src\Vulkan\Buffers\Buffer.h" />
     <ClInclude Include="src\Vulkan\Buffers\Framebuffer.h" />
     <ClInclude Include="src\Vulkan\Buffers\Image.h" />
@@ -130,6 +131,7 @@
   <ItemGroup>
     <ClCompile Include="src\Core\Logger.cpp" />
     <ClCompile Include="src\Core\Window.cpp" />
+    <ClCompile Include="src\GLTFTest\GLTFTest.cpp" />
     <ClCompile Include="src\Vulkan\Buffers\Buffer.cpp" />
     <ClCompile Include="src\Vulkan\Buffers\Framebuffer.cpp" />
     <ClCompile Include="src\Vulkan\Buffers\Image.cpp" />

@@ -3,7 +3,7 @@
 #include "Vulkan/Instance.h"
 
 #include <GLFW/glfw3.h>
-#define STB_IMAGE_IMPLEMENTATION
+//#define STB_IMAGE_IMPLEMENTATION
 #include <stb/stb_image.h>
 
 Renderer::Renderer()
