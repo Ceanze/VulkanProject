@@ -15,7 +15,8 @@ public:
 	bool isKeyToggled(int key);
 
 	void updateCursor(double deltaX, double deltaY);
-	void updateKey(int key, bool pressed);
+	void setKeyPressed(int key);
+	void setKeyReleased(int key);
 private:
 	Input();
 	Input(Input& other) = delete;
@@ -23,4 +24,5 @@ private:
 	double deltaX, deltaY;
 
 	std::unordered_map<int, bool> keys;
+	std::unordered_map<int, bool> toggledKeys;
 };
