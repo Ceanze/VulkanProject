@@ -72,9 +72,9 @@ void Window::keyCallback(GLFWwindow* window, int key, int scancode, int action, 
 		Window::open = false;
 
 	if (action == GLFW_PRESS)
-		Input::get().updateKey(key, true);
+		Input::get().setKeyPressed(key);
 	else if (action == GLFW_RELEASE)
-		Input::get().updateKey(key, false);
+		Input::get().setKeyReleased(key);
 }
 
 void Window::mouseCallback(GLFWwindow* window, double xpos, double ypos)
@@ -84,7 +84,10 @@ void Window::mouseCallback(GLFWwindow* window, double xpos, double ypos)
 		int width, height;
 		glfwGetWindowSize(window, &width, &height);
 		glfwSetCursorPos(window, (double)width * 0.5, (double)height * 0.5);
+		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
 		// Send cursor offset from centre of window
 		input.updateCursor(xpos - (double)width * 0.5, ypos - (double)height * 0.5);
 	}
+	else
+		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 }
