@@ -11,9 +11,13 @@ Input& Input::get()
 	return singleton;
 }
 
-glm::vec2 Input::getCursorDelta() const
+glm::vec2 Input::getCursorDelta()
 {
-	return glm::vec2(this->deltaX, this->deltaY);
+	glm::vec2 cursorDelta(this->deltaX, this->deltaY);
+	this->deltaX = 0;
+	this->deltaY = 0;
+
+	return cursorDelta;
 }
 
 void Input::updateCursor(double deltaX, double deltaY)

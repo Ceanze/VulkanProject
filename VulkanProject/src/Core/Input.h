@@ -10,7 +10,7 @@ public:
 
 	static Input& get();
 
-	glm::vec2 getCursorDelta() const;
+	glm::vec2 getCursorDelta();
 	bool isKeyDown(int key);
 
 	void updateCursor(double deltaX, double deltaY);
