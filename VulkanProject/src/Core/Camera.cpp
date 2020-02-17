@@ -12,7 +12,7 @@ Camera::Camera(float aspect, float fov, const glm::vec3& position, const glm::ve
 	this->fov = fov;
 	this->nearPlane = 0.001f;
 	this->farPlane = 100.f;
-	this->yaw = 0;
+	this->yaw = 270;
 	this->pitch = 0;
 	this->roll = 0;
 }
@@ -41,7 +41,7 @@ void Camera::update(float dt)
 		this->position += this->up * this->speed * dt;
 
 	glm::vec2 cursorDelta = input.getCursorDelta();
-	cursorDelta *= 0.05f;
+	cursorDelta *= 0.1f;
 
 	this->yaw += cursorDelta.x;
 	this->pitch += cursorDelta.y;

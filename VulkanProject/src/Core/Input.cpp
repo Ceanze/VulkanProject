@@ -36,6 +36,11 @@ bool Input::isKeyDown(int key)
 	return this->keys[key];
 }
 
+bool Input::isKeyToggled(int key)
+{
+	return this->keys[key];
+}
+
 Input::Input() 
 	: deltaX(0.0), deltaY(0.0)
 {

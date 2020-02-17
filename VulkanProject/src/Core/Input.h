@@ -12,6 +12,7 @@ public:
 
 	glm::vec2 getCursorDelta();
 	bool isKeyDown(int key);
+	bool isKeyToggled(int key);
 
 	void updateCursor(double deltaX, double deltaY);
 	void updateKey(int key, bool pressed);

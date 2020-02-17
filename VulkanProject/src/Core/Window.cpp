@@ -79,12 +79,12 @@ void Window::keyCallback(GLFWwindow* window, int key, int scancode, int action, 
 
 void Window::mouseCallback(GLFWwindow* window, double xpos, double ypos)
 {
-	int width, height;
-	glfwGetWindowSize(window, &width, &height);
-	glfwSetCursorPos(window, (double)width * 0.5, (double)height * 0.5);
-
-
-	// Send cursor offset from centre of window
-	Input::get().updateCursor(xpos - (double)width * 0.5, ypos - (double)height * 0.5);
-
+	Input &input = Input::get();
+	if (input.isKeyToggled(GLFW_KEY_C)) {
+		int width, height;
+		glfwGetWindowSize(window, &width, &height);
+		glfwSetCursorPos(window, (double)width * 0.5, (double)height * 0.5);
+		// Send cursor offset from centre of window
+		input.updateCursor(xpos - (double)width * 0.5, ypos - (double)height * 0.5);
+	}
 }
