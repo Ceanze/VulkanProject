@@ -7,55 +7,54 @@
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/quaternion.hpp>
 
-struct VertexAttribs
+struct Vertex
 {
-	struct Attrib
-	{
-		VkFormat format;
-		uint32_t offset;
-		uint32_t stride;
-		uint32_t location;
-		uint32_t binding;
-	};
-	std::vector<Attrib> attribs;
+	glm::vec3 pos;
+	glm::vec3 nor;
+	glm::vec2 uv0;
 
-	std::vector<VkVertexInputBindingDescription> getBindingDescriptions() {
-		std::vector<VkVertexInputBindingDescription > bindingDescriptions = {};
-		for (Attrib& attrib : this->attribs)
-		{
-			VkVertexInputBindingDescription attribDesc;
-			attribDesc.binding = attrib.binding;
-			attribDesc.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-			attribDesc.stride = attrib.stride;
-			bindingDescriptions.push_back(attribDesc);
-		}
-		return bindingDescriptions;
+	static VkVertexInputBindingDescription getBindingDescriptions() {
+		VkVertexInputBindingDescription bindingDescription = {};
+		bindingDescription.binding = 0;
+		bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+		bindingDescription.stride = sizeof(Vertex);
+		return bindingDescription;
 	}
 
-	std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions() {
-		std::vector<VkVertexInputAttributeDescription> attributeDescriptions = {};
-		for (Attrib& attrib : this->attribs)
-		{
-			VkVertexInputAttributeDescription attribDesc;
-			attribDesc.binding = attrib.binding;
-			attribDesc.location = attrib.location;
-			attribDesc.format = attrib.format;
-			attribDesc.offset = attrib.offset;
-			attributeDescriptions.push_back(attribDesc);
-		}
+	static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescriptions() {
+		std::array<VkVertexInputAttributeDescription, 3> attributeDescriptions = {};
+		// Position
+		attributeDescriptions[0].binding = 0;
+		attributeDescriptions[0].location = 0;
+		attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
+		attributeDescriptions[0].offset = offsetof(Vertex, pos);
+		// Normal
+		attributeDescriptions[1].binding = 0;
+		attributeDescriptions[1].location = 1;
+		attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+		attributeDescriptions[1].offset = offsetof(Vertex, nor);
+		// Uv0
+		attributeDescriptions[2].binding = 0;
+		attributeDescriptions[2].location = 2;
+		attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
+		attributeDescriptions[2].offset = offsetof(Vertex, uv0);
 		return attributeDescriptions;
 	}
+};
+
+struct Primitive
+{
+	uint32_t firstIndex{0};
+	uint32_t indexCount{0};
+	uint32_t vertexCount{0};
+	bool hasIndices{false};
 };
 
 class Mesh
 {
 public:
 	std::string name{"Mesh"};
-	bool hasIndices{false};
-	uint32_t numIndices{0};
-	Buffer indices;
-	std::unordered_map<std::string, Buffer> attributes; // Map attribute type to buffer. Type can be POSITION, NORMAL, TEXCOORD_0, TANGENT, ...
-	Memory bufferMemory; // Memory for position, normal, indices, texcoords ...
+	std::vector<Primitive> primitives;
 };
 
 class Model
@@ -63,7 +62,8 @@ class Model
 public:
 	struct Node
 	{
-		Mesh* mesh{ nullptr };
+		bool hasMesh{false};
+		Mesh mesh;
 		glm::vec3 translation;
 		glm::quat rotation;
 		glm::vec3 scale;
@@ -80,7 +80,12 @@ public:
 	std::vector<Node> nodes;
 	
 	// Data
-	std::vector<Mesh> meshes;
+	std::vector<uint32_t> indices;
+	std::vector<Vertex> vertices;
+	Buffer indexBuffer;
+	Buffer vertexBuffer;
+	Memory bufferMemory;
+
 	bool hasImageMemory{false};
 	bool hasMaterialMemory{ false };
 	Memory imageMemory;

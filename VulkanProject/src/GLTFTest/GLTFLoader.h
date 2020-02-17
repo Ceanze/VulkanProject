@@ -45,17 +45,11 @@ private:
 	void loadModel(Model& model, const std::string& filePath);
 	void loadTextures(Model& model, tinygltf::Model& gltfModel);
 	void loadMaterials(Model& model, tinygltf::Model& gltfModel);
-	void loadMeshes(Model& model, tinygltf::Model& gltfModel);
 	void loadScenes(Model& model, tinygltf::Model& gltfModel);
 	void loadNode(Model& model, Model::Node* node, tinygltf::Model& gltfModel, tinygltf::Node& gltfNode, std::string indents);
 	glm::mat4 getViewFromCamera(float dt);
 
 	void drawNode(int index, Model::Node& node);
-	void loadSimpleModel();
-
-	/* Utils functions */
-	size_t getComponentTypeSize(int);
-	size_t getNumComponentsPerElement(int type);
 
 private:
 	Window window;
@@ -73,15 +67,12 @@ private:
 	DescriptorManager descManager;
 
 	// For loading model
-	VertexAttribs vertexAttribs;
 	Model model;
 	tinygltf::TinyGLTF loader;
 
 	CommandBuffer* cmdBuffs[3];
-	Buffer bufferInd;
-	Buffer bufferVert;
 	Buffer bufferUniform;
 	Texture depthTexture;
-	Memory memory; // Holds vertex and index data.
-	Memory imageMemory;
+	Memory memory; // Holds uniform data
+	Memory imageMemory; // Holds depth texture
 };

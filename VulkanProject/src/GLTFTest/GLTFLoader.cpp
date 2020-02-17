@@ -12,6 +12,7 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/rotate_vector.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 GLTFLoader::GLTFLoader()
 {
@@ -85,11 +86,11 @@ void GLTFLoader::init()
 	// Vertex input info
 	pipInfo.vertexInputInfo = {};
 	pipInfo.vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-	auto bindingDescription = this->vertexAttribs.getBindingDescriptions();
-	auto attributeDescriptions = this->vertexAttribs.getAttributeDescriptions();
-	pipInfo.vertexInputInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(bindingDescription.size());
+	auto bindingDescription = Vertex::getBindingDescriptions();
+	auto attributeDescriptions = Vertex::getAttributeDescriptions();
+	pipInfo.vertexInputInfo.vertexBindingDescriptionCount = 1;
+	pipInfo.vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
 	pipInfo.vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
-	pipInfo.vertexInputInfo.pVertexBindingDescriptions = bindingDescription.data();
 	pipInfo.vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
 	this->pipeline.setPipelineInfo(PipelineInfoFlag::VERTEX_INPUT, pipInfo);
 	this->pipeline.init(Pipeline::Type::GRAPHICS, &this->shader);
@@ -148,11 +149,6 @@ void GLTFLoader::cleanup()
 	this->memory.cleanup();
 
 	this->model.cleanup();
-	if (this->model.meshes.empty())
-	{
-		this->bufferVert.cleanup();
-		this->bufferInd.cleanup();
-	}
 
 	this->descManager.cleanup();
 
@@ -177,7 +173,8 @@ void GLTFLoader::setupPreTEMP()
 	this->descManager.init(this->swapChain.getNumImages());
 
 	//const std::string filePath = "..\\assets\\Models\\Cube\\Cube.gltf";
-	const std::string filePath = "..\\assets\\Models\\FlightHelmet\\FlightHelmet.gltf";
+	//const std::string filePath = "..\\assets\\Models\\FlightHelmet\\FlightHelmet.gltf";
+	const std::string filePath = "..\\assets\\Models\\Sponza\\Sponza.gltf";
 	loadModel(this->model, filePath);
 }
 
@@ -187,7 +184,7 @@ void GLTFLoader::setupPostTEMP()
 	UboData uboData;
 	uboData.proj = glm::perspective(glm::radians(45.0f), (float)this->window.getWidth() / (float)this->window.getHeight(), 1.0f, 150.0f);
 	uboData.view = glm::lookAt(glm::vec3{ 0.0f, 0.0f, 10.f }, glm::vec3{ 0.0f, 0.0f, 0.0f }, glm::vec3{ 0.f, -1.f, 0.f });
-	uboData.world = glm::mat4(10.0f); // Scale by 10
+	uboData.world = glm::mat4(0.01f); // Scale by 0.01 SHOULD NOT BE SCALED HERE, USE TRANSFORM OF THE NODE (PUSH CONSTANTS)!!
 	uboData.world[3][3] = 1.0f;
 	uint32_t unsiformBufferSize = sizeof(UboData);
 
@@ -219,7 +216,14 @@ void GLTFLoader::setupPostTEMP()
 		clearValues.push_back(value);
 		this->cmdBuffs[i]->cmdBeginRenderPass(&this->renderPass, this->framebuffers[i].getFramebuffer(), this->swapChain.getExtent(), clearValues);
 
+		// TODO: Use different materials, can still use same pipeline if all meshes uses same type of material (i.e. PBR)!
 		this->cmdBuffs[i]->cmdBindPipeline(&this->pipeline);
+		VkBuffer vertexBuffers[] = { this->model.vertexBuffer.getBuffer() };
+		VkDeviceSize vertOffsets[] = { 0 };
+		this->cmdBuffs[i]->cmdBindVertexBuffers(0, 1, vertexBuffers, vertOffsets);
+		if(this->model.indices.empty() == false)
+			this->cmdBuffs[i]->cmdBindIndexBuffer(this->model.indexBuffer.getBuffer(), 0, VK_INDEX_TYPE_UINT32);
+
 		std::vector<VkDescriptorSet> sets = { this->descManager.getSet(i, 0) };
 		std::vector<uint32_t> offsets;
 		this->cmdBuffs[i]->cmdBindDescriptorSets(&this->pipeline, 0, sets, offsets);
@@ -257,7 +261,6 @@ void GLTFLoader::loadModel(Model& model, const std::string& filePath)
 
 	loadTextures(model, gltfModel);
 	loadMaterials(model, gltfModel);
-	loadMeshes(model, gltfModel);
 	loadScenes(model, gltfModel);
 }
 
@@ -295,161 +298,6 @@ void GLTFLoader::loadMaterials(Model& model, tinygltf::Model& gltfModel)
 	}
 }
 
-void GLTFLoader::loadMeshes(Model& model, tinygltf::Model& gltfModel)
-{
-	model.meshes.resize(gltfModel.meshes.size());
-
-	JAS_INFO("Meshes:");
-	if (gltfModel.meshes.empty()) JAS_INFO(" ->No meshes");
-	for (size_t meshIndex = 0; meshIndex < gltfModel.meshes.size(); meshIndex++)
-	{
-		tinygltf::Mesh& gltfMesh = gltfModel.meshes[meshIndex];
-		JAS_INFO(" ->Mesh: {0}", gltfMesh.name.c_str());
-
-		Mesh& mesh = model.meshes[meshIndex];
-		mesh.name = gltfMesh.name;
-
-		tinygltf::Primitive& primitive = gltfMesh.primitives[0]; // Take first primitive. This holds the attributes, material, indices and the topology type (mode)
-		JAS_ASSERT(primitive.mode == TINYGLTF_MODE_TRIANGLES, "Only support topology type TRIANGLE_LIST!");
-
-		if (primitive.material != -1)
-		{
-			JAS_WARN("   ->Has material!");
-		}
-
-		// Create memory and buffers (Need to be done before fetching the data)
-		size_t memSize = 0;
-		std::vector<uint32_t> queueIndices = { findQueueIndex(VK_QUEUE_GRAPHICS_BIT, Instance::get().getPhysicalDevice()) };
-		if (primitive.indices != -1)
-		{
-			JAS_WARN("   ->Has indices!");
-			mesh.hasIndices = true;
-			tinygltf::Accessor& accessor = gltfModel.accessors[primitive.indices];
-			size_t compSize = getComponentTypeSize(accessor.componentType);
-			size_t numComps = getNumComponentsPerElement(accessor.type);
-			size_t size = compSize * accessor.count * numComps;
-			memSize += size;
-
-			switch (accessor.componentType)
-			{
-			case TINYGLTF_COMPONENT_TYPE_BYTE:				JAS_INFO("    ->Component type: BYTE"); break;
-			case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:		JAS_INFO("    ->Component type: UNSIGNED_BYTE"); break;
-			case TINYGLTF_COMPONENT_TYPE_DOUBLE:			JAS_INFO("    ->Component type: DOUBLE"); break;
-			case TINYGLTF_COMPONENT_TYPE_FLOAT:				JAS_INFO("    ->Component type: FLOAT"); break;
-			case TINYGLTF_COMPONENT_TYPE_INT:				JAS_INFO("    ->Component type: INT"); break;
-			case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:		JAS_INFO("    ->Component type: UNSIGNED_INT"); break;
-			case TINYGLTF_COMPONENT_TYPE_SHORT:				JAS_INFO("    ->Component type: SHORT"); break;
-			case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:	JAS_INFO("    ->Component type: UNSIGNED_SHORT"); break;
-			}
-			JAS_INFO("    ->Component type size: {0} bytes", compSize);
-			// type can be: TINYGLTF_TYPE_SCALAR, TINYGLTF_TYPE_VECTOR, TINYGLTF_TYPE_MATRIX, TINYGLTF_TYPE_VEC2, TINYGLTF_TYPE_VEC3, TINYGLTF_TYPE_VEC4, TINYGLTF_TYPE_MAT2, TINYGLTF_TYPE_MAT3, TINYGLTF_TYPE_MAT4
-			JAS_INFO("    ->Type: 0x{0:b} ({1})", accessor.type, numComps);
-			JAS_INFO("    ->Count: {0}", accessor.count);
-
-			// Create buffer and bind it to memory.
-			mesh.indices.init(size, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, queueIndices);
-			mesh.bufferMemory.bindBuffer(&mesh.indices);
-			mesh.numIndices = accessor.count;
-		}
-		JAS_INFO("   ->Attributes");
-		for (auto& attrib : primitive.attributes)
-		{
-			JAS_WARN("    ->Attribute: {0}", attrib.first.c_str());
-			tinygltf::Accessor& accessor = gltfModel.accessors[attrib.second];
-			size_t compSize = getComponentTypeSize(accessor.componentType);
-			size_t numComps = getNumComponentsPerElement(accessor.type);
-			size_t size = compSize * accessor.count * numComps;
-			memSize += size;
-
-			switch (accessor.componentType)
-			{
-			case TINYGLTF_COMPONENT_TYPE_BYTE:				JAS_INFO("    ->Component type: BYTE"); break;
-			case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:		JAS_INFO("    ->Component type: UNSIGNED_BYTE"); break;
-			case TINYGLTF_COMPONENT_TYPE_DOUBLE:			JAS_INFO("    ->Component type: DOUBLE"); break;
-			case TINYGLTF_COMPONENT_TYPE_FLOAT:				JAS_INFO("    ->Component type: FLOAT"); break;
-			case TINYGLTF_COMPONENT_TYPE_INT:				JAS_INFO("    ->Component type: INT"); break;
-			case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:		JAS_INFO("    ->Component type: UNSIGNED_INT"); break;
-			case TINYGLTF_COMPONENT_TYPE_SHORT:				JAS_INFO("    ->Component type: SHORT"); break;
-			case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:	JAS_INFO("    ->Component type: UNSIGNED_SHORT"); break;
-			}
-			JAS_INFO("    ->Component type size: {0} bytes", compSize);
-			// type can be: TINYGLTF_TYPE_SCALAR, TINYGLTF_TYPE_VECTOR, TINYGLTF_TYPE_MATRIX, TINYGLTF_TYPE_VEC2, TINYGLTF_TYPE_VEC3, TINYGLTF_TYPE_VEC4, TINYGLTF_TYPE_MAT2, TINYGLTF_TYPE_MAT3, TINYGLTF_TYPE_MAT4
-			JAS_INFO("    ->Type: 0x{0:b} ({1})", accessor.type, numComps);
-			JAS_INFO("    ->Count: {0}", accessor.count);
-
-			// Create buffer and bind it to memory.
-			Buffer& buffer = mesh.attributes[attrib.first];
-			buffer.init(size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, queueIndices);
-			mesh.bufferMemory.bindBuffer(&buffer);
-		}
-		mesh.bufferMemory.init(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
-		// Upload data to GPU
-		if (primitive.indices != -1)
-		{
-			tinygltf::Accessor& accessor = gltfModel.accessors[primitive.indices];
-			size_t compSize = getComponentTypeSize(accessor.componentType);
-			size_t numComps = getNumComponentsPerElement(accessor.type);
-			size_t size = compSize * accessor.count * numComps;
-			tinygltf::BufferView& bufferView = gltfModel.bufferViews[accessor.bufferView];
-			tinygltf::Buffer& gltfBuffer = gltfModel.buffers[bufferView.buffer];
-			unsigned char* indicesData = &gltfBuffer.data.at(0) + bufferView.byteOffset;
-			mesh.bufferMemory.directTransfer(&mesh.indices, (void*)indicesData, (uint32_t)size, 0);
-			vkDeviceWaitIdle(Instance::get().getDevice());
-			//JAS_ERROR("INDEX count: {0}, compSize: {1}, #comps: {2}, size: {3}, offset: {4}", accessor.count, compSize, numComps, size, bufferView.byteOffset);
-		}
-		for (auto& attrib : primitive.attributes)
-		{
-			tinygltf::Accessor& accessor = gltfModel.accessors[attrib.second];
-			size_t compSize = getComponentTypeSize(accessor.componentType);
-			size_t numComps = getNumComponentsPerElement(accessor.type);
-			size_t size = compSize * accessor.count * numComps;
-			memSize += size;
-			tinygltf::BufferView& bufferView = gltfModel.bufferViews[accessor.bufferView];
-			tinygltf::Buffer& gltfBuffer = gltfModel.buffers[bufferView.buffer];
-			unsigned char* bufferData = &gltfBuffer.data.at(0) + bufferView.byteOffset;
-
-			Buffer& buffer = mesh.attributes[attrib.first];
-			mesh.bufferMemory.directTransfer(&buffer, (void*)bufferData, (uint32_t)size, 0);
-			vkDeviceWaitIdle(Instance::get().getDevice());
-			//JAS_ERROR("{0} count: {1}, compSize: {2}, #comps: {3}, size: {4}, offset: {5}", attrib.first.c_str(), accessor.count, compSize, numComps, size, bufferView.byteOffset);
-
-			// TODO: This can be different depending on mesh and can be more than just POSITION and TEXCOORD_0!!
-			if (attrib.first == "POSITION")
-			{
-				static bool hasAddedPosAttribute = false;
-				if (!hasAddedPosAttribute)
-				{
-					VertexAttribs::Attrib attrib;
-					attrib.format = VK_FORMAT_R32G32B32_SFLOAT;
-					attrib.offset = 0;
-					attrib.stride = sizeof(glm::vec3);
-					attrib.location = 0;
-					attrib.binding = 0;
-					this->vertexAttribs.attribs.push_back(attrib);
-					hasAddedPosAttribute = true;
-				}
-			}
-
-			if (attrib.first == "TEXCOORD_0")
-			{
-				static bool hasAddedUVAttribute = false;
-				if (!hasAddedUVAttribute)
-				{
-					VertexAttribs::Attrib attrib;
-					attrib.format = VK_FORMAT_R32G32_SFLOAT;
-					attrib.offset = 0;
-					attrib.stride = sizeof(glm::vec2);
-					attrib.location = 1;
-					attrib.binding = 1;
-					this->vertexAttribs.attribs.push_back(attrib);
-					hasAddedUVAttribute = true;
-				}
-			}
-		}
-	}
-}
-
 void GLTFLoader::loadScenes(Model& model, tinygltf::Model& gltfModel)
 {
 	for (auto& scene : gltfModel.scenes)
@@ -463,11 +311,31 @@ void GLTFLoader::loadScenes(Model& model, tinygltf::Model& gltfModel)
 			loadNode(model, &model.nodes[nodeIndex], gltfModel, node, " ");
 		}
 	}
+
+	// Create vertex and index buffers
+	std::vector<uint32_t> queueIndices = { findQueueIndex(VK_QUEUE_GRAPHICS_BIT, Instance::get().getPhysicalDevice()) };
+	uint32_t indicesSize = (uint32_t)(model.indices.size() * sizeof(uint32_t));
+	if (indicesSize > 0)
+	{
+		model.indexBuffer.init(indicesSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, queueIndices);
+		model.bufferMemory.bindBuffer(&model.indexBuffer);
+	}
+
+	uint32_t verticesSize = (uint32_t)(model.vertices.size() * sizeof(Vertex));
+	model.vertexBuffer.init(verticesSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, queueIndices);
+	model.bufferMemory.bindBuffer(&model.vertexBuffer);
+
+	// Create memory with the binded buffers
+	model.bufferMemory.init(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+	// Transfer data to buffers
+	if (indicesSize > 0)
+		model.bufferMemory.directTransfer(&model.indexBuffer, (const void*)model.indices.data(), indicesSize, 0);
+	model.bufferMemory.directTransfer(&model.vertexBuffer, (const void*)model.vertices.data(), verticesSize, 0);
 }
 
 void GLTFLoader::loadNode(Model& model, Model::Node* node, tinygltf::Model& gltfModel, tinygltf::Node& gltfNode, std::string indents)
 {
-	//TODO: Load attribute buffers and index buffer into memory for use.
 	JAS_INFO("{0}->Node [{1}]", indents.c_str(), gltfNode.name.c_str());
 
 	if (!gltfNode.scale.empty())
@@ -491,20 +359,124 @@ void GLTFLoader::loadNode(Model& model, Model::Node* node, tinygltf::Model& gltf
 		JAS_WARN("{0} ->Matrix NOT implemented!", indents.c_str());
 	}
 
-	// Check if it has a mesh
-	if (gltfNode.mesh != -1)
-	{
-		// Set mesh
-		node->mesh = &model.meshes[gltfNode.mesh];
-	}
-
-	if(!gltfNode.children.empty())
+	if (!gltfNode.children.empty())
 		JAS_INFO("{0} ->Children:", indents.c_str());
 	node->children.resize(gltfNode.children.size());
 	for (size_t childIndex = 0; childIndex < gltfNode.children.size(); childIndex++)
 	{
 		tinygltf::Node& child = gltfModel.nodes[gltfNode.children[childIndex]];
-		loadNode(model, &node->children[childIndex], gltfModel, child, indents+"  ");
+		loadNode(model, &node->children[childIndex], gltfModel, child, indents + "  ");
+	}
+
+	// Check if it has a mesh
+	node->hasMesh = gltfNode.mesh != -1;
+	if (node->hasMesh)
+	{
+		tinygltf::Mesh gltfMesh = gltfModel.meshes[gltfNode.mesh];
+		Mesh& mesh = node->mesh;
+		mesh.name = gltfMesh.name;
+		JAS_INFO("{0} ->Has mesh: {1}", indents.c_str(), mesh.name.c_str());
+
+		mesh.primitives.resize(gltfMesh.primitives.size());
+		for (size_t i = 0; i < gltfMesh.primitives.size(); i++)
+		{
+			Primitive& primitive = mesh.primitives[i];
+			primitive.firstIndex = static_cast<uint32_t>(model.indices.size());
+			uint32_t vertexStart = static_cast<uint32_t>(model.vertices.size()); // Used for indices.
+
+			tinygltf::Primitive& gltfPrimitive = gltfMesh.primitives[i];
+			
+			// Indicies
+			primitive.hasIndices = gltfPrimitive.indices != -1;
+			if(primitive.hasIndices)
+			{
+				JAS_INFO("{0}  ->Has indices", indents.c_str());
+				tinygltf::Accessor& indAccessor = gltfModel.accessors[gltfPrimitive.indices];
+				tinygltf::BufferView& indBufferView = gltfModel.bufferViews[indAccessor.bufferView];
+				tinygltf::Buffer& indBuffer = gltfModel.buffers[indBufferView.buffer];
+				unsigned char* indicesData = &indBuffer.data.at(0) + indBufferView.byteOffset;
+				size_t indByteStride = indAccessor.ByteStride(indBufferView);
+
+				primitive.indexCount = static_cast<uint32_t>(indAccessor.count);
+				const void* dataPtr = &indBuffer.data.at(0) + indBufferView.byteOffset;
+				for (size_t c = 0; c < indAccessor.count; c++)
+				{
+					switch (indAccessor.componentType)
+					{
+					case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
+					{
+						const uint8_t* data = static_cast<const uint8_t*>(dataPtr);
+						model.indices.push_back(data[c] + vertexStart);
+					}
+					break;
+					case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
+					{
+						const uint16_t* data = static_cast<const uint16_t*>(dataPtr);
+						model.indices.push_back(data[c] + vertexStart);
+					}
+					break;
+					case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
+					{
+						const uint32_t* data = static_cast<const uint32_t*>(dataPtr);
+						model.indices.push_back(data[c] + vertexStart);
+					}
+					break;
+					}
+				}
+			}
+
+			// Begin to fetch attributes and construct the vertices.
+			unsigned char* posData = nullptr; // Assume to be vec3
+			unsigned char* norData = nullptr; // Assume to be vec3
+			unsigned char* uv0Data = nullptr; // Assume to be vec2
+			size_t posByteStride = 0;
+			size_t norByteStride = 0;
+			size_t uv0ByteStride = 0;
+
+			auto& attributes = gltfPrimitive.attributes;
+
+			// POSITION
+			JAS_ASSERT(attributes.find("POSITION") != attributes.end(), "Primitive need to have one POSITION attribute!");
+			JAS_INFO("{0}  ->Has POSITION", indents.c_str());
+			tinygltf::Accessor& posAccessor = gltfModel.accessors[attributes["POSITION"]];
+			tinygltf::BufferView& posBufferView = gltfModel.bufferViews[posAccessor.bufferView];
+			tinygltf::Buffer& posBuffer = gltfModel.buffers[posBufferView.buffer];
+			posData = &posBuffer.data.at(0) + posBufferView.byteOffset;
+			primitive.vertexCount = posAccessor.count;
+			posByteStride = posAccessor.ByteStride(posBufferView);
+
+			// NORMAL
+			if (attributes.find("NORMAL") != attributes.end())
+			{
+				JAS_INFO("{0}  ->Has NORMAL", indents.c_str());
+				tinygltf::Accessor& accessor = gltfModel.accessors[attributes["NORMAL"]];
+				tinygltf::BufferView& bufferView = gltfModel.bufferViews[accessor.bufferView];
+				tinygltf::Buffer& buffer = gltfModel.buffers[bufferView.buffer];
+				norData = &buffer.data.at(0) + bufferView.byteOffset;
+				norByteStride = accessor.ByteStride(bufferView);
+			}
+
+			// TEXCOORD_0
+			if (attributes.find("TEXCOORD_0") != attributes.end())
+			{
+				JAS_INFO("{0}  ->Has TEXCOORD_0", indents.c_str());
+				tinygltf::Accessor& accessor = gltfModel.accessors[attributes["TEXCOORD_0"]];
+				tinygltf::BufferView& bufferView = gltfModel.bufferViews[accessor.bufferView];
+				tinygltf::Buffer& buffer = gltfModel.buffers[bufferView.buffer];
+				uv0Data = &buffer.data.at(0) + bufferView.byteOffset;
+				uv0ByteStride = accessor.ByteStride(bufferView);
+			}
+
+			// Construct vertex data
+			for (size_t v = 0; v < posAccessor.count; v++)
+			{
+				Vertex vert;
+				vert.pos = glm::make_vec3((const float*)(posData + v*posByteStride));
+				vert.nor = norData ? glm::normalize(glm::make_vec3((const float*)(norData + v*norByteStride))) : glm::vec3(0.0f);
+				vert.uv0 = uv0Data ? glm::make_vec2((const float*)(uv0Data + v*uv0ByteStride)) : glm::vec2(0.0f);
+				model.vertices.push_back(vert);
+			}
+		}
 	}
 }
 
@@ -585,201 +557,19 @@ glm::mat4 GLTFLoader::getViewFromCamera(float dt)
 
 void GLTFLoader::drawNode(int index, Model::Node& node)
 {
-	if (node.mesh != nullptr)
+	if (node.hasMesh)
 	{
-		VkBuffer vertexBuffers[] = { node.mesh->attributes["POSITION"].getBuffer(), node.mesh->attributes["TEXCOORD_0"].getBuffer() };
-		VkDeviceSize vertOffsets[] = { 0, 0 };
-		this->cmdBuffs[index]->cmdBindVertexBuffers(0, 2, vertexBuffers, vertOffsets);
-		this->cmdBuffs[index]->cmdBindIndexBuffer(node.mesh->indices.getBuffer(), 0, VK_INDEX_TYPE_UINT16); // Unsinged short
-		this->cmdBuffs[index]->cmdDrawIndexed(node.mesh->numIndices, 1, 0, 0, 0);
+		Mesh& mesh = node.mesh;
+		for (Primitive& primitive : mesh.primitives)
+		{
+			// TODO: Send node transformation as push constant per draw!
+
+			if (primitive.hasIndices)
+				this->cmdBuffs[index]->cmdDrawIndexed(primitive.indexCount, 1, primitive.firstIndex, 0, 0);
+			else
+				this->cmdBuffs[index]->cmdDraw(primitive.vertexCount, 1, 0, 0);
+		}
 	}
 	for (Model::Node& child : node.children)
 		drawNode(index, child);
-}
-
-void GLTFLoader::loadSimpleModel()
-{
-	tinygltf::Model model;
-	const std::string filePath = "..\\assets\\Models\\Cube\\Cube.gltf";
-
-	bool ret = false;
-	size_t pos = filePath.rfind('.');
-	if (pos != std::string::npos)
-	{
-		std::string err;
-		std::string warn;
-
-		std::string prefix = filePath.substr(pos);
-		if (prefix == ".gltf")
-			ret = this->loader.LoadASCIIFromFile(&model, &err, &warn, filePath);
-		else if (prefix == ".glb")
-			ret = this->loader.LoadBinaryFromFile(&model, &err, &warn, filePath); // for binary glTF(.glb)
-
-		if (!warn.empty()) JAS_WARN("GLTF Waring: {0}", warn.c_str());
-		if (!err.empty()) JAS_ERROR("GLTF Error: {0}", err.c_str());
-	}
-
-	JAS_ASSERT(ret, "Failed to parse glTF\n");
-
-	JAS_INFO("Loaded model");
-
-	JAS_INFO("Processing data...");
-	tinygltf::Scene & scene = model.scenes[0]; // nodes: 0
-	JAS_INFO("Scene 0");
-
-	tinygltf::Node & node = model.nodes[scene.nodes[0]]; // Name: Cube, Mesh: 0
-	JAS_INFO("->Node: ", node.name.c_str());
-
-	tinygltf::Mesh & mesh = model.meshes[node.mesh];
-	JAS_INFO("	->Mesh: ", node.name.c_str());
-	tinygltf::Primitive & primitive = mesh.primitives[0]; // Take first primitive. This holds the attributes, material, indices and the topology type (mode)
-	JAS_ASSERT(primitive.mode == TINYGLTF_MODE_TRIANGLES, "Only support topology type TRIANGLE_LIST!");
-	JAS_INFO("	  mode: TRIANGLES");
-
-	// Indices (Assume it uses indices)
-	tinygltf::Accessor & indicesAccessor = model.accessors[primitive.indices];
-	tinygltf::BufferView & indicesView = model.bufferViews[indicesAccessor.bufferView];
-	tinygltf::Buffer & indicesBuffer = model.buffers[indicesView.buffer];
-	JAS_INFO("	  ->Fetched indices");
-	unsigned char* indices = &indicesBuffer.data.at(0) + indicesView.byteOffset;
-
-	// Positions
-	tinygltf::Accessor & positionsAccessor = model.accessors[primitive.attributes["POSITION"]];
-	tinygltf::BufferView & positionsView = model.bufferViews[positionsAccessor.bufferView];
-	tinygltf::Buffer & positionsBuffer = model.buffers[positionsView.buffer];
-	JAS_INFO("	  ->Fetched positions");
-	unsigned char* positions = &positionsBuffer.data.at(0) + positionsView.byteOffset;
-
-	// Texture coordinates
-	tinygltf::Accessor & texCoordsAccessor = model.accessors[primitive.attributes["TEXCOORD_0"]];
-	tinygltf::BufferView & texCoordsView = model.bufferViews[texCoordsAccessor.bufferView];
-	tinygltf::Buffer & texCoordsBuffer = model.buffers[texCoordsView.buffer];
-	JAS_INFO("	  ->Fetched texCoords");
-	unsigned char* texCoords = &texCoordsBuffer.data.at(0) + texCoordsView.byteOffset;
-
-	struct Vertex
-	{
-		glm::vec3 pos;
-		glm::vec2 uv;
-	};
-
-	VertexAttribs::Attrib attrib;
-	attrib.format = VK_FORMAT_R32G32B32_SFLOAT;
-	attrib.offset = offsetof(Vertex, pos);
-	attrib.stride = sizeof(Vertex);
-	attrib.location = 0;
-	attrib.binding = 0;
-	this->vertexAttribs.attribs.push_back(attrib);
-
-	attrib.format = VK_FORMAT_R32G32_SFLOAT;
-	attrib.offset = offsetof(Vertex, uv);
-	attrib.stride = sizeof(Vertex);
-	attrib.location = 1;
-	attrib.binding = 0;
-	this->vertexAttribs.attribs.push_back(attrib);
-
-	JAS_ASSERT(indicesAccessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT, "Indices component type need to be unsigned short!");
-	size_t indSize = indicesAccessor.count * sizeof(unsigned short); // Should be indicesView.byteLength
-	size_t vertSize = positionsAccessor.count * sizeof(Vertex);
-
-	// Fill vertex data.
-	JAS_INFO("Construct vertex data");
-	std::vector<Vertex> vertices(positionsAccessor.count);
-	for (size_t i = 0; i < positionsAccessor.count; i++)
-	{
-		size_t offset = i * sizeof(float) * 3;
-		memcpy(&vertices[i].pos[0], positions + offset, sizeof(float) * 3);
-		offset = i * sizeof(float) * 2;
-		memcpy(&vertices[i].uv[0], texCoords + offset, sizeof(float) * 2);
-	}
-
-	// Set uniform data.
-	UboData uboData;
-	uboData.proj = glm::perspective(glm::radians(45.0f), (float)this->window.getWidth() / (float)this->window.getHeight(), 1.0f, 150.0f);
-	uboData.view = glm::lookAt(glm::vec3{ 0.0f, 0.0f, 10.f }, glm::vec3{ 0.0f, 0.0f, 0.0f }, glm::vec3{ 0.f, -1.f, 0.f });
-	uboData.world = glm::mat4(1.0f);
-	uint32_t unsiformBufferSize = sizeof(UboData);
-
-	// Create the buffer and memory
-	std::vector<uint32_t> queueIndices = { findQueueIndex(VK_QUEUE_GRAPHICS_BIT, Instance::get().getPhysicalDevice()) };
-	this->bufferVert.init(vertSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, queueIndices);
-	this->bufferInd.init(indSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, queueIndices);
-	this->bufferUniform.init(unsiformBufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, queueIndices);
-	this->memory.bindBuffer(&this->bufferVert);
-	this->memory.bindBuffer(&this->bufferInd);
-	this->memory.bindBuffer(&this->bufferUniform);
-	this->memory.init(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
-	// Transfer the data to the buffers.
-	// TODO: Vertex and index buffers should use staging and be sent to the gpu by the command buffer instead!
-	this->memory.directTransfer(&this->bufferVert, (void*)vertices.data(), (uint32_t)vertSize, 0);
-	this->memory.directTransfer(&this->bufferInd, (void*)indices, (uint32_t)indSize, 0);
-
-	this->memory.directTransfer(&this->bufferUniform, (void*)& uboData, unsiformBufferSize, 0);
-
-	// Update descriptor
-	for (size_t i = 0; i < this->swapChain.getNumImages(); i++)
-	{
-		this->descManager.updateBufferDesc(0, 0, this->bufferUniform.getBuffer(), 0, unsiformBufferSize);
-		this->descManager.updateSets(i);
-	}
-
-	// Record command buffers
-	for (int i = 0; i < this->swapChain.getNumImages(); i++) {
-		this->cmdBuffs[i] = this->commandPool.createCommandBuffer();
-		this->cmdBuffs[i]->begin(0);
-		std::vector<VkClearValue> clearValues = {};
-		VkClearValue value;
-		value.color = { 0.0f, 0.0f, 0.0f, 1.0f };
-		clearValues.push_back(value);
-		value.depthStencil = { 1.0f, 0 };
-		clearValues.push_back(value);
-		this->cmdBuffs[i]->cmdBeginRenderPass(&this->renderPass, this->framebuffers[i].getFramebuffer(), this->swapChain.getExtent(), clearValues);
-		this->cmdBuffs[i]->cmdBindPipeline(&this->pipeline);
-		VkBuffer vertexBuffers[] = { this->bufferVert.getBuffer() };
-		VkDeviceSize vertOffsets[] = { 0 };
-		this->cmdBuffs[i]->cmdBindVertexBuffers(0, 1, vertexBuffers, vertOffsets);
-		this->cmdBuffs[i]->cmdBindIndexBuffer(this->bufferInd.getBuffer(), 0, VK_INDEX_TYPE_UINT16); // Unsinged short
-		std::vector<VkDescriptorSet> sets = { this->descManager.getSet(i, 0) };
-		std::vector<uint32_t> offsets;
-		this->cmdBuffs[i]->cmdBindDescriptorSets(&this->pipeline, 0, sets, offsets);
-		this->cmdBuffs[i]->cmdDrawIndexed(indicesAccessor.count, 1, 0, 0, 0);
-		this->cmdBuffs[i]->cmdEndRenderPass();
-		this->cmdBuffs[i]->end();
-	}
-}
-
-size_t GLTFLoader::getComponentTypeSize(int type)
-{
-	size_t compSize = 0;
-	switch (type)
-	{
-	case TINYGLTF_COMPONENT_TYPE_BYTE:				compSize = sizeof(int8_t);		break;
-	case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:		compSize = sizeof(uint8_t);		break;
-	case TINYGLTF_COMPONENT_TYPE_DOUBLE:			compSize = sizeof(double);		break;
-	case TINYGLTF_COMPONENT_TYPE_FLOAT:				compSize = sizeof(float);		break;
-	case TINYGLTF_COMPONENT_TYPE_INT:				compSize = sizeof(int32_t);		break;
-	case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:		compSize = sizeof(uint32_t);	break;
-	case TINYGLTF_COMPONENT_TYPE_SHORT:				compSize = sizeof(int16_t);		break;
-	case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:	compSize = sizeof(uint16_t);	break;
-	}
-	return compSize;
-}
-
-size_t GLTFLoader::getNumComponentsPerElement(int type)
-{
-	size_t numComps = 0;
-	switch (type)
-	{
-	case TINYGLTF_TYPE_SCALAR:	numComps = 1;	break;
-	case TINYGLTF_TYPE_VECTOR:	numComps = 3;	break; // Unsure
-	case TINYGLTF_TYPE_MATRIX:	numComps = 16;	break; // Unsure
-	case TINYGLTF_TYPE_VEC2:	numComps = 2;	break;
-	case TINYGLTF_TYPE_VEC3:	numComps = 3;	break;
-	case TINYGLTF_TYPE_VEC4:	numComps = 4;	break;
-	case TINYGLTF_TYPE_MAT2:	numComps = 4;	break;
-	case TINYGLTF_TYPE_MAT3:	numComps = 9;	break;
-	case TINYGLTF_TYPE_MAT4:	numComps = 16;	break;
-	}
-	return numComps;
 }

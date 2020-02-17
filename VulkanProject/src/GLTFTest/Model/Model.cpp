@@ -13,13 +13,13 @@ Model::~Model()
 
 void Model::cleanup()
 {
-	for (Mesh& mesh : this->meshes)
-	{
-		mesh.indices.cleanup();
-		for (auto& attrib : mesh.attributes)
-			attrib.second.cleanup();
-		mesh.bufferMemory.cleanup();
-	}
+	if(this->indices.empty() == false)
+		this->indexBuffer.cleanup();
+	if (this->vertices.empty() == false)
+		this->vertexBuffer.cleanup();
+
+	if(this->indices.empty() == false && this->vertices.empty() == false)
+		this->bufferMemory.cleanup();
 
 	if(hasImageMemory)
 		this->imageMemory.cleanup();
