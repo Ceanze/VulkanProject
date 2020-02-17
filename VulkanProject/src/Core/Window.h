@@ -14,6 +14,9 @@ public:
 	void init(unsigned width, unsigned height, const std::string& title);
 	void cleanup();
 
+	void setTitle(const std::string& title);
+
+	float getAspectRatio() const { return this->width/this->height; }
 	unsigned getWidth() const { return this->width; }
 	unsigned getHeight() const { return this->height; }
 	bool isOpen() const { return this->open; }
@@ -29,4 +32,6 @@ private:
 
 	// Callbacks
 	static void closeWindowCallback(GLFWwindow* w);
+	static void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
+	static void mouseCallback(GLFWwindow* window, double xpos, double ypos);
 };

@@ -9,6 +9,7 @@
 #include "CommandBuffer.h"
 #include "Buffers/Framebuffer.h"
 #include "Frame.h"
+#include "Core/Camera.h"
 
 // TEMP
 #include "Buffers/Buffer.h"
@@ -39,10 +40,13 @@ private:
 	std::vector<Framebuffer> framebuffers;
 	Frame frame;
 
+	Camera* camera;
+
 	bool running = true;
 
 	// TEMP
 	Buffer buffer;
+	Buffer camBuffer;
 	Memory memory;
 	Memory memoryTexture;
 	Buffer stagingBuffer;
