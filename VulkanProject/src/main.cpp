@@ -2,7 +2,7 @@
 #include "Vulkan/Renderer.h"
 
 // TEMP
-#include "GLTFTest/GLTFTest.h"
+#include "GLTFTest/GLTFLoader.h"
 
 int main(int argv, char* argc[])
 {
@@ -11,10 +11,10 @@ int main(int argv, char* argc[])
 	//renderer.run();
 	//renderer.shutdown();
 
-	GLTFTest gltfTest;
-	gltfTest.init();
-	gltfTest.run();
-	gltfTest.cleanup();
+	GLTFLoader gltfLoader;
+	gltfLoader.init();
+	gltfLoader.run();
+	gltfLoader.cleanup();
 
 	return 0;
 }

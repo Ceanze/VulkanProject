@@ -104,7 +104,8 @@
   <ItemGroup>
     <ClInclude Include="src\Core\Logger.h" />
     <ClInclude Include="src\Core\Window.h" />
-    <ClInclude Include="src\GLTFTest\GLTFTest.h" />
+    <ClInclude Include="src\GLTFTest\GLTFLoader.h" />
+    <ClInclude Include="src\GLTFTest\Model\Model.h" />
     <ClInclude Include="src\Vulkan\Buffers\Buffer.h" />
     <ClInclude Include="src\Vulkan\Buffers\Framebuffer.h" />
     <ClInclude Include="src\Vulkan\Buffers\Image.h" />
@@ -124,14 +125,15 @@
     <ClInclude Include="src\Vulkan\Renderer.h" />
     <ClInclude Include="src\Vulkan\Sampler.h" />
     <ClInclude Include="src\Vulkan\SwapChain.h" />
-    <ClInclude Include="src\Vulkan\Texure.h" />
+    <ClInclude Include="src\Vulkan\Texture.h" />
     <ClInclude Include="src\Vulkan\VulkanCommon.h" />
     <ClInclude Include="src\jaspch.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Core\Logger.cpp" />
     <ClCompile Include="src\Core\Window.cpp" />
-    <ClCompile Include="src\GLTFTest\GLTFTest.cpp" />
+    <ClCompile Include="src\GLTFTest\GLTFLoader.cpp" />
+    <ClCompile Include="src\GLTFTest\Model\Model.cpp" />
     <ClCompile Include="src\Vulkan\Buffers\Buffer.cpp" />
     <ClCompile Include="src\Vulkan\Buffers\Framebuffer.cpp" />
     <ClCompile Include="src\Vulkan\Buffers\Image.cpp" />
@@ -149,7 +151,7 @@
     <ClCompile Include="src\Vulkan\Renderer.cpp" />
     <ClCompile Include="src\Vulkan\Sampler.cpp" />
     <ClCompile Include="src\Vulkan\SwapChain.cpp" />
-    <ClCompile Include="src\Vulkan\Texure.cpp" />
+    <ClCompile Include="src\Vulkan\Texture.cpp" />
     <ClCompile Include="src\jaspch.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>

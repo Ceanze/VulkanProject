@@ -4,7 +4,7 @@
 #include "Vulkan/Instance.h"
 #include "Buffer.h"
 #include "Vulkan/VulkanCommon.h"
-#include "Vulkan/Texure.h"
+#include "Vulkan/Texture.h"
 
 Memory::Memory() : memory(VK_NULL_HANDLE), currentOffset(0)
 {
