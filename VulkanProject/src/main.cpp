@@ -6,15 +6,15 @@
 
 int main(int argv, char* argc[])
 {
-	//Renderer renderer;
-	//renderer.init();
-	//renderer.run();
-	//renderer.shutdown();
-
-	GLTFLoader gltfLoader;
+	Renderer renderer;
+	renderer.init();
+	renderer.run();
+	renderer.shutdown();
+	
+	/*GLTFLoader gltfLoader;
 	gltfLoader.init();
 	gltfLoader.run();
 	gltfLoader.cleanup();
-
+	*/
 	return 0;
 }

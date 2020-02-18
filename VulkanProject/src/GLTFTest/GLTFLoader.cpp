@@ -173,9 +173,7 @@ void GLTFLoader::setupPreTEMP()
 	this->descManager.addLayout(this->descLayout);
 	this->descManager.init(this->swapChain.getNumImages());
 
-	//const std::string filePath = "..\\assets\\Models\\Cube\\Cube.gltf";
-	//const std::string filePath = "..\\assets\\Models\\FlightHelmet\\FlightHelmet.gltf";
-	const std::string filePath = "..\\assets\\Models\\Sponza\\Sponza.gltf";
+	const std::string filePath = "..\\assets\\Models\\Cube\\Cube.gltf";
 	loadModel(this->model, filePath);
 }
 
@@ -185,7 +183,7 @@ void GLTFLoader::setupPostTEMP()
 	UboData uboData;
 	uboData.proj = glm::perspective(glm::radians(45.0f), (float)this->window.getWidth() / (float)this->window.getHeight(), 1.0f, 150.0f);
 	uboData.view = glm::lookAt(glm::vec3{ 0.0f, 0.0f, 10.f }, glm::vec3{ 0.0f, 0.0f, 0.0f }, glm::vec3{ 0.f, -1.f, 0.f });
-	uboData.world = glm::mat4(0.008f); // Scale by 0.01 SHOULD NOT BE SCALED HERE, USE TRANSFORM OF THE NODE (PUSH CONSTANTS)!!
+	uboData.world = glm::mat4(1.0f);
 	uboData.world[3][3] = 1.0f;
 	uint32_t unsiformBufferSize = sizeof(UboData);
 

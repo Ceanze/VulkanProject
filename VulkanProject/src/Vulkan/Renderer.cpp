@@ -150,21 +150,21 @@ void Renderer::setupPostTEMP()
 	// Create buffer
 	this->buffer.init(size + size2, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, queueIndices);
 	this->stagingBuffer.init(width * height * 4, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, queueIndices);
-	
+
 	// Create memory
 	this->memory.bindBuffer(&this->buffer);
+	this->memory.bindBuffer(&this->stagingBuffer);
 	this->memory.init(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
-	this->memoryTexture.bindBuffer(&this->stagingBuffer);
 	this->memoryTexture.bindTexture(&this->texture);
-	this->memoryTexture.init(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+	this->memoryTexture.init(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
 	this->texture.getImageView().init(this->texture.getVkImage(), VK_IMAGE_VIEW_TYPE_2D, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT);
 
 	// Update buffer
 	this->memory.directTransfer(&this->buffer, (void*)&uvs[0], size, 0);
 	this->memory.directTransfer(&this->buffer, (void*)&position[0], size2, size);
-	this->memoryTexture.directTransfer(&this->stagingBuffer, (void*)img, width * height * 4, 0);
+	this->memory.directTransfer(&this->stagingBuffer, (void*)img, width * height * 4, 0);
 
 	// Transistion image
 	Image::TransistionDesc desc;
