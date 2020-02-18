@@ -3,6 +3,7 @@
 #include <vulkan/vulkan.h>
 #include "PipelineInfo.h"
 
+class PushConstants;
 class DescriptorLayout;
 class RenderPass;
 class Shader;
@@ -24,6 +25,8 @@ public:
 
 	// Set the layouts which will be used
 	void setDescriptorLayouts(const std::vector<DescriptorLayout>& descriptorLayouts);
+	// Set push constants which will be used
+	void setPushConstants(const std::vector<PushConstants>& pushConstants);
 	// Enables or disables wireframe at creation time
 	void setWireframe(bool enable);
 	// Sets the necessary information for the graphics pipeline
@@ -47,6 +50,7 @@ private:
 	Type type;
 	bool graphicsPipelineInitilized = false;
 	std::vector<VkDescriptorSetLayout> layouts;
+	std::vector<VkPushConstantRange> pushConstantRanges;
 
 	// Pipeline create info
 	PipelineInfo graphicsPipelineInfo;

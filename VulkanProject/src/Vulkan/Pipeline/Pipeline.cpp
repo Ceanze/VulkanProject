@@ -4,6 +4,7 @@
 #include "Shader.h"
 #include "RenderPass.h"
 #include "DescriptorLayout.h"
+#include "PushConstants.h"
 
 // TODO: Add support for addition of descriptors and push constants for both graphics and compute pipeline.
 
@@ -39,6 +40,12 @@ void Pipeline::setDescriptorLayouts(const std::vector<DescriptorLayout>& descrip
 {
 	for (auto& layout : descriptorLayouts)
 		this->layouts.push_back(layout.getLayout());
+}
+
+void Pipeline::setPushConstants(const std::vector<PushConstants>& pushConstants)
+{
+	for (auto& pushConstant : pushConstants)
+		this->pushConstantRanges.push_back(pushConstant.getRange());
 }
 
 void Pipeline::setWireframe(bool enable)
@@ -120,8 +127,8 @@ void Pipeline::createGraphicsPipeline()
 	pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 	pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(this->layouts.size());
 	pipelineLayoutInfo.pSetLayouts = this->layouts.empty() ? nullptr : this->layouts.data();
-	pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
-	pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
+	pipelineLayoutInfo.pushConstantRangeCount = static_cast<uint32_t>(this->pushConstantRanges.size()); // Optional
+	pipelineLayoutInfo.pPushConstantRanges = this->pushConstantRanges.empty() ? nullptr : this->pushConstantRanges.data(); // Optional
 
 	// Vertex attribute info for vertex shaders
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};

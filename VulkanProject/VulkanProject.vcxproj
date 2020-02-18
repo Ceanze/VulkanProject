@@ -122,6 +122,7 @@
     <ClInclude Include="src\Vulkan\Pipeline\Descriptors.h" />
     <ClInclude Include="src\Vulkan\Pipeline\Pipeline.h" />
     <ClInclude Include="src\Vulkan\Pipeline\PipelineInfo.h" />
+    <ClInclude Include="src\Vulkan\Pipeline\PushConstants.h" />
     <ClInclude Include="src\Vulkan\Pipeline\RenderPass.h" />
     <ClInclude Include="src\Vulkan\Pipeline\Shader.h" />
     <ClInclude Include="src\Vulkan\Renderer.h" />
@@ -150,6 +151,7 @@
     <ClCompile Include="src\Vulkan\Pipeline\DescriptorLayout.cpp" />
     <ClCompile Include="src\Vulkan\Pipeline\DescriptorManager.cpp" />
     <ClCompile Include="src\Vulkan\Pipeline\Pipeline.cpp" />
+    <ClCompile Include="src\Vulkan\Pipeline\PushConstants.cpp" />
     <ClCompile Include="src\Vulkan\Pipeline\RenderPass.cpp" />
     <ClCompile Include="src\Vulkan\Pipeline\Shader.cpp" />
     <ClCompile Include="src\Vulkan\Renderer.cpp" />

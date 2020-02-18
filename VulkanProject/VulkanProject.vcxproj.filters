@@ -90,6 +90,7 @@
     <ClInclude Include="src\Vulkan\Sampler.h" />
     <ClInclude Include="src\Core\Camera.h" />
     <ClInclude Include="src\Core\Input.h" />
+    <ClInclude Include="src\Vulkan\Pipeline\PushConstants.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Core\Logger.cpp">
@@ -159,5 +160,6 @@
       <Filter>Vulkan</Filter>
     </ClCompile>
     <ClCompile Include="src\GLTFTest\Model\Model.cpp" />
+    <ClCompile Include="src\Vulkan\Pipeline\PushConstants.cpp" />
   </ItemGroup>
 </Project>

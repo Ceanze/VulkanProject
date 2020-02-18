@@ -7,7 +7,12 @@ layout(location = 0) out vec4 outColor;
 
 layout(set=0, binding=2) uniform sampler2D tex;
 
+layout(push_constant) uniform TintColor
+{
+    vec4 tint;
+};
+
 void main() {
     vec4 sampled = texture(tex, fragUV);
-    outColor = vec4(sampled);
+    outColor = vec4(sampled) * tint;
 }

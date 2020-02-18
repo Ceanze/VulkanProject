@@ -3,6 +3,7 @@
 #include "Vulkan/Instance.h"
 #include "Pipeline/RenderPass.h"
 #include "Pipeline/Pipeline.h"
+#include "Pipeline/PushConstants.h"
 
 CommandBuffer::CommandBuffer() :
 	pool(VK_NULL_HANDLE), buffer(VK_NULL_HANDLE)
@@ -78,6 +79,11 @@ void CommandBuffer::cmdBindVertexBuffers(uint32_t firstBinding, uint32_t binding
 void CommandBuffer::cmdBindIndexBuffer(VkBuffer buffer, VkDeviceSize offset, VkIndexType indexType)
 {
 	vkCmdBindIndexBuffer(this->buffer, buffer, offset, indexType);
+}
+
+void CommandBuffer::cmdPushConstants(Pipeline* pipeline, const PushConstants* pushConstant)
+{
+	vkCmdPushConstants(this->buffer, pipeline->getPipelineLayout(), pushConstant->getRange().stageFlags, pushConstant->getOffset(), pushConstant->getSize(), pushConstant->getData());
 }
 
 void CommandBuffer::cmdBindDescriptorSets(Pipeline* pipeline, uint32_t firstSet, const std::vector<VkDescriptorSet>& sets, const std::vector<uint32_t>& offsets)
