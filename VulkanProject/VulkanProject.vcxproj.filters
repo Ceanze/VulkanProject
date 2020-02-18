@@ -83,6 +83,8 @@
     </ClInclude>
     <ClInclude Include="src\jaspch.h" />
     <ClInclude Include="src\Vulkan\Sampler.h" />
+    <ClInclude Include="src\Core\Camera.h" />
+    <ClInclude Include="src\Core\Input.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Core\Logger.cpp">
@@ -145,5 +147,7 @@
     <ClCompile Include="src\jaspch.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\Vulkan\Sampler.cpp" />
+    <ClCompile Include="src\Core\Camera.cpp" />
+    <ClCompile Include="src\Core\Input.cpp" />
   </ItemGroup>
 </Project>
