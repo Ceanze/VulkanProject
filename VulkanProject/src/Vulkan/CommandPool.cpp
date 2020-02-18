@@ -37,8 +37,10 @@ QueueVK CommandPool::getQueue() const
 	{
 	case Queue::GRAPHICS:
 		return Instance::get().getGraphicsQueue();
-	default:
-		JAS_ASSERT(false, "Only graphics queue is currently supported!");
+	case Queue::TRANSFER:
+		return Instance::get().getTransferQueue();
+	case Queue::COMPUTE:
+		return Instance::get().getComputeQueue();
 	}
 }
 
