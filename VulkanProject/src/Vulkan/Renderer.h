@@ -17,6 +17,7 @@
 #include "Pipeline/DescriptorManager.h"
 #include "Texture.h"
 #include "Sampler.h"
+#include "Pipeline/PushConstants.h"
 
 class Renderer
 {
@@ -54,4 +55,5 @@ private:
 	Sampler sampler;
 	DescriptorLayout descLayout;
 	DescriptorManager descManager;
+	std::vector<PushConstants> pushConstants;
 };
