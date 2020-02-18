@@ -27,6 +27,7 @@ void GLTFLoader::init()
 	Logger::init();
 
 	this->window.init(1280, 720, "Vulkan Project");
+	this->camera = new Camera(this->window.getAspectRatio(), 45.f, { 0.f, 0.f, 10.f }, { 0.f, 0.f, 0.f }, 0.8f);
 
 	Instance::get().init(&this->window);
 	this->swapChain.init(this->window.getWidth(), this->window.getHeight());
@@ -124,17 +125,18 @@ void GLTFLoader::run()
 		auto startTime = std::chrono::high_resolution_clock::now();
 
 		// Update view matrix
-		glm::mat4 newView = getViewFromCamera(dt);
-		this->memory.directTransfer(&this->bufferUniform, (void*)&newView[0][0], (uint32_t)sizeof(newView), (Offset)offsetof(UboData, view));
-		vkDeviceWaitIdle(Instance::get().getDevice()); // This is bad!!
+		this->memory.directTransfer(&this->bufferUniform, (void*)&this->camera->getMatrix()[0], sizeof(glm::mat4), (Offset)offsetof(UboData, vp));
 
 		// Render
 		this->frame.beginFrame();
 		this->frame.submit(Instance::get().getGraphicsQueue(), this->cmdBuffs);
 		this->frame.endFrame();
+		this->camera->update(dt);
 
 		auto endTime = std::chrono::high_resolution_clock::now();
 		dt = std::chrono::duration<float>(endTime - startTime).count();
+
+		this->window.setTitle("Delta Time: " + std::to_string(dt * 1000.f) + " ms");
 	}
 }
 
@@ -181,8 +183,7 @@ void GLTFLoader::setupPostTEMP()
 {
 	// Set uniform data.
 	UboData uboData;
-	uboData.proj = glm::perspective(glm::radians(45.0f), (float)this->window.getWidth() / (float)this->window.getHeight(), 1.0f, 150.0f);
-	uboData.view = glm::lookAt(glm::vec3{ 0.0f, 0.0f, 10.f }, glm::vec3{ 0.0f, 0.0f, 0.0f }, glm::vec3{ 0.f, -1.f, 0.f });
+	uboData.vp = this->camera->getMatrix();
 	uboData.world = glm::mat4(1.0f);
 	uboData.world[3][3] = 1.0f;
 	uint32_t unsiformBufferSize = sizeof(UboData);
@@ -479,81 +480,6 @@ void GLTFLoader::loadNode(Model& model, Model::Node* node, tinygltf::Model& gltf
 			}
 		}
 	}
-}
-
-glm::mat4 GLTFLoader::getViewFromCamera(float dt)
-{
-	auto isKeyPressed = [&](int key)->bool {
-		return glfwGetKey(this->window.getNativeWindow(), key) == GLFW_PRESS;
-	};
-
-	static glm::vec3 pos(0.0f, 0.0f, -10.0f);
-	static glm::vec3 dir(0.0f, 0.0f, 1.0f);
-	static glm::vec3 up(0.0f, -1.0f, 0.0f);
-	static glm::vec3 GLOBAL_UP(0.0f, -1.0f, 0.0f);
-
-	const float DEFAULT_SPEED = 8.0f;
-	const float SPEED_FACTOR = 2.0f;
-	const float DEFAUTL_ROT_SPEED = 3.1415f / 180.f * 90.0f; // 90 degrees per second.
-	float speed = DEFAULT_SPEED * dt;
-	float rotSpeed = DEFAUTL_ROT_SPEED * dt;
-
-	if (isKeyPressed(GLFW_KEY_LEFT_SHIFT))
-		speed = DEFAULT_SPEED * SPEED_FACTOR * dt;
-
-	if (isKeyPressed(GLFW_KEY_A))
-	{
-		glm::vec3 right = glm::normalize(glm::cross(up, dir));
-		pos = pos - right * speed;
-	}
-	if (isKeyPressed(GLFW_KEY_D))
-	{
-		glm::vec3 right = glm::normalize(glm::cross(up, dir));
-		pos = pos + right * speed;
-	}
-	if (isKeyPressed(GLFW_KEY_W))
-	{
-		pos = pos + dir * speed;
-	}
-	if (isKeyPressed(GLFW_KEY_S))
-	{
-		pos = pos - dir * speed;
-	}
-
-	if (isKeyPressed(GLFW_KEY_LEFT))
-	{
-		glm::vec3 right = glm::normalize(glm::cross(up, dir));
-		right = glm::rotate(right, -rotSpeed, GLOBAL_UP);
-		if (glm::length(up - GLOBAL_UP) > 0.0001f)
-			up = glm::rotate(up, -rotSpeed, GLOBAL_UP);
-		up = glm::normalize(up);
-		dir = glm::normalize(glm::cross(right, up));
-	}
-	if (isKeyPressed(GLFW_KEY_RIGHT))
-	{
-		glm::vec3 right = glm::normalize(glm::cross(up, dir));
-		right = glm::rotate(right, rotSpeed, GLOBAL_UP);
-		if (glm::length(up - GLOBAL_UP) > 0.0001f)
-			up = glm::rotate(up, rotSpeed, GLOBAL_UP);
-		up = glm::normalize(up);
-		dir = glm::normalize(glm::cross(right, up));
-	}
-	if (isKeyPressed(GLFW_KEY_UP))
-	{
-		glm::vec3 right = glm::normalize(glm::cross(up, dir));
-		up = glm::rotate(up, rotSpeed, right);
-		up = glm::normalize(up);
-		dir = glm::normalize(glm::cross(right, up));
-	}
-	if (isKeyPressed(GLFW_KEY_DOWN))
-	{
-		glm::vec3 right = glm::normalize(glm::cross(up, dir));
-		up = glm::rotate(up, -rotSpeed, right);
-		up = glm::normalize(up);
-		dir = glm::normalize(glm::cross(right, up));
-	}
-
-	return glm::lookAt(pos, pos + dir, up);
 }
 
 void GLTFLoader::drawNode(int index, Model::Node& node)

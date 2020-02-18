@@ -14,8 +14,6 @@
 #include <vulkan/vulkan.h>
 
 // Externals
-// Make it behave like DirectX
-#define GLM_FORCE_LEFT_HANDED
 #include <glm/glm.hpp>
 
 // Custom

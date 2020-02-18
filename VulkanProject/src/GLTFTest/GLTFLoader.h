@@ -20,6 +20,7 @@
 #include "Vulkan/Buffers/Memory.h"
 #include "Vulkan/Texture.h"
 #include "Model/Model.h"
+#include "Core/Camera.h"
 
 class GLTFLoader
 {
@@ -35,8 +36,7 @@ private:
 	struct UboData
 	{
 		glm::mat4 world;
-		glm::mat4 view;
-		glm::mat4 proj;
+		glm::mat4 vp;
 	};
 
 	void setupPreTEMP();
@@ -47,7 +47,6 @@ private:
 	void loadMaterials(Model& model, tinygltf::Model& gltfModel);
 	void loadScenes(Model& model, tinygltf::Model& gltfModel);
 	void loadNode(Model& model, Model::Node* node, tinygltf::Model& gltfModel, tinygltf::Node& gltfNode, std::string indents);
-	glm::mat4 getViewFromCamera(float dt);
 
 	void drawNode(int index, Model::Node& node);
 
@@ -65,6 +64,8 @@ private:
 
 	DescriptorLayout descLayout;
 	DescriptorManager descManager;
+
+	Camera* camera;
 
 	// For loading model
 	Model model;

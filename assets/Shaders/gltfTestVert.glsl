@@ -19,13 +19,11 @@ layout(location = 1) out vec2 fragUv;
 layout(set=0, binding = 1) uniform UboData
 {
     mat4 world;
-    mat4 view;
-    mat4 proj;
+    mat4 vp;
 };
 
-
 void main() {
-    gl_Position = proj * view * world * vec4(vertices[gl_VertexIndex].inPosition.xyz, 1.0);
+    gl_Position = vp * world * vec4(vertices[gl_VertexIndex].inPosition.xyz, 1.0);
     fragNormal = normalize((world * vec4(vertices[gl_VertexIndex].inNormal.xyz, 0.0)).xyz);
     fragUv = vertices[gl_VertexIndex].inUv.xy;
 }
