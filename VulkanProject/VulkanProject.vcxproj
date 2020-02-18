@@ -108,6 +108,7 @@
     <ClInclude Include="src\Core\Window.h" />
     <ClInclude Include="src\GLTFTest\GLTFLoader.h" />
     <ClInclude Include="src\GLTFTest\Model\Model.h" />
+    <ClInclude Include="src\Threading\ThreadManager.h" />
     <ClInclude Include="src\Vulkan\Buffers\Buffer.h" />
     <ClInclude Include="src\Vulkan\Buffers\Framebuffer.h" />
     <ClInclude Include="src\Vulkan\Buffers\Image.h" />
@@ -139,6 +140,7 @@
     <ClCompile Include="src\Core\Window.cpp" />
     <ClCompile Include="src\GLTFTest\GLTFLoader.cpp" />
     <ClCompile Include="src\GLTFTest\Model\Model.cpp" />
+    <ClCompile Include="src\Threading\ThreadManager.cpp" />
     <ClCompile Include="src\Vulkan\Buffers\Buffer.cpp" />
     <ClCompile Include="src\Vulkan\Buffers\Framebuffer.cpp" />
     <ClCompile Include="src\Vulkan\Buffers\Image.cpp" />
