@@ -15,7 +15,13 @@ std::vector<const char*> Instance::deviceExtensions = {
 
 VkPhysicalDeviceFeatures Instance::deviceFeatures = {};
 
-Instance::Instance(){}
+Instance::Instance() :
+	debugMessenger(VK_NULL_HANDLE), device(VK_NULL_HANDLE), instance(VK_NULL_HANDLE),
+	physicalDevice(VK_NULL_HANDLE), surface(VK_NULL_HANDLE)
+{
+
+}
+
 Instance::~Instance(){}
 
 Instance& Instance::get()
@@ -46,31 +52,6 @@ void Instance::cleanup()
 	}
 	vkDestroySurfaceKHR(this->instance, this->surface, nullptr);
 	vkDestroyInstance(this->instance, nullptr);
-}
-
-VkSurfaceKHR Instance::getSurface()
-{
-	return this->surface;
-}
-
-VkDevice Instance::getDevice()
-{
-	return this->device;
-}
-
-VkPhysicalDevice Instance::getPhysicalDevice()
-{
-	return this->physicalDevice;
-}
-
-QueueVK Instance::getGraphicsQueue() const
-{
-	return this->graphicsQueue;
-}
-
-QueueVK Instance::getPresentQueue() const
-{
-	return this->presentQueue;
 }
 
 VKAPI_ATTR VkBool32 VKAPI_CALL Instance::debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData)
@@ -234,11 +215,16 @@ void Instance::pickPhysicalDevice()
 void Instance::createLogicalDevice()
 {
 	QueueFamilyIndices indices = findQueueFamilies(this->physicalDevice, this->surface);
+	this->graphicsQueue.queueIndex = indices.graphicsFamily.value();
+	this->presentQueue.queueIndex = indices.presentFamily.value();
+	this->transferQueue.queueIndex = findQueueIndex(VK_QUEUE_TRANSFER_BIT, this->physicalDevice);
+	this->computeQueue.queueIndex = findQueueIndex(VK_QUEUE_COMPUTE_BIT, this->physicalDevice);
 	
 	std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-	std::set<uint32_t> uniqueQueueFamilies = { indices.graphicsFamily.value(), indices.presentFamily.value() };
+	std::set<uint32_t> uniqueQueueFamilies = { this->graphicsQueue.queueIndex, this->presentQueue.queueIndex,
+		this->transferQueue.queueIndex, this->computeQueue.queueIndex};
 
-	float queuePriority = 1.0f;  // Because we only use of queue
+	float queuePriority = 1.0f;
 	for (uint32_t queueFamily : uniqueQueueFamilies) {
 		VkDeviceQueueCreateInfo queueCreateInfo = {};
 		queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
@@ -263,11 +249,11 @@ void Instance::createLogicalDevice()
 	// Create the logical device
 	ERROR_CHECK(vkCreateDevice(this->physicalDevice, &createInfo, nullptr, &this->device) != VK_SUCCESS, "failed to create logical device!");
 
-	this->graphicsQueue.queueIndex = indices.graphicsFamily.value();
-	this->presentQueue.queueIndex = indices.presentFamily.value();
-
-	vkGetDeviceQueue(this->device, indices.graphicsFamily.value(), 0, &this->graphicsQueue.queue);
-	vkGetDeviceQueue(this->device, indices.presentFamily.value(), 0, &this->presentQueue.queue);
+	// Get all desired queues
+	vkGetDeviceQueue(this->device, this->graphicsQueue.queueIndex, 0, &this->graphicsQueue.queue);
+	vkGetDeviceQueue(this->device, this->presentQueue.queueIndex, 0, &this->presentQueue.queue);
+	vkGetDeviceQueue(this->device, this->transferQueue.queueIndex, 0, &this->transferQueue.queue);
+	vkGetDeviceQueue(this->device, this->computeQueue.queueIndex, 0, &this->computeQueue.queue);
 }
 
 bool Instance::isDeviceSuitable(VkPhysicalDevice device)

@@ -22,12 +22,14 @@ public:
 	void init(Window* window);
 	void cleanup();
 
-	VkSurfaceKHR getSurface();
-	VkDevice getDevice();
-	VkPhysicalDevice getPhysicalDevice();
+	VkSurfaceKHR getSurface() const { return this->surface; }
+	VkDevice getDevice() const { return this->device; }
+	VkPhysicalDevice getPhysicalDevice() const { return this->physicalDevice; }
 
-	QueueVK getGraphicsQueue() const;
-	QueueVK getPresentQueue() const;
+	QueueVK getGraphicsQueue() const { return this->graphicsQueue; }
+	QueueVK getPresentQueue() const { return this->presentQueue; }
+	QueueVK getTransferQueue() const { return this->transferQueue; }
+	QueueVK getComputeQueue() const { return this->computeQueue; }
 
 private:
 	Instance();
@@ -58,6 +60,8 @@ private:
 
 	QueueVK graphicsQueue;
 	QueueVK presentQueue;
+	QueueVK transferQueue;
+	QueueVK computeQueue;
 
 	#ifdef JAS_RELEASE
 		const bool enableValidationLayers = false;

@@ -45,6 +45,7 @@ private:
 	bool running = true;
 
 	// TEMP
+	CommandPool transferCommandPool;
 	Buffer buffer;
 	Buffer camBuffer;
 	Memory memory;
