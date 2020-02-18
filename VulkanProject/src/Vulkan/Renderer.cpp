@@ -103,7 +103,7 @@ void Renderer::run()
 		this->memory.directTransfer(&this->camBuffer, (void*)&this->camera->getMatrix()[0], sizeof(glm::mat4), 0);
 
 		this->frame.beginFrame();
-		this->frame.submit(Instance::get().getGraphicsQueue(), cmdBuffs);
+		this->frame.submit(Instance::get().getGraphicsQueue().queue, cmdBuffs);
 		this->frame.endFrame();
 		this->camera->update(dt);
 		

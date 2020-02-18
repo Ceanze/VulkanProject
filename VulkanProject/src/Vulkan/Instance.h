@@ -5,6 +5,13 @@
 
 class Window;
 
+struct QueueVK {
+	QueueVK() : queue(VK_NULL_HANDLE), queueIndex(0) {};
+
+	VkQueue queue;
+	uint32_t queueIndex;
+};
+
 class Instance
 {
 public:
@@ -19,8 +26,8 @@ public:
 	VkDevice getDevice();
 	VkPhysicalDevice getPhysicalDevice();
 
-	VkQueue getGraphicsQueue() const;
-	VkQueue getPresentQueue() const;
+	QueueVK getGraphicsQueue() const;
+	QueueVK getPresentQueue() const;
 
 private:
 	Instance();
@@ -49,9 +56,8 @@ private:
 	VkPhysicalDevice physicalDevice;
 	VkInstance instance;
 
-	// Temporary
-	VkQueue graphicsQueue;
-	VkQueue presentQueue;
+	QueueVK graphicsQueue;
+	QueueVK presentQueue;
 
 	#ifdef JAS_RELEASE
 		const bool enableValidationLayers = false;

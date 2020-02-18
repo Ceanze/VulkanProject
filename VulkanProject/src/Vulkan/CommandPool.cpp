@@ -31,7 +31,7 @@ void CommandPool::cleanup()
 	this->buffers.clear();
 }
 
-VkQueue CommandPool::getQueue() const
+QueueVK CommandPool::getQueue() const
 {
 	switch (this->queueFamily)
 	{
@@ -67,8 +67,8 @@ void CommandPool::endSingleTimeCommand(CommandBuffer* buffer)
 	submitInfo.commandBufferCount = 1;
 	submitInfo.pCommandBuffers = &commandBuffer;
 
-	vkQueueSubmit(getQueue(), 1, &submitInfo, VK_NULL_HANDLE);
-	vkQueueWaitIdle(getQueue());
+	vkQueueSubmit(getQueue().queue, 1, &submitInfo, VK_NULL_HANDLE);
+	vkQueueWaitIdle(getQueue().queue);
 
 	vkFreeCommandBuffers(Instance::get().getDevice(), this->pool, 1, &commandBuffer);
 	removeCommandBuffer(buffer);

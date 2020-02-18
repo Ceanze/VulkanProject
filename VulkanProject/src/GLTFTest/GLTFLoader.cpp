@@ -129,7 +129,7 @@ void GLTFLoader::run()
 
 		// Render
 		this->frame.beginFrame();
-		this->frame.submit(Instance::get().getGraphicsQueue(), this->cmdBuffs);
+		this->frame.submit(Instance::get().getGraphicsQueue().queue, this->cmdBuffs);
 		this->frame.endFrame();
 		this->camera->update(dt);
 

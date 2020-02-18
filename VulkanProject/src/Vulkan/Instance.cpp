@@ -63,12 +63,12 @@ VkPhysicalDevice Instance::getPhysicalDevice()
 	return this->physicalDevice;
 }
 
-VkQueue Instance::getGraphicsQueue() const
+QueueVK Instance::getGraphicsQueue() const
 {
 	return this->graphicsQueue;
 }
 
-VkQueue Instance::getPresentQueue() const
+QueueVK Instance::getPresentQueue() const
 {
 	return this->presentQueue;
 }
@@ -263,8 +263,11 @@ void Instance::createLogicalDevice()
 	// Create the logical device
 	ERROR_CHECK(vkCreateDevice(this->physicalDevice, &createInfo, nullptr, &this->device) != VK_SUCCESS, "failed to create logical device!");
 
-	vkGetDeviceQueue(this->device, indices.graphicsFamily.value(), 0, &this->graphicsQueue);
-	vkGetDeviceQueue(this->device, indices.presentFamily.value(), 0, &this->presentQueue);
+	this->graphicsQueue.queueIndex = indices.graphicsFamily.value();
+	this->presentQueue.queueIndex = indices.presentFamily.value();
+
+	vkGetDeviceQueue(this->device, indices.graphicsFamily.value(), 0, &this->graphicsQueue.queue);
+	vkGetDeviceQueue(this->device, indices.presentFamily.value(), 0, &this->presentQueue.queue);
 }
 
 bool Instance::isDeviceSuitable(VkPhysicalDevice device)

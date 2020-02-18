@@ -78,7 +78,7 @@ bool Frame::endFrame()
 	presentInfo.pSwapchains = &swapchain;
 	presentInfo.pImageIndices = &this->imageIndex;
 
-	VkResult result = vkQueuePresentKHR(Instance::get().getPresentQueue(), &presentInfo);
+	VkResult result = vkQueuePresentKHR(Instance::get().getPresentQueue().queue, &presentInfo);
 
 	// Check if window has been resized
 	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {

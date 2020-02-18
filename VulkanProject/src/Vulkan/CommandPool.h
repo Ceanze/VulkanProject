@@ -5,6 +5,7 @@
 #include <vulkan/vulkan.h>
 
 class CommandBuffer;
+struct QueueVK;
 
 class CommandPool
 {
@@ -21,7 +22,7 @@ public:
 	void init(Queue queueFamily);
 	void cleanup();
 	Queue getQueueFamily() const { return this->queueFamily; }
-	VkQueue getQueue() const;
+	QueueVK getQueue() const;
 
 	CommandBuffer* beginSingleTimeCommand();
 	void endSingleTimeCommand(CommandBuffer* buffer);
