@@ -15,7 +15,7 @@ public:
 
 	glm::mat4 getMatrix() const;
 private:
-	float speed;
+	float speed, speedFactor;
 	float fov;
 	float nearPlane, farPlane;
 	float yaw, pitch, roll;

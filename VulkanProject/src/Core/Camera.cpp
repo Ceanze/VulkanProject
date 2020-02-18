@@ -15,6 +15,7 @@ Camera::Camera(float aspect, float fov, const glm::vec3& position, const glm::ve
 	this->yaw = 270;
 	this->pitch = 0;
 	this->roll = 0;
+	this->speedFactor = 1.f;
 }
 
 Camera::~Camera()
@@ -26,19 +27,24 @@ void Camera::update(float dt)
 	static Input& input = Input::get();
 
 	if (input.isKeyDown(GLFW_KEY_A))
-		this->position -= this->right * this->speed * dt;
+		this->position -= this->right * this->speed * dt * this->speedFactor;
 	if(input.isKeyDown(GLFW_KEY_D))
-		this->position += this->right * this->speed * dt;
+		this->position += this->right * this->speed * dt * this->speedFactor;
 
 	if (input.isKeyDown(GLFW_KEY_W))
-		this->position += this->forward * this->speed * dt;
+		this->position += this->forward * this->speed * dt * this->speedFactor;
 	if (input.isKeyDown(GLFW_KEY_S))
-		this->position -= this->forward * this->speed * dt;
+		this->position -= this->forward * this->speed * dt* this->speedFactor;
+
+	if (input.isKeyDown(GLFW_KEY_SPACE))
+		this->position -= this->up * this->speed * dt * this->speedFactor;
+	if (input.isKeyDown(GLFW_KEY_LEFT_CONTROL))
+		this->position += this->up * this->speed * dt * this->speedFactor;
 
 	if (input.isKeyDown(GLFW_KEY_LEFT_SHIFT))
-		this->position -= this->up * this->speed * dt;
-	if (input.isKeyDown(GLFW_KEY_LEFT_CONTROL))
-		this->position += this->up * this->speed * dt;
+		this->speedFactor = 5.f;
+	else
+		this->speedFactor = 1.f;
 
 	glm::vec2 cursorDelta = input.getCursorDelta();
 	cursorDelta *= 0.1f;
