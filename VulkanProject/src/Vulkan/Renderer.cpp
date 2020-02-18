@@ -1,6 +1,7 @@
 #include "jaspch.h"
 #include "Renderer.h"
 #include "Vulkan/Instance.h"
+#include "Core/Input.h"
 
 #include <GLFW/glfw3.h>
 //#define STB_IMAGE_IMPLEMENTATION
@@ -19,6 +20,8 @@ void Renderer::init()
 	Logger::init();
 
 	this->window.init(1280, 720, "Vulkan Project");
+
+	this->camera = new Camera(this->window.getAspectRatio(), 45.f, { 0.f, 0.f, 1.f }, { 0.f, 0.f, 0.f }, 0.8f);
 
 	Instance::get().init(&this->window);
 	this->swapChain.init(this->window.getWidth(), this->window.getHeight());
@@ -87,13 +90,26 @@ void Renderer::run()
 		cmdBuffs[i]->end();
 	}
 
+	auto currentTime = std::chrono::high_resolution_clock::now();
+	auto prevTime = currentTime;
+	float dt = 0;
+
 	while (running && this->window.isOpen())
 	{
 		glfwPollEvents();
 
+		this->memory.directTransfer(&this->camBuffer, (void*)&this->camera->getMatrix()[0], sizeof(glm::mat4), 0);
+
 		this->frame.beginFrame();
 		this->frame.submit(Instance::get().getGraphicsQueue(), cmdBuffs);
 		this->frame.endFrame();
+		this->camera->update(dt);
+		
+		currentTime = std::chrono::high_resolution_clock::now();
+		dt = std::chrono::duration<float>(currentTime - prevTime).count();
+		prevTime = currentTime;
+
+		this->window.setTitle("Delta Time: " + std::to_string(dt * 1000.f) + " ms");
 	}
 }
 
@@ -102,6 +118,7 @@ void Renderer::shutdown()
 	vkDeviceWaitIdle(Instance::get().getDevice());
 
 	this->buffer.cleanup();
+	this->camBuffer.cleanup();
 	this->stagingBuffer.cleanup();
 	this->memory.cleanup();
 	this->descManager.cleanup();
@@ -124,6 +141,7 @@ void Renderer::shutdown()
 void Renderer::setupPreTEMP()
 {
 	this->descLayout.add(new SSBO(VK_SHADER_STAGE_VERTEX_BIT, 1, nullptr));
+	this->descLayout.add(new UBO(VK_SHADER_STAGE_VERTEX_BIT, 1, nullptr));
 	this->descLayout.add(new IMG(VK_SHADER_STAGE_FRAGMENT_BIT, 1, nullptr));
 	this->descLayout.init();
 
@@ -149,11 +167,13 @@ void Renderer::setupPostTEMP()
 
 	// Create buffer
 	this->buffer.init(size + size2, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, queueIndices);
+	this->camBuffer.init(sizeof(glm::mat4), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, queueIndices);
 	this->stagingBuffer.init(width * height * 4, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, queueIndices);
 
 	// Create memory
 	this->memory.bindBuffer(&this->buffer);
 	this->memory.bindBuffer(&this->stagingBuffer);
+	this->memory.bindBuffer(&this->camBuffer);
 	this->memory.init(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
 	this->memoryTexture.bindTexture(&this->texture);
@@ -164,6 +184,7 @@ void Renderer::setupPostTEMP()
 	// Update buffer
 	this->memory.directTransfer(&this->buffer, (void*)&uvs[0], size, 0);
 	this->memory.directTransfer(&this->buffer, (void*)&position[0], size2, size);
+	this->memory.directTransfer(&this->camBuffer, (void*)&this->camera->getMatrix()[0], sizeof(glm::mat4), 0);
 	this->memory.directTransfer(&this->stagingBuffer, (void*)img, width * height * 4, 0);
 
 	// Transistion image
@@ -183,7 +204,8 @@ void Renderer::setupPostTEMP()
 	for (size_t i = 0; i < this->swapChain.getNumImages(); i++)
 	{
 		this->descManager.updateBufferDesc(0, 0, this->buffer.getBuffer(), 0, size + size2);
-		this->descManager.updateImageDesc(0, 1, image.getLayout(), this->texture.getVkImageView(), this->sampler.getSampler());
+		this->descManager.updateBufferDesc(0, 1, this->camBuffer.getBuffer(), 0, sizeof(glm::mat4));
+		this->descManager.updateImageDesc(0, 2, image.getLayout(), this->texture.getVkImageView(), this->sampler.getSampler());
 		this->descManager.updateSets(i);
 	}
 }

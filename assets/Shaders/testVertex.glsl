@@ -9,7 +9,12 @@ layout(set=0, binding = 0) readonly buffer Data
     vec2 positions[3];
 };
 
+layout(set=0, binding = 1) uniform Camera
+{
+    mat4 vp;
+};
+
 void main() {
-    gl_Position = vec4(positions[gl_VertexIndex], 0.0, 1.0);
+    gl_Position = vp * vec4(positions[gl_VertexIndex], 0.0, 1.0);
     fragUV = uv[gl_VertexIndex];
 }
