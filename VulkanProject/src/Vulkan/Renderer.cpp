@@ -93,6 +93,8 @@ void Renderer::run()
 	auto currentTime = std::chrono::high_resolution_clock::now();
 	auto prevTime = currentTime;
 	float dt = 0;
+	unsigned frames = 0;
+	double elapsedTime = 0;
 
 	while (running && this->window.isOpen())
 	{
@@ -107,9 +109,15 @@ void Renderer::run()
 		
 		currentTime = std::chrono::high_resolution_clock::now();
 		dt = std::chrono::duration<float>(currentTime - prevTime).count();
+		elapsedTime += dt;
+		frames++;
 		prevTime = currentTime;
 
-		this->window.setTitle("Delta Time: " + std::to_string(dt * 1000.f) + " ms");
+		if (elapsedTime >= 1.0) {
+			this->window.setTitle("FPS: " + std::to_string(frames) + " [Delta time: " + std::to_string((elapsedTime / frames) * 1000.f) + " ms]");
+			elapsedTime = 0;
+			frames = 0;
+		}
 	}
 }
 
