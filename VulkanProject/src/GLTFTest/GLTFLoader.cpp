@@ -86,12 +86,12 @@ void GLTFLoader::init()
 	// Vertex input info
 	pipInfo.vertexInputInfo = {};
 	pipInfo.vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-	auto bindingDescription = Vertex::getBindingDescriptions();
-	auto attributeDescriptions = Vertex::getAttributeDescriptions();
-	pipInfo.vertexInputInfo.vertexBindingDescriptionCount = 1;
-	pipInfo.vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
-	pipInfo.vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
-	pipInfo.vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
+	//auto bindingDescription = Vertex::getBindingDescriptions();
+	//auto attributeDescriptions = Vertex::getAttributeDescriptions();
+	pipInfo.vertexInputInfo.vertexBindingDescriptionCount = 0;
+	pipInfo.vertexInputInfo.pVertexBindingDescriptions = nullptr;// &bindingDescription;
+	pipInfo.vertexInputInfo.vertexAttributeDescriptionCount = 0;// static_cast<uint32_t>(attributeDescriptions.size());
+	pipInfo.vertexInputInfo.pVertexAttributeDescriptions = nullptr;// attributeDescriptions.data();
 	this->pipeline.setPipelineInfo(PipelineInfoFlag::VERTEX_INPUT, pipInfo);
 	this->pipeline.init(Pipeline::Type::GRAPHICS, &this->shader);
 	JAS_INFO("Created Renderer!");
@@ -166,6 +166,7 @@ void GLTFLoader::cleanup()
 
 void GLTFLoader::setupPreTEMP()
 {
+	this->descLayout.add(new SSBO(VK_SHADER_STAGE_VERTEX_BIT, 1, nullptr)); // Uniforms
 	this->descLayout.add(new UBO(VK_SHADER_STAGE_VERTEX_BIT, 1, nullptr)); // Uniforms
 	this->descLayout.init();
 
@@ -184,7 +185,7 @@ void GLTFLoader::setupPostTEMP()
 	UboData uboData;
 	uboData.proj = glm::perspective(glm::radians(45.0f), (float)this->window.getWidth() / (float)this->window.getHeight(), 1.0f, 150.0f);
 	uboData.view = glm::lookAt(glm::vec3{ 0.0f, 0.0f, 10.f }, glm::vec3{ 0.0f, 0.0f, 0.0f }, glm::vec3{ 0.f, -1.f, 0.f });
-	uboData.world = glm::mat4(0.01f); // Scale by 0.01 SHOULD NOT BE SCALED HERE, USE TRANSFORM OF THE NODE (PUSH CONSTANTS)!!
+	uboData.world = glm::mat4(0.008f); // Scale by 0.01 SHOULD NOT BE SCALED HERE, USE TRANSFORM OF THE NODE (PUSH CONSTANTS)!!
 	uboData.world[3][3] = 1.0f;
 	uint32_t unsiformBufferSize = sizeof(UboData);
 
@@ -200,7 +201,9 @@ void GLTFLoader::setupPostTEMP()
 	// Update descriptor
 	for (size_t i = 0; i < this->swapChain.getNumImages(); i++)
 	{
-		this->descManager.updateBufferDesc(0, 0, this->bufferUniform.getBuffer(), 0, unsiformBufferSize);
+		VkDeviceSize vertexBufferSize = this->model.vertices.size() * sizeof(Vertex);
+		this->descManager.updateBufferDesc(0, 0, this->model.vertexBuffer.getBuffer(), 0, vertexBufferSize);
+		this->descManager.updateBufferDesc(0, 1, this->bufferUniform.getBuffer(), 0, unsiformBufferSize);
 		this->descManager.updateSets(i);
 	}
 
@@ -218,9 +221,9 @@ void GLTFLoader::setupPostTEMP()
 
 		// TODO: Use different materials, can still use same pipeline if all meshes uses same type of material (i.e. PBR)!
 		this->cmdBuffs[i]->cmdBindPipeline(&this->pipeline);
-		VkBuffer vertexBuffers[] = { this->model.vertexBuffer.getBuffer() };
-		VkDeviceSize vertOffsets[] = { 0 };
-		this->cmdBuffs[i]->cmdBindVertexBuffers(0, 1, vertexBuffers, vertOffsets);
+		//VkBuffer vertexBuffers[] = { this->model.vertexBuffer.getBuffer() };
+		//VkDeviceSize vertOffsets[] = { 0 };
+		//this->cmdBuffs[i]->cmdBindVertexBuffers(0, 1, vertexBuffers, vertOffsets);
 		if(this->model.indices.empty() == false)
 			this->cmdBuffs[i]->cmdBindIndexBuffer(this->model.indexBuffer.getBuffer(), 0, VK_INDEX_TYPE_UINT32);
 
@@ -322,7 +325,7 @@ void GLTFLoader::loadScenes(Model& model, tinygltf::Model& gltfModel)
 	}
 
 	uint32_t verticesSize = (uint32_t)(model.vertices.size() * sizeof(Vertex));
-	model.vertexBuffer.init(verticesSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, queueIndices);
+	model.vertexBuffer.init(verticesSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, queueIndices);
 	model.bufferMemory.bindBuffer(&model.vertexBuffer);
 
 	// Create memory with the binded buffers

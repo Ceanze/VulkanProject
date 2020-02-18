@@ -1,14 +1,22 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
 
-layout(location = 0) in vec3 inPosition;
-layout(location = 1) in vec3 inNormal;
-layout(location = 2) in vec2 inUv;
+struct Vertex
+{
+    vec4 inPosition;
+    vec4 inNormal;
+    vec4 inUv;
+};
+
+layout(set=0, binding = 0) readonly buffer VertexData
+{
+    Vertex vertices[];
+};
 
 layout(location = 0) out vec3 fragNormal;
 layout(location = 1) out vec2 fragUv;
 
-layout(set=0, binding = 0) uniform UboData
+layout(set=0, binding = 1) uniform UboData
 {
     mat4 world;
     mat4 view;
@@ -17,7 +25,7 @@ layout(set=0, binding = 0) uniform UboData
 
 
 void main() {
-    gl_Position = proj * view * world * vec4(inPosition, 1.0);
-    fragNormal = normalize((world * vec4(inNormal, 0.0)).xyz);
-    fragUv = inUv;
+    gl_Position = proj * view * world * vec4(vertices[gl_VertexIndex].inPosition.xyz, 1.0);
+    fragNormal = normalize((world * vec4(vertices[gl_VertexIndex].inNormal.xyz, 0.0)).xyz);
+    fragUv = vertices[gl_VertexIndex].inUv.xy;
 }
