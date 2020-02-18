@@ -114,9 +114,9 @@ void Renderer::run()
 		prevTime = currentTime;
 
 		if (elapsedTime >= 1.0) {
-			this->window.setTitle("FPS: " + std::to_string(loops) + " [Delta time: " + std::to_string((elapsedTime / loops) * 1000.f) + " ms]");
+			this->window.setTitle("FPS: " + std::to_string(frames) + " [Delta time: " + std::to_string((elapsedTime / frames) * 1000.f) + " ms]");
 			elapsedTime = 0;
-			loops = 0;
+			frames = 0;
 		}
 	}
 }
