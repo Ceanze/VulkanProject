@@ -4,7 +4,7 @@
 #include "Vulkan/Instance.h"
 #include "Buffer.h"
 #include "Vulkan/VulkanCommon.h"
-#include "Vulkan/Texure.h"
+#include "Vulkan/Texture.h"
 
 Memory::Memory() : memory(VK_NULL_HANDLE), currentOffset(0)
 {
@@ -38,7 +38,7 @@ void Memory::directTransfer(Buffer* buffer, const void* data, uint32_t size, Off
 
 void Memory::init(VkMemoryPropertyFlags memProp)
 {
-	JAS_ASSERT(this->currentOffset != 0, "No buffers bound before allocation of memory!");
+	JAS_ASSERT(this->currentOffset != 0, "No buffers/images bound before allocation of memory!");
 
 	uint32_t typeFilter = 0;
 	for (auto buffer : this->bufferOffsets)

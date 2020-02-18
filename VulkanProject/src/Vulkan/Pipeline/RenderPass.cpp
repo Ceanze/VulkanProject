@@ -27,11 +27,11 @@ void RenderPass::addDepthAttachment(VkAttachmentDescription desc)
 {
 	this->attachments.push_back(desc);
 
-	VkAttachmentReference colorAttachmentRef = {};
-	colorAttachmentRef.attachment = (uint32_t)(this->attachments.size()-1);
-	colorAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+	VkAttachmentReference depthAttachmentRef = {};
+	depthAttachmentRef.attachment = (uint32_t)(this->attachments.size()-1);
+	depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
-	this->attachmentRefs[colorAttachmentRef.attachment] = colorAttachmentRef;
+	this->attachmentRefs[depthAttachmentRef.attachment] = depthAttachmentRef;
 }
 
 void RenderPass::addDefaultColorAttachment(VkFormat swapChainImageFormat)
@@ -76,8 +76,10 @@ void RenderPass::addSubpass(SubpassInfo info)
 	for (uint32_t i : info.preserveAttachments)
 		subpassInternal.preserveAttachments.push_back(i);
 
+	subpassInternal.hasDepthStencilAttachment = info.depthStencilAttachmentIndex == -1 ? false : true;
 	if(info.depthStencilAttachmentIndex != -1)
 		subpassInternal.depthStencilAttachment = getRef(info.depthStencilAttachmentIndex);
+	subpassInternal.hasResolveAttachment = info.resolveAttachmentIndex == -1 ? false : true;
 	if (info.resolveAttachmentIndex != -1)
 		subpassInternal.resolveAttachment = getRef(info.resolveAttachmentIndex);
 }
@@ -119,6 +121,10 @@ void RenderPass::init()
 		subpassDesc.pColorAttachments = sub.colorAttachments.data();
 		subpassDesc.preserveAttachmentCount = static_cast<uint32_t>(sub.preserveAttachments.size());
 		subpassDesc.pPreserveAttachments = sub.preserveAttachments.data();
+		if(sub.hasDepthStencilAttachment)
+			subpassDesc.pDepthStencilAttachment = &sub.depthStencilAttachment;
+		if(sub.hasResolveAttachment)
+			subpassDesc.pResolveAttachments = &sub.resolveAttachment;
 
 		subpasses.push_back(subpassDesc);
 	}

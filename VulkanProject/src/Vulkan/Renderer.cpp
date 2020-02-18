@@ -4,7 +4,7 @@
 #include "Core/Input.h"
 
 #include <GLFW/glfw3.h>
-#define STB_IMAGE_IMPLEMENTATION
+//#define STB_IMAGE_IMPLEMENTATION
 #include <stb/stb_image.h>
 
 Renderer::Renderer()
@@ -76,7 +76,11 @@ void Renderer::run()
 	for (int i = 0; i < this->swapChain.getNumImages(); i++) {
 		cmdBuffs[i] = this->commandPool.createCommandBuffer();
 		cmdBuffs[i]->begin(0);
-		cmdBuffs[i]->cmdBeginRenderPass(&this->renderPass, this->framebuffers[i].getFramebuffer(), this->swapChain.getExtent(), {0.0f, 0.0f, 0.0f, 1.0f});
+		std::vector<VkClearValue> clearValues = {};
+		VkClearValue value;
+		value.color = { 0.0f, 0.0f, 0.0f, 1.0f };
+		clearValues.push_back(value);
+		cmdBuffs[i]->cmdBeginRenderPass(&this->renderPass, this->framebuffers[i].getFramebuffer(), this->swapChain.getExtent(), clearValues);
 		cmdBuffs[i]->cmdBindPipeline(&this->pipeline);
 		std::vector<VkDescriptorSet> sets = { this->descManager.getSet(i, 0) };
 		std::vector<uint32_t> offsets;
@@ -173,23 +177,23 @@ void Renderer::setupPostTEMP()
 	this->buffer.init(size + size2, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, queueIndices);
 	this->camBuffer.init(sizeof(glm::mat4), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, queueIndices);
 	this->stagingBuffer.init(width * height * 4, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, queueIndices);
-	
+
 	// Create memory
 	this->memory.bindBuffer(&this->buffer);
+	this->memory.bindBuffer(&this->stagingBuffer);
 	this->memory.bindBuffer(&this->camBuffer);
 	this->memory.init(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
-	this->memoryTexture.bindBuffer(&this->stagingBuffer);
 	this->memoryTexture.bindTexture(&this->texture);
-	this->memoryTexture.init(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+	this->memoryTexture.init(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-	this->texture.getImageView().init(this->texture.getVkImage(), VK_IMAGE_VIEW_TYPE_2D, VK_FORMAT_R8G8B8A8_UNORM);
+	this->texture.getImageView().init(this->texture.getVkImage(), VK_IMAGE_VIEW_TYPE_2D, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT);
 
 	// Update buffer
 	this->memory.directTransfer(&this->buffer, (void*)&uvs[0], size, 0);
 	this->memory.directTransfer(&this->buffer, (void*)&position[0], size2, size);
 	this->memory.directTransfer(&this->camBuffer, (void*)&this->camera->getMatrix()[0], sizeof(glm::mat4), 0);
-	this->memoryTexture.directTransfer(&this->stagingBuffer, (void*)img, width * height * 4, 0);
+	this->memory.directTransfer(&this->stagingBuffer, (void*)img, width * height * 4, 0);
 
 	// Transistion image
 	Image::TransistionDesc desc;
