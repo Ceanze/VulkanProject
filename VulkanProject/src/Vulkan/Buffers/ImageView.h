@@ -8,7 +8,7 @@ public:
 	ImageView();
 	~ImageView();
 
-	void init(VkImage image, VkImageViewType type, VkFormat format);
+	void init(VkImage image, VkImageViewType type, VkFormat format, VkImageAspectFlags aspectMask);
 
 	VkImageView getImageView() const { return this->imageView; }
 

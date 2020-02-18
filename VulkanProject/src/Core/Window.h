@@ -16,7 +16,7 @@ public:
 
 	void setTitle(const std::string& title);
 
-	float getAspectRatio() const { return this->width/this->height; }
+	float getAspectRatio() const { return (float)this->width/this->height; }
 	unsigned getWidth() const { return this->width; }
 	unsigned getHeight() const { return this->height; }
 	bool isOpen() const { return this->open; }

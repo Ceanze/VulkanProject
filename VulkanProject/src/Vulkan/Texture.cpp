@@ -1,5 +1,5 @@
 #include "jaspch.h"
-#include "Texure.h"
+#include "Texture.h"
 #include "Vulkan/Instance.h"
 
 Texture::Texture()

@@ -72,16 +72,21 @@
     <ClInclude Include="src\Vulkan\Renderer.h">
       <Filter>Vulkan</Filter>
     </ClInclude>
-    <ClInclude Include="src\Vulkan\SwapChain.h">
+    <ClInclude Include="src\Vulkan\Sampler.h">
       <Filter>Vulkan</Filter>
     </ClInclude>
-    <ClInclude Include="src\Vulkan\Texure.h">
+    <ClInclude Include="src\Vulkan\SwapChain.h">
       <Filter>Vulkan</Filter>
     </ClInclude>
     <ClInclude Include="src\Vulkan\VulkanCommon.h">
       <Filter>Vulkan</Filter>
     </ClInclude>
     <ClInclude Include="src\jaspch.h" />
+    <ClInclude Include="src\GLTFTest\Model\Model.h" />
+    <ClInclude Include="src\GLTFTest\GLTFLoader.h" />
+    <ClInclude Include="src\Vulkan\Texture.h">
+      <Filter>Vulkan</Filter>
+    </ClInclude>
     <ClInclude Include="src\Vulkan\Sampler.h" />
     <ClInclude Include="src\Core\Camera.h" />
     <ClInclude Include="src\Core\Input.h" />
@@ -138,10 +143,10 @@
     <ClCompile Include="src\Vulkan\Renderer.cpp">
       <Filter>Vulkan</Filter>
     </ClCompile>
-    <ClCompile Include="src\Vulkan\SwapChain.cpp">
+    <ClCompile Include="src\Vulkan\Sampler.cpp">
       <Filter>Vulkan</Filter>
     </ClCompile>
-    <ClCompile Include="src\Vulkan\Texure.cpp">
+    <ClCompile Include="src\Vulkan\SwapChain.cpp">
       <Filter>Vulkan</Filter>
     </ClCompile>
     <ClCompile Include="src\jaspch.cpp" />
@@ -149,5 +154,10 @@
     <ClCompile Include="src\Vulkan\Sampler.cpp" />
     <ClCompile Include="src\Core\Camera.cpp" />
     <ClCompile Include="src\Core\Input.cpp" />
+    <ClCompile Include="src\GLTFTest\GLTFLoader.cpp" />
+    <ClCompile Include="src\Vulkan\Texture.cpp">
+      <Filter>Vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="src\GLTFTest\Model\Model.cpp" />
   </ItemGroup>
 </Project>
