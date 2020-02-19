@@ -37,8 +37,10 @@ QueueVK CommandPool::getQueue() const
 	{
 	case Queue::GRAPHICS:
 		return Instance::get().getGraphicsQueue();
-	default:
-		JAS_ASSERT(false, "Only graphics queue is currently supported!");
+	case Queue::TRANSFER:
+		return Instance::get().getTransferQueue();
+	case Queue::COMPUTE:
+		return Instance::get().getComputeQueue();
 	}
 }
 
@@ -102,6 +104,7 @@ std::vector<CommandBuffer*> CommandPool::createCommandBuffers(uint32_t count)
 		b[i] = new CommandBuffer;
 		b[i]->init(this->pool);
 		b[i]->setCommandBuffer(vkBuffers[i]);
+		buffers.push_back(b[i]);
 	}
 	
 	return b;

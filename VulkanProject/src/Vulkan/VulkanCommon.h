@@ -88,7 +88,14 @@ static uint32_t findQueueIndex(VkQueueFlagBits queueFamily, VkPhysicalDevice dev
 	vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
 
 	for (size_t i = 0; i < queueFamilies.size(); i++) {
-		if (queueFamilies[i].queueFlags & queueFamily)
+
+		VkQueueFlags desiredQueue = queueFamilies[i].queueFlags & queueFamily;
+		VkQueueFlags graphicsCheck = queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT;
+
+		if ((queueFamily & VK_QUEUE_GRAPHICS_BIT == 1) && (queueFamilies[i].queueFlags & queueFamily))
+			return i;
+		// If not requesting graphics queue, should return a queue without graphics support (to avoid non-unique queue)
+		else if ((desiredQueue) && (graphicsCheck == 0))
 			return i;
 	}
 }

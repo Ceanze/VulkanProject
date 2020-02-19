@@ -55,7 +55,7 @@ void Renderer::init()
 	JAS_INFO("Created Renderer!");
 
 	this->commandPool.init(CommandPool::Queue::GRAPHICS);
-	JAS_INFO("Created Command Pool!");
+	this->transferCommandPool.init(CommandPool::Queue::TRANSFER);
 
 	this->framebuffers.resize(this->swapChain.getNumImages());
 
@@ -140,6 +140,7 @@ void Renderer::shutdown()
 
 	this->frame.cleanup();
 	this->commandPool.cleanup();
+	this->transferCommandPool.cleanup();
 	for (auto& framebuffer : this->framebuffers)
 		framebuffer.cleanup();
 	this->pipeline.cleanup();
@@ -148,6 +149,8 @@ void Renderer::shutdown()
 	this->swapChain.cleanup();
 	Instance::get().cleanup();
 	this->window.cleanup();
+
+	delete this->camera;
 }
 
 void Renderer::setupPreTEMP()
@@ -175,7 +178,8 @@ void Renderer::setupPostTEMP()
 	uint32_t size = sizeof(glm::vec2) * 3;
 	uint32_t size2 = sizeof(glm::vec2) * 3;
 
-	std::vector<uint32_t> queueIndices = { findQueueIndex(VK_QUEUE_GRAPHICS_BIT, Instance::get().getPhysicalDevice()) };
+	std::vector<uint32_t> queueIndices = { findQueueIndex(VK_QUEUE_GRAPHICS_BIT, Instance::get().getPhysicalDevice()),
+		findQueueIndex(VK_QUEUE_TRANSFER_BIT, Instance::get().getPhysicalDevice()) };
 
 	// Create texture and sampler
 	this->texture.init(width, height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, queueIndices);
@@ -211,7 +215,7 @@ void Renderer::setupPostTEMP()
 	desc.pool = &this->commandPool;
 	Image& image = this->texture.getImage();
 	image.transistionLayout(desc);
-	image.copyBufferToImage(&this->stagingBuffer, &this->commandPool);
+	image.copyBufferToImage(&this->stagingBuffer, &this->transferCommandPool);
 	desc.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 	desc.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 	image.transistionLayout(desc);
