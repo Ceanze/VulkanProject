@@ -19,7 +19,6 @@ void RenderPass::addColorAttachment(VkAttachmentDescription desc)
 	VkAttachmentReference colorAttachmentRef = {};
 	colorAttachmentRef.attachment = (uint32_t)(this->attachments.size() - 1);
 	colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
 	this->attachmentRefs[colorAttachmentRef.attachment] = colorAttachmentRef;
 }
 

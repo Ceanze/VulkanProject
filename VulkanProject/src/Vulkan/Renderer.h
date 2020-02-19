@@ -17,6 +17,8 @@
 #include "Pipeline/DescriptorManager.h"
 #include "Texture.h"
 #include "Sampler.h"
+#include "Buffers/Image.h"
+#include "Buffers/ImageView.h"
 
 class Renderer
 {
@@ -30,6 +32,7 @@ public:
 
 	void setupPreTEMP();
 	void setupPostTEMP();
+
 private:
 	Window window;
 	SwapChain swapChain;
@@ -45,10 +48,22 @@ private:
 	bool running = true;
 
 	// TEMP
-	Buffer buffer;
+	Pipeline offscreenPipeline;
+	Shader offscreenShader;
+	RenderPass offScreenRenderPass;
+	std::vector<Framebuffer> offScreenFramebuffers;
+	Sampler offScreenSampler;
+	std::vector<Texture> offScreenTextures;
+	DescriptorLayout offScreenDescLayout;
+	DescriptorManager offScreenDescManager;
+	Buffer offScreenBuffer;
 	Buffer camBuffer;
-	Memory memory;
 	Memory memoryTexture;
+	std::vector<Sampler> samplers;
+
+	Buffer buffer;
+	Memory memory;
+	Memory memoryTexture2;
 	Buffer stagingBuffer;
 	Texture texture;
 	Sampler sampler;

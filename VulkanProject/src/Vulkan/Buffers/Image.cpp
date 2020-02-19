@@ -90,6 +90,13 @@ void Image::transistionLayout(TransistionDesc& desc)
 		sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 		destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
 	}
+	else if (desc.oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && desc.newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
+		barrier.srcAccessMask = 0;
+		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+		sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+		destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+	}
 	else if (desc.oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && desc.newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
 		barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
