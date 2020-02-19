@@ -82,8 +82,6 @@
       <Filter>Vulkan</Filter>
     </ClInclude>
     <ClInclude Include="src\jaspch.h" />
-    <ClInclude Include="src\GLTFTest\Model\Model.h" />
-    <ClInclude Include="src\GLTFTest\GLTFLoader.h" />
     <ClInclude Include="src\Vulkan\Texture.h">
       <Filter>Vulkan</Filter>
     </ClInclude>
@@ -92,6 +90,10 @@
     <ClInclude Include="src\Core\Input.h" />
     <ClInclude Include="src\Vulkan\Pipeline\PushConstants.h" />
     <ClInclude Include="src\Threading\ThreadManager.h" />
+    <ClInclude Include="src\Threading\ThreadingTest.h" />
+    <ClInclude Include="src\Models\Model\Model.h" />
+    <ClInclude Include="src\Models\GLTFLoader.h" />
+    <ClInclude Include="src\Models\GLTFTest.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Core\Logger.cpp">
@@ -156,12 +158,14 @@
     <ClCompile Include="src\Vulkan\Sampler.cpp" />
     <ClCompile Include="src\Core\Camera.cpp" />
     <ClCompile Include="src\Core\Input.cpp" />
-    <ClCompile Include="src\GLTFTest\GLTFLoader.cpp" />
     <ClCompile Include="src\Vulkan\Texture.cpp">
       <Filter>Vulkan</Filter>
     </ClCompile>
-    <ClCompile Include="src\GLTFTest\Model\Model.cpp" />
     <ClCompile Include="src\Vulkan\Pipeline\PushConstants.cpp" />
     <ClCompile Include="src\Threading\ThreadManager.cpp" />
+    <ClCompile Include="src\Threading\ThreadingTest.cpp" />
+    <ClCompile Include="src\Models\Model\Model.cpp" />
+    <ClCompile Include="src\Models\GLTFLoader.cpp" />
+    <ClCompile Include="src\Models\GLTFTest.cpp" />
   </ItemGroup>
 </Project>

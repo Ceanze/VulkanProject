@@ -13,8 +13,7 @@
 #include "Vulkan/Pipeline/DescriptorManager.h"
 
 // ------------ TEMP ------------
-// #define TINYGLTF_NOEXCEPTION // optional. disable exception handling.
-#include "glTF/tiny_gltf.h"
+#include "GLTFLoader.h"
 
 #include "Vulkan/Buffers/Buffer.h"
 #include "Vulkan/Buffers/Memory.h"
@@ -22,15 +21,15 @@
 #include "Model/Model.h"
 #include "Core/Camera.h"
 
-class GLTFLoader
+class GLTFTest
 {
 public:
-	GLTFLoader();
-	~GLTFLoader();
+	GLTFTest();
+	~GLTFTest();
 
 	void init();
 	void run();
-	void cleanup();
+	void shutdown();
 
 private:
 	struct UboData
@@ -41,14 +40,6 @@ private:
 
 	void setupPreTEMP();
 	void setupPostTEMP();
-
-	void loadModel(Model& model, const std::string& filePath);
-	void loadTextures(Model& model, tinygltf::Model& gltfModel);
-	void loadMaterials(Model& model, tinygltf::Model& gltfModel);
-	void loadScenes(Model& model, tinygltf::Model& gltfModel);
-	void loadNode(Model& model, Model::Node* node, tinygltf::Model& gltfModel, tinygltf::Node& gltfNode, std::string indents);
-
-	void drawNode(int index, Model::Node& node);
 
 private:
 	Window window;
@@ -68,8 +59,8 @@ private:
 	Camera* camera;
 
 	// For loading model
+	GLTFLoader loader;
 	Model model;
-	tinygltf::TinyGLTF loader;
 
 	CommandBuffer* cmdBuffs[3];
 	Buffer bufferUniform;
