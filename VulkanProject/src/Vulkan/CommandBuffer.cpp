@@ -105,3 +105,13 @@ void CommandBuffer::end()
 {
 	ERROR_CHECK(vkEndCommandBuffer(this->buffer), "Failed to record command buffer!")
 }
+
+void CommandBuffer::cmdCopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, uint32_t regionCount, const VkBufferCopy* pRegions)
+{
+	vkCmdCopyBuffer(this->buffer, srcBuffer, dstBuffer, regionCount, pRegions);
+}
+
+void CommandBuffer::cmdCopyBufferToImage(VkBuffer srcBuffer, VkImage dstImage, VkImageLayout dstImageLayout, uint32_t regionCount, const VkBufferImageCopy* pRegions)
+{
+	vkCmdCopyBufferToImage(this->buffer, srcBuffer, dstImage, dstImageLayout, regionCount, pRegions);
+}

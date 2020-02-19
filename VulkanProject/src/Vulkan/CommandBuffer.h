@@ -29,6 +29,12 @@ public:
 	void cmdEndRenderPass();
 	void end();
 
+	// Copy commands (used for transfer queue)
+	void cmdCopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, uint32_t regionCount, const VkBufferCopy* pRegions);
+	void cmdCopyBufferToImage(VkBuffer srcBuffer, VkImage dstImage, VkImageLayout dstImageLayout, uint32_t regionCount, const VkBufferImageCopy* pRegions);
+
+	// Compute/dispatch commands (used for compute queue)
+
 private:
 
 	VkCommandPool pool;

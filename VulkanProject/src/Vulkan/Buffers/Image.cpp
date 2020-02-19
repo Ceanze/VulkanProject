@@ -130,7 +130,7 @@ void Image::copyBufferToImage(Buffer* buffer, CommandPool* pool)
 	region.imageOffset = { 0, 0, 0 };
 	region.imageExtent = { this->width, this->height, 1 };
 
-	vkCmdCopyBufferToImage(commandBuffer->getCommandBuffer(), buffer->getBuffer(), this->image, this->layout, 1, &region);
+	commandBuffer->cmdCopyBufferToImage(buffer->getBuffer(), this->image, this->layout, 1, &region);
 
 	pool->endSingleTimeCommand(commandBuffer);
 }
