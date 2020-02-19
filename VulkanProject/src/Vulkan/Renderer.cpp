@@ -207,6 +207,9 @@ void Renderer::setupPostTEMP()
 	this->memory.directTransfer(&this->camBuffer, (void*)&this->camera->getMatrix()[0], sizeof(glm::mat4), 0);
 	this->memory.directTransfer(&this->stagingBuffer, (void*)img, width * height * 4, 0);
 
+	// Free img after transfer
+	delete img;
+
 	// Transistion image
 	Image::TransistionDesc desc;
 	desc.format = VK_FORMAT_R8G8B8A8_UNORM;
