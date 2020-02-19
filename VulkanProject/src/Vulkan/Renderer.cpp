@@ -54,8 +54,8 @@ void Renderer::init()
 	this->pipeline.init(Pipeline::Type::GRAPHICS, &this->shader);
 	JAS_INFO("Created Renderer!");
 
-	this->commandPool.init(CommandPool::Queue::GRAPHICS);
-	this->transferCommandPool.init(CommandPool::Queue::TRANSFER);
+	this->commandPool.init(CommandPool::Queue::GRAPHICS, 0);
+	this->transferCommandPool.init(CommandPool::Queue::TRANSFER, 0);
 
 	this->framebuffers.resize(this->swapChain.getNumImages());
 
@@ -75,8 +75,8 @@ void Renderer::run()
 {
 	CommandBuffer* cmdBuffs[3];
 	for (int i = 0; i < this->swapChain.getNumImages(); i++) {
-		cmdBuffs[i] = this->commandPool.createCommandBuffer();
-		cmdBuffs[i]->begin(0);
+		cmdBuffs[i] = this->commandPool.createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+		cmdBuffs[i]->begin(0, nullptr);
 		std::vector<VkClearValue> clearValues = {};
 		VkClearValue value;
 		value.color = { 0.0f, 0.0f, 0.0f, 1.0f };

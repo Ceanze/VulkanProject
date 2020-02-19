@@ -16,6 +16,9 @@ public:
 
 	bool beginFrame();
 	bool endFrame();
+
+	uint32_t getCurrentImageIndex() const;
+
 private:
 	void createSyncObjects();
 	void destroySyncObjects();

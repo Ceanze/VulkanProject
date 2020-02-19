@@ -16,10 +16,10 @@ public:
 	void cleanup();
 	VkCommandBuffer getCommandBuffer() const { return this->buffer; }
 	void setCommandBuffer(VkCommandBuffer buffer);
-	void createCommandBuffer();
+	void createCommandBuffer(VkCommandBufferLevel level);
 	
 	// Record command functions
-	void begin(VkCommandBufferUsageFlags flags);
+	void begin(VkCommandBufferUsageFlags flags, VkCommandBufferInheritanceInfo* instanceInfo);
 	void cmdBeginRenderPass(RenderPass* renderPass, VkFramebuffer framebuffer, VkExtent2D extent, const std::vector<VkClearValue>& clearValues);
 	void cmdBindPipeline(Pipeline* pipeline);
 	void cmdBindVertexBuffers(uint32_t firstBinding, uint32_t bindingCount, const VkBuffer* buffers, const VkDeviceSize* offsets);

@@ -50,7 +50,7 @@ void GLTFTest::init()
 	this->renderPass.addSubpassDependency(subpassDependency);
 	this->renderPass.init();
 
-	this->commandPool.init(CommandPool::Queue::GRAPHICS);
+	this->commandPool.init(CommandPool::Queue::GRAPHICS, 0);
 	JAS_INFO("Created Command Pool!");
 
 	setupPreTEMP();
@@ -203,8 +203,8 @@ void GLTFTest::setupPostTEMP()
 
 	// Record command buffers
 	for (int i = 0; i < this->swapChain.getNumImages(); i++) {
-		this->cmdBuffs[i] = this->commandPool.createCommandBuffer();
-		this->cmdBuffs[i]->begin(0);
+		this->cmdBuffs[i] = this->commandPool.createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+		this->cmdBuffs[i]->begin(0, nullptr);
 		std::vector<VkClearValue> clearValues = {};
 		VkClearValue value;
 		value.color = { 0.0f, 0.0f, 0.0f, 1.0f };

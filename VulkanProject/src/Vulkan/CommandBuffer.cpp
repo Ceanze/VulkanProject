@@ -29,24 +29,24 @@ void CommandBuffer::setCommandBuffer(VkCommandBuffer buffer)
 	this->buffer = buffer;
 }
 
-void CommandBuffer::createCommandBuffer()
+void CommandBuffer::createCommandBuffer(VkCommandBufferLevel level)
 {
 	VkCommandBufferAllocateInfo allocInfo = {};
 	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 	allocInfo.commandPool = this->pool;
-	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	allocInfo.level = level;
 	allocInfo.commandBufferCount = 1;
 	allocInfo.pNext = nullptr;
 
 	ERROR_CHECK(vkAllocateCommandBuffers(Instance::get().getDevice(), &allocInfo, &this->buffer), "Failed to allocate command buffer!");
 }
 
-void CommandBuffer::begin(VkCommandBufferUsageFlags flags)
+void CommandBuffer::begin(VkCommandBufferUsageFlags flags, VkCommandBufferInheritanceInfo* instanceInfo)
 {
 	VkCommandBufferBeginInfo beginInfo = {};
 	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 	beginInfo.flags = flags; // Optional
-	beginInfo.pInheritanceInfo = nullptr; // Optional
+	beginInfo.pInheritanceInfo = instanceInfo; // Optional
 
 	ERROR_CHECK(vkBeginCommandBuffer(this->buffer, &beginInfo), "Failed to begin recording command buffer!");
 }

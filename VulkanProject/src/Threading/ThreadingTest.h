@@ -21,6 +21,7 @@
 #include "Core/Camera.h"
 
 #include "Threading/ThreadManager.h"
+#include "Vulkan/Pipeline/PushConstants.h"
 
 class ThreadingTest
 {
@@ -33,11 +34,22 @@ public:
 	void shutdown();
 
 private:
-	struct UboData
+	struct PushConstantData
 	{
-		glm::mat4 world;
+		glm::mat4 mw;
 		glm::mat4 vp;
+		glm::vec4 tint;
 	};
+
+	struct ObjectData
+	{
+		glm::mat4 model;
+		glm::mat4 world;
+		glm::vec4 tint;
+	};
+
+	void prepareBuffers();
+	void updateBuffers(uint32_t frameIndex, float dt);
 
 	void setupPreTEMP();
 	void setupPostTEMP();
@@ -63,11 +75,11 @@ private:
 	GLTFLoader loader;
 	Model model;
 
-	CommandBuffer* cmdBuffs[3];
-	Buffer bufferUniform;
+	std::vector<CommandBuffer*> primaryBuffers;
 	Texture depthTexture;
-	Memory memory; // Holds uniform data
 	Memory imageMemory; // Holds depth texture
 
 	ThreadManager threadManager;
+	std::vector<ObjectData> objects;
+	std::vector<PushConstants> pushConstants;
 };
