@@ -104,6 +104,7 @@ std::vector<CommandBuffer*> CommandPool::createCommandBuffers(uint32_t count)
 		b[i] = new CommandBuffer;
 		b[i]->init(this->pool);
 		b[i]->setCommandBuffer(vkBuffers[i]);
+		buffers.push_back(b[i]);
 	}
 	
 	return b;

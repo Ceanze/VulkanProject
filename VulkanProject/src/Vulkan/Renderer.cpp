@@ -145,6 +145,8 @@ void Renderer::shutdown()
 	this->swapChain.cleanup();
 	Instance::get().cleanup();
 	this->window.cleanup();
+
+	delete this->camera;
 }
 
 void Renderer::setupPreTEMP()
