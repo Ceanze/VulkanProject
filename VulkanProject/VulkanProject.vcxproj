@@ -102,6 +102,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="src\ComputeTest\ComputeTest.h" />
     <ClInclude Include="src\Core\Camera.h" />
     <ClInclude Include="src\Core\Input.h" />
     <ClInclude Include="src\Core\Logger.h" />
@@ -133,6 +134,7 @@
     <ClInclude Include="src\jaspch.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\ComputeTest\ComputeTest.cpp" />
     <ClCompile Include="src\Core\Camera.cpp" />
     <ClCompile Include="src\Core\Input.cpp" />
     <ClCompile Include="src\Core\Logger.cpp" />

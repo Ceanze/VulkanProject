@@ -91,6 +91,7 @@
     <ClInclude Include="src\Core\Camera.h" />
     <ClInclude Include="src\Core\Input.h" />
     <ClInclude Include="src\Vulkan\Pipeline\PushConstants.h" />
+    <ClInclude Include="src\ComputeTest\ComputeTest.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Core\Logger.cpp">
@@ -161,5 +162,6 @@
     </ClCompile>
     <ClCompile Include="src\GLTFTest\Model\Model.cpp" />
     <ClCompile Include="src\Vulkan\Pipeline\PushConstants.cpp" />
+    <ClCompile Include="src\ComputeTest\ComputeTest.cpp" />
   </ItemGroup>
 </Project>
