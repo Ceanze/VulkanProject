@@ -26,7 +26,7 @@ void Buffer::init(VkDeviceSize size, VkBufferUsageFlags usage, const std::vector
 	else
 		createInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-	createInfo.queueFamilyIndexCount = queueFamilyIndices.size();
+	createInfo.queueFamilyIndexCount = static_cast<uint32_t>(queueFamilyIndices.size());
 	createInfo.pQueueFamilyIndices = queueFamilyIndices.data();
 
 	ERROR_CHECK(vkCreateBuffer(Instance::get().getDevice(), &createInfo, nullptr, &this->buffer), "Failed to create buffer");

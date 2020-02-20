@@ -42,6 +42,7 @@ QueueVK CommandPool::getQueue() const
 	case Queue::COMPUTE:
 		return Instance::get().getComputeQueue();
 	}
+	return QueueVK();
 }
 
 CommandBuffer* CommandPool::beginSingleTimeCommand()
@@ -52,9 +53,9 @@ CommandBuffer* CommandPool::beginSingleTimeCommand()
 	allocInfo.commandPool = pool;
 	allocInfo.commandBufferCount = 1;
 
-	CommandBuffer* buffer = createCommandBuffer();
+	CommandBuffer* buffer = createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 
-	buffer->begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+	buffer->begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, nullptr);
 
 	return buffer;
 }
@@ -77,24 +78,24 @@ void CommandPool::endSingleTimeCommand(CommandBuffer* buffer)
 }
 
 // Creates one (1) command buffer only
-CommandBuffer* CommandPool::createCommandBuffer()
+CommandBuffer* CommandPool::createCommandBuffer(VkCommandBufferLevel level)
 {
 	CommandBuffer* b = new CommandBuffer();
 	b->init(this->pool);
-	b->createCommandBuffer();
+	b->createCommandBuffer(level);
 	buffers.push_back(b);
 	return b;
 }
 
 // Used to create several command buffers at a time for optimization
-std::vector<CommandBuffer*> CommandPool::createCommandBuffers(uint32_t count)
+std::vector<CommandBuffer*> CommandPool::createCommandBuffers(uint32_t count, VkCommandBufferLevel level)
 {
 	std::vector<VkCommandBuffer> vkBuffers(count);
 
 	VkCommandBufferAllocateInfo allocInfo = {};
 	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 	allocInfo.commandPool = this->pool;
-	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	allocInfo.level = level;
 	allocInfo.commandBufferCount = count;
 
 	ERROR_CHECK(vkAllocateCommandBuffers(Instance::get().getDevice(), &allocInfo, vkBuffers.data()), "Failed to allocate command buffers!");

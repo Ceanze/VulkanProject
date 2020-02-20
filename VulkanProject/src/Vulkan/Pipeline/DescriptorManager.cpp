@@ -29,7 +29,7 @@ void DescriptorManager::init(uint32_t numCopies)
 	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 	poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
 	poolInfo.pPoolSizes = poolSizes.data();
-	poolInfo.maxSets = numCopies * this->setLayouts.size();
+	poolInfo.maxSets = static_cast<uint32_t>(numCopies * this->setLayouts.size());
 
 	VkResult result = vkCreateDescriptorPool(Instance::get().getDevice(), &poolInfo, nullptr, &this->pool);
 	JAS_ASSERT(result == VK_SUCCESS, "Failed to create descriptor pool!");
