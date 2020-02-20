@@ -25,6 +25,7 @@ public:
 	VkSurfaceKHR getSurface() const { return this->surface; }
 	VkDevice getDevice() const { return this->device; }
 	VkPhysicalDevice getPhysicalDevice() const { return this->physicalDevice; }
+	VkInstance getInstance() const { return this->instance; }
 
 	QueueVK getGraphicsQueue() const { return this->graphicsQueue; }
 	QueueVK getPresentQueue() const { return this->presentQueue; }

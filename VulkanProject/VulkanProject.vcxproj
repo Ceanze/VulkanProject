@@ -62,7 +62,7 @@
       <PrecompiledHeaderFile>jaspch.h</PrecompiledHeaderFile>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>JAS_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>src;..\libs\glfw\include;..\libs\spdlog\include;..\libs\glm;..\libs\stb;..\libs\glTF;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>src;..\libs\glfw\include;..\libs\spdlog\include;..\libs\glm;..\libs\stb;..\libs\glTF;..\libs\imgui\imgui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
       <MinimalRebuild>false</MinimalRebuild>
@@ -83,7 +83,7 @@
       <PrecompiledHeaderFile>jaspch.h</PrecompiledHeaderFile>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>JAS_RELEASE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>src;..\libs\glfw\include;..\libs\spdlog\include;..\libs\glm;..\libs\stb;..\libs\glTF;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>src;..\libs\glfw\include;..\libs\spdlog\include;..\libs\glm;..\libs\stb;..\libs\glTF;..\libs\imgui\imgui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
@@ -132,6 +132,7 @@
     <ClInclude Include="src\Vulkan\Sampler.h" />
     <ClInclude Include="src\Vulkan\SwapChain.h" />
     <ClInclude Include="src\Vulkan\Texture.h" />
+    <ClInclude Include="src\Vulkan\VKImgui.h" />
     <ClInclude Include="src\Vulkan\VulkanCommon.h" />
     <ClInclude Include="src\jaspch.h" />
   </ItemGroup>
@@ -164,6 +165,7 @@
     <ClCompile Include="src\Vulkan\Sampler.cpp" />
     <ClCompile Include="src\Vulkan\SwapChain.cpp" />
     <ClCompile Include="src\Vulkan\Texture.cpp" />
+    <ClCompile Include="src\Vulkan\VKImgui.cpp" />
     <ClCompile Include="src\jaspch.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
@@ -172,6 +174,9 @@
   <ItemGroup>
     <ProjectReference Include="..\libs\glfw\GLFW.vcxproj">
       <Project>{154B857C-0182-860D-AA6E-6C109684020F}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\libs\imgui\imgui\ImGui.vcxproj">
+      <Project>{C0FF640D-2C14-8DBE-F595-301E616989EF}</Project>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -79,6 +79,12 @@ void Pipeline::setPipelineInfo(PipelineInfoFlag flags, PipelineInfo info)
 		this->graphicsPipelineInfo.colorBlendAttachment = info.colorBlendAttachment;
 	if (flags & PipelineInfoFlag::COLOR_BLEND)
 		this->graphicsPipelineInfo.colorBlending = info.colorBlending;
+	if (flags & PipelineInfoFlag::INPUT_ASSEMBLY)
+		this->graphicsPipelineInfo.inputAssembly = info.inputAssembly;
+	if (flags & PipelineInfoFlag::VIEWPORT)
+		this->graphicsPipelineInfo.viewport = info.viewport;
+	if (flags & PipelineInfoFlag::SCISSOR)
+		this->graphicsPipelineInfo.scissor = info.scissor;
 }
 
 void Pipeline::createGraphicsPipeline()
@@ -89,21 +95,33 @@ void Pipeline::createGraphicsPipeline()
 	}
 
 	VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
-	inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-	inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-	inputAssembly.primitiveRestartEnable = VK_FALSE;
+	if (this->graphicsPipelineInfoFlags & PipelineInfoFlag::INPUT_ASSEMBLY)
+		inputAssembly = this->graphicsPipelineInfo.inputAssembly;
+	else {
+		inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+		inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+		inputAssembly.primitiveRestartEnable = VK_FALSE;
+	}
 
 	VkViewport viewport = {};
-	viewport.x = 0.0f;
-	viewport.y = 0.0f;
-	viewport.width = (float)this->extent.width;
-	viewport.height = (float)this->extent.height;
-	viewport.minDepth = 0.0f;
-	viewport.maxDepth = 1.0f;
+	if (this->graphicsPipelineInfoFlags & PipelineInfoFlag::VIEWPORT)
+		viewport = this->graphicsPipelineInfo.viewport;
+	else {
+		viewport.x = 0.0f;
+		viewport.y = 0.0f;
+		viewport.width = (float)this->extent.width;
+		viewport.height = (float)this->extent.height;
+		viewport.minDepth = 0.0f;
+		viewport.maxDepth = 1.0f;
+	}
 
 	VkRect2D scissor = {};
-	scissor.offset = { 0, 0 };
-	scissor.extent = this->extent;
+	if (this->graphicsPipelineInfoFlags & PipelineInfoFlag::SCISSOR)
+		scissor = this->graphicsPipelineInfo.scissor;
+	else {
+		scissor.offset = { 0, 0 };
+		scissor.extent = this->extent;
+	}
 
 	VkPipelineViewportStateCreateInfo viewportState = {};
 	viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;

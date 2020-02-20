@@ -106,7 +106,7 @@ void ThreadingTest::init()
 		this->framebuffers[i].init(this->swapChain.getNumImages(), &this->renderPass, imageViews, this->swapChain.getExtent());
 	}
 
-	this->frame.init(&this->swapChain);
+	this->frame.init(&this->window, &this->swapChain);
 
 	setupPostTEMP();
 }
