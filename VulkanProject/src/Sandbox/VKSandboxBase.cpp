@@ -12,8 +12,6 @@ VKSandboxBase::~VKSandboxBase()
 void VKSandboxBase::selfInit()
 {
 	this->framebuffers.resize(getSwapChain()->getNumImages());
-	this->frame.init(getWindow(), getSwapChain());
-
 	init();
 
 	JAS_ASSERT(this->framebuffersInitialized == true, "Framebuffers must be initialized by the function initFramebuffers()!");
@@ -29,8 +27,6 @@ void VKSandboxBase::selfCleanup()
 	vkDeviceWaitIdle(Instance::get().getDevice());
 
 	cleanup();
-
-	this->frame.cleanup();
 
 	for (auto& framebuffer : this->framebuffers)
 		framebuffer.cleanup();
@@ -66,7 +62,7 @@ std::vector<Framebuffer>& VKSandboxBase::getFramebuffers()
 
 Frame* VKSandboxBase::getFrame()
 {
-	return &this->frame;
+	return this->frame;
 }
 
 void VKSandboxBase::setWindow(Window* window)
@@ -77,4 +73,9 @@ void VKSandboxBase::setWindow(Window* window)
 void VKSandboxBase::setSwapChain(SwapChain* swapChain)
 {
 	this->swapChain = swapChain;
+}
+
+void VKSandboxBase::setFrame(Frame* frame)
+{
+	this->frame = frame;
 }

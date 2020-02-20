@@ -54,11 +54,12 @@ public:
 private:
 	void setWindow(Window* window);
 	void setSwapChain(SwapChain* swapChain);
+	void setFrame(Frame* frame);
 
 private:
 	Window* window;
 	SwapChain* swapChain;
-	Frame frame;
+	Frame* frame;
 
 	std::vector<Framebuffer> framebuffers;
 	bool framebuffersInitialized;

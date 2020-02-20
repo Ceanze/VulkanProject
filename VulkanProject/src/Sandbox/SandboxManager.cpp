@@ -5,7 +5,7 @@
 #include "Vulkan/Instance.h"
 #include <GLFW/glfw3.h>
 
-SandboxManager::SandboxManager() : running(true)
+SandboxManager::SandboxManager() : running(true), sandbox(nullptr)
 {
 }
 
@@ -13,9 +13,9 @@ SandboxManager::~SandboxManager()
 {
 }
 
-void SandboxManager::add(VKSandboxBase* sandbox)
+void SandboxManager::set(VKSandboxBase* sandbox)
 {
-	this->sandboxes.push_back(sandbox);
+	this->sandbox = sandbox;
 }
 
 void SandboxManager::init()
@@ -26,13 +26,12 @@ void SandboxManager::init()
 
 	Instance::get().init(&this->window);
 	this->swapChain.init(this->window.getWidth(), this->window.getHeight());
+	this->frame.init(&this->window, &this->swapChain);
 
-	for (auto& sandbox : this->sandboxes)
-	{
-		sandbox->setWindow(&this->window);
-		sandbox->setSwapChain(&this->swapChain);
-		sandbox->selfInit();
-	}
+	this->sandbox->setWindow(&this->window);
+	this->sandbox->setSwapChain(&this->swapChain);
+	this->sandbox->setFrame(&this->frame);
+	this->sandbox->selfInit();
 }
 
 void SandboxManager::run()
@@ -50,8 +49,7 @@ void SandboxManager::run()
 		if (glfwGetKey(this->window.getNativeWindow(), GLFW_KEY_ESCAPE) == GLFW_PRESS)
 			this->running = false;
 
-		for (auto& sandbox : this->sandboxes)
-			sandbox->selfLoop(dt);
+		this->sandbox->selfLoop(dt);
 
 		currentTime = std::chrono::high_resolution_clock::now();
 		dt = std::chrono::duration<float>(currentTime - prevTime).count();
@@ -69,13 +67,10 @@ void SandboxManager::run()
 
 void SandboxManager::cleanup()
 {
-	for (auto& sandbox : this->sandboxes)
-	{
-		sandbox->selfCleanup();
-		delete sandbox;
-	}
-	this->sandboxes.clear();
-
+	this->sandbox->selfCleanup();
+	delete this->sandbox;
+	this->sandbox = nullptr;
+	this->frame.cleanup();
 	this->swapChain.cleanup();
 	Instance::get().cleanup();
 	this->window.cleanup();
