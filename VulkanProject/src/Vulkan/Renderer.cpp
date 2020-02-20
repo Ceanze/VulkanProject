@@ -4,12 +4,16 @@
 #include "Core/Input.h"
 
 #include <GLFW/glfw3.h>
-//#define STB_IMAGE_IMPLEMENTATION
+
+#pragma warning(push)
+#pragma warning(disable : 4996)
 #include <stb/stb_image.h>
+#pragma warning(pop)
 
 #include <imgui.h>
 
 Renderer::Renderer()
+	: camera(nullptr)
 {
 }
 

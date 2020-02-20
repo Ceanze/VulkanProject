@@ -11,6 +11,9 @@ class Window;
 class Frame
 {
 public:
+	Frame();
+	~Frame();
+
 	void init(Window* window, SwapChain* swapChain);
 	void cleanup();
 
