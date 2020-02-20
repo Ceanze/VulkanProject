@@ -44,15 +44,12 @@ private:
 	private:
 		void threadLoop();
 
-		uint32_t id;
 		bool destroying = false;
 		std::thread worker;
 		std::mutex mutex;
 		std::queue<std::function<void(void)>> queue;
 		std::condition_variable condition;
 	};
-
-	void clear();
 
 	std::vector<Thread*> threads;
 };

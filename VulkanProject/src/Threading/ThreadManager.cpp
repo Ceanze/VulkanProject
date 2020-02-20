@@ -10,9 +10,9 @@ ThreadManager::~ThreadManager()
 	// Delete all threads
 	for (Thread* thread : this->threads)
 		delete thread;
-
+	
 	// Clear thread pool
-	clear();
+	this->threads.clear();
 }
 
 uint32_t ThreadManager::getMaxNumConcurrentThreads()
@@ -38,19 +38,9 @@ void ThreadManager::wait()
 		thread->wait();
 }
 
-void ThreadManager::clear()
-{
-	for (auto& thread : this->threads)
-		delete thread;
-	this->threads.clear();
-}
-
 ThreadManager::Thread::Thread()
 {
-	static uint32_t uid = 0;
-	this->id = uid++;
 	this->worker = std::thread(&ThreadManager::Thread::threadLoop, this);
-	JAS_INFO("Thread {0} created!", this->id);
 }
 
 ThreadManager::Thread::~Thread()
@@ -60,13 +50,12 @@ ThreadManager::Thread::~Thread()
 		wait();
 		
 		// Lock mutex to be able to change destroying to true.
-		this->mutex.lock();
+		std::unique_lock<std::mutex> lock(this->mutex);
 		this->destroying = true;
 		this->condition.notify_one();
-		this->mutex.unlock();
+		lock.unlock();
 
 		this->worker.join();
-		JAS_INFO("Thread {0} destroyed!", this->id);
 	}
 }
 

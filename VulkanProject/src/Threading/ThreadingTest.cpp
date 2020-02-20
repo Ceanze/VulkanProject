@@ -264,7 +264,7 @@ void ThreadingTest::updateBuffers(uint32_t frameIndex, float dt)
 
 	for (uint32_t t = 0; t < this->numThreads; t++)
 	{
-		// TODO: This should add it to a list instead within a certain thread and run it in sequence.
+		// Add work to a specific thread, the thread has a queue which it will go through.
 		this->threadManager.addWork(t, [=] { recordThread(t, frameIndex, inheritanceInfo); });
 	}
 
