@@ -179,7 +179,7 @@ void ThreadingTest::shutdown()
 
 void ThreadingTest::prepareBuffers()
 {
-	this->numThreads = 1;// this->threadManager.getMaxNumConcurrentThreads();
+	this->numThreads = this->threadManager.getMaxNumConcurrentThreads();
 	this->threadManager.init(this->numThreads);
 
 	// Utils function for random numbers.
@@ -189,7 +189,7 @@ void ThreadingTest::prepareBuffers()
 	static float RAD_PER_DEG = glm::pi<float>() / 180.f;
 
 	static float RANGE = 10.f;
-	static uint32_t NUM_OBJECTS = 100;
+	static uint32_t NUM_OBJECTS = 1000;
 
 	// Create primary command buffers, one per swap chain image.
 	this->primaryBuffers = this->commandPool.createCommandBuffers(this->swapChain.getNumImages(), VK_COMMAND_BUFFER_LEVEL_PRIMARY);
