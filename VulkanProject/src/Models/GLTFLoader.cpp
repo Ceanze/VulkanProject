@@ -17,13 +17,8 @@
 
 #include <glm/gtc/type_ptr.hpp>
 
-GLTFLoader::GLTFLoader()
-{
-}
-
-GLTFLoader::~GLTFLoader()
-{
-}
+Model GLTFLoader::model = Model();
+tinygltf::TinyGLTF GLTFLoader::loader = tinygltf::TinyGLTF();
 
 void GLTFLoader::load(const std::string& filePath, Model* model)
 {
@@ -57,9 +52,9 @@ void GLTFLoader::loadModel(Model& model, const std::string& filePath)
 
 		std::string prefix = filePath.substr(pos);
 		if(prefix == ".gltf")
-			ret = this->loader.LoadASCIIFromFile(&gltfModel, &err, &warn, filePath);
+			ret = loader.LoadASCIIFromFile(&gltfModel, &err, &warn, filePath);
 		else if (prefix == ".glb")
-			ret = this->loader.LoadBinaryFromFile(&gltfModel, &err, &warn, filePath); // for binary glTF(.glb)
+			ret = loader.LoadBinaryFromFile(&gltfModel, &err, &warn, filePath); // for binary glTF(.glb)
 
 		if (!warn.empty()) JAS_WARN("GLTF Waring: {0}", warn.c_str());
 		if (!err.empty()) JAS_ERROR("GLTF Error: {0}", err.c_str());

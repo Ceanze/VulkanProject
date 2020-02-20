@@ -81,7 +81,7 @@ void Renderer::run()
 		VkClearValue value;
 		value.color = { 0.0f, 0.0f, 0.0f, 1.0f };
 		clearValues.push_back(value);
-		cmdBuffs[i]->cmdBeginRenderPass(&this->renderPass, this->framebuffers[i].getFramebuffer(), this->swapChain.getExtent(), clearValues);
+		cmdBuffs[i]->cmdBeginRenderPass(&this->renderPass, this->framebuffers[i].getFramebuffer(), this->swapChain.getExtent(), clearValues, VK_SUBPASS_CONTENTS_INLINE);
 		cmdBuffs[i]->cmdBindPipeline(&this->pipeline);
 		std::vector<VkDescriptorSet> sets = { this->descManager.getSet(i, 0) };
 		std::vector<uint32_t> offsets;

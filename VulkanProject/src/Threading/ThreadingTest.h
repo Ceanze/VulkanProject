@@ -12,7 +12,6 @@
 
 #include "Vulkan/Pipeline/DescriptorManager.h"
 
-#include "Models/GLTFLoader.h"
 #include "Models/Model/Model.h"
 
 #include "Vulkan/Buffers/Buffer.h"
@@ -48,7 +47,17 @@ private:
 		glm::vec4 tint;
 	};
 
+	// Data per thread.
+	struct ThreadData
+	{
+		CommandPool cmdPool;
+		std::vector<CommandBuffer*> cmdBuffs;
+		std::vector<ObjectData> objects;
+		std::vector<PushConstants> pushConstants;
+	};
+
 	void prepareBuffers();
+	void recordThread(uint32_t threadId, uint32_t frameIndex, VkCommandBufferInheritanceInfo inheritanceInfo);
 	void updateBuffers(uint32_t frameIndex, float dt);
 
 	void setupPreTEMP();
@@ -72,14 +81,14 @@ private:
 	Camera* camera;
 
 	// For loading model
-	GLTFLoader loader;
 	Model model;
 
 	std::vector<CommandBuffer*> primaryBuffers;
 	Texture depthTexture;
 	Memory imageMemory; // Holds depth texture
 
+	uint32_t numThreads;
 	ThreadManager threadManager;
-	std::vector<ObjectData> objects;
 	std::vector<PushConstants> pushConstants;
+	std::vector<ThreadData> threadData;
 };

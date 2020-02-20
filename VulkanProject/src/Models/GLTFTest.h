@@ -13,8 +13,6 @@
 #include "Vulkan/Pipeline/DescriptorManager.h"
 
 // ------------ TEMP ------------
-#include "GLTFLoader.h"
-
 #include "Vulkan/Buffers/Buffer.h"
 #include "Vulkan/Buffers/Memory.h"
 #include "Vulkan/Texture.h"
@@ -59,7 +57,6 @@ private:
 	Camera* camera;
 
 	// For loading model
-	GLTFLoader loader;
 	Model model;
 
 	CommandBuffer* cmdBuffs[3];

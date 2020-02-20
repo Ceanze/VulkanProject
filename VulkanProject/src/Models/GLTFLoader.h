@@ -15,23 +15,20 @@ class Pipeline;
 class GLTFLoader
 {
 public:
-	GLTFLoader();
-	~GLTFLoader();
-
 	// Will read from file and load the data into the model pointer.
-	void load(const std::string& filePath, Model* model);
-	void recordDraw(Model* model, CommandBuffer* commandBuffer, Pipeline* pipeline, const std::vector<VkDescriptorSet>& sets, const std::vector<uint32_t>& offsets);
+	static void load(const std::string& filePath, Model* model);
+	static void recordDraw(Model* model, CommandBuffer* commandBuffer, Pipeline* pipeline, const std::vector<VkDescriptorSet>& sets, const std::vector<uint32_t>& offsets);
 
 private:
-	void loadModel(Model& model, const std::string& filePath);
-	void loadTextures(Model& model, tinygltf::Model& gltfModel);
-	void loadMaterials(Model& model, tinygltf::Model& gltfModel);
-	void loadScenes(Model& model, tinygltf::Model& gltfModel);
-	void loadNode(Model& model, Model::Node* node, tinygltf::Model& gltfModel, tinygltf::Node& gltfNode, std::string indents);
+	static void loadModel(Model& model, const std::string& filePath);
+	static void loadTextures(Model& model, tinygltf::Model& gltfModel);
+	static void loadMaterials(Model& model, tinygltf::Model& gltfModel);
+	static void loadScenes(Model& model, tinygltf::Model& gltfModel);
+	static void loadNode(Model& model, Model::Node* node, tinygltf::Model& gltfModel, tinygltf::Node& gltfNode, std::string indents);
 
-	void drawNode(CommandBuffer* commandBuffer, Model::Node& node);
+	static void drawNode(CommandBuffer* commandBuffer, Model::Node& node);
 
 private:
-	Model model;
-	tinygltf::TinyGLTF loader;
+	static Model model;
+	static tinygltf::TinyGLTF loader;
 };

@@ -51,7 +51,7 @@ void CommandBuffer::begin(VkCommandBufferUsageFlags flags, VkCommandBufferInheri
 	ERROR_CHECK(vkBeginCommandBuffer(this->buffer, &beginInfo), "Failed to begin recording command buffer!");
 }
 
-void CommandBuffer::cmdBeginRenderPass(RenderPass* renderPass, VkFramebuffer framebuffer, VkExtent2D extent, const std::vector<VkClearValue>& clearValues)
+void CommandBuffer::cmdBeginRenderPass(RenderPass* renderPass, VkFramebuffer framebuffer, VkExtent2D extent, const std::vector<VkClearValue>& clearValues, VkSubpassContents subpassContents)
 {	
 	VkRenderPassBeginInfo renderPassInfo = {};
 	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -63,7 +63,7 @@ void CommandBuffer::cmdBeginRenderPass(RenderPass* renderPass, VkFramebuffer fra
 	renderPassInfo.pClearValues = clearValues.data();
 	renderPassInfo.pNext = nullptr;
 
-	vkCmdBeginRenderPass(this->buffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+	vkCmdBeginRenderPass(this->buffer, &renderPassInfo, subpassContents);
 }
 
 void CommandBuffer::cmdBindPipeline(Pipeline* pipeline)
@@ -100,6 +100,11 @@ void CommandBuffer::cmdDraw(uint32_t vertexCount, uint32_t instanceCount, uint32
 void CommandBuffer::cmdDrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, uint32_t vertexOffset, uint32_t firstInstance)
 {
 	vkCmdDrawIndexed(this->buffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
+}
+
+void CommandBuffer::cmdExecuteCommands(uint32_t bufferCount, const VkCommandBuffer* secondaryBuffers)
+{
+	vkCmdExecuteCommands(this->buffer, bufferCount, secondaryBuffers);
 }
 
 void CommandBuffer::cmdEndRenderPass()

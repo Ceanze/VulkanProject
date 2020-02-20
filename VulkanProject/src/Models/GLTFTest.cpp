@@ -9,6 +9,8 @@
 #include <glm/gtx/rotate_vector.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include "GLTFLoader.h"
+
 GLTFTest::GLTFTest()
 {
 }
@@ -171,7 +173,7 @@ void GLTFTest::setupPreTEMP()
 	this->descManager.init(this->swapChain.getNumImages());
 
 	const std::string filePath = "..\\assets\\Models\\Cube\\Cube.gltf";
-	this->loader.load(filePath, &this->model);
+	GLTFLoader::load(filePath, &this->model);
 }
 
 void GLTFTest::setupPostTEMP()
@@ -211,12 +213,12 @@ void GLTFTest::setupPostTEMP()
 		clearValues.push_back(value);
 		value.depthStencil = { 1.0f, 0 };
 		clearValues.push_back(value);
-		this->cmdBuffs[i]->cmdBeginRenderPass(&this->renderPass, this->framebuffers[i].getFramebuffer(), this->swapChain.getExtent(), clearValues);
+		this->cmdBuffs[i]->cmdBeginRenderPass(&this->renderPass, this->framebuffers[i].getFramebuffer(), this->swapChain.getExtent(), clearValues, VK_SUBPASS_CONTENTS_INLINE);
 
 		std::vector<VkDescriptorSet> sets = { this->descManager.getSet(i, 0) };
 		std::vector<uint32_t> offsets;
 		this->cmdBuffs[i]->cmdBindPipeline(&this->pipeline);
-		this->loader.recordDraw(&this->model, this->cmdBuffs[i], &this->pipeline, sets, offsets);
+		GLTFLoader::recordDraw(&this->model, this->cmdBuffs[i], &this->pipeline, sets, offsets);
 
 		this->cmdBuffs[i]->cmdEndRenderPass();
 		this->cmdBuffs[i]->end();
