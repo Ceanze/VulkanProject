@@ -90,10 +90,13 @@
     <ClInclude Include="src\Core\Input.h" />
     <ClInclude Include="src\Vulkan\Pipeline\PushConstants.h" />
     <ClInclude Include="src\Threading\ThreadManager.h" />
-    <ClInclude Include="src\Threading\ThreadingTest.h" />
     <ClInclude Include="src\Models\Model\Model.h" />
     <ClInclude Include="src\Models\GLTFLoader.h" />
-    <ClInclude Include="src\Models\GLTFTest.h" />
+    <ClInclude Include="src\Sandbox\VKSandboxBase.h" />
+    <ClInclude Include="src\Sandbox\SandboxManager.h" />
+    <ClInclude Include="src\Sandbox\Tests\RenderTest.h" />
+    <ClInclude Include="src\Sandbox\Tests\GLTFTest.h" />
+    <ClInclude Include="src\Sandbox\Tests\ThreadingTest.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Core\Logger.cpp">
@@ -163,9 +166,12 @@
     </ClCompile>
     <ClCompile Include="src\Vulkan\Pipeline\PushConstants.cpp" />
     <ClCompile Include="src\Threading\ThreadManager.cpp" />
-    <ClCompile Include="src\Threading\ThreadingTest.cpp" />
     <ClCompile Include="src\Models\Model\Model.cpp" />
     <ClCompile Include="src\Models\GLTFLoader.cpp" />
-    <ClCompile Include="src\Models\GLTFTest.cpp" />
+    <ClCompile Include="src\Sandbox\VKSandboxBase.cpp" />
+    <ClCompile Include="src\Sandbox\SandboxManager.cpp" />
+    <ClCompile Include="src\Sandbox\Tests\RenderTest.cpp" />
+    <ClCompile Include="src\Sandbox\Tests\GLTFTest.cpp" />
+    <ClCompile Include="src\Sandbox\Tests\ThreadingTest.cpp" />
   </ItemGroup>
 </Project>
