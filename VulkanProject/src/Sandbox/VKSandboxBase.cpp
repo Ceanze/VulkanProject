@@ -12,7 +12,7 @@ VKSandboxBase::~VKSandboxBase()
 void VKSandboxBase::selfInit()
 {
 	this->framebuffers.resize(getSwapChain()->getNumImages());
-	this->frame.init(this->swapChain);
+	this->frame.init(getWindow(), getSwapChain());
 
 	init();
 

@@ -75,17 +75,6 @@ void ThreadingTest::init()
 	this->pipeline.init(Pipeline::Type::GRAPHICS, &this->shader);
 	JAS_INFO("Created Renderer!");
 
-	this->framebuffers.resize(this->swapChain.getNumImages());
-
-	for (size_t i = 0; i < this->swapChain.getNumImages(); i++)
-	{
-		std::vector<VkImageView> imageViews;
-		imageViews.push_back(this->swapChain.getImageViews()[i]);  // Add color attachment
-		imageViews.push_back(this->depthTexture.getVkImageView()); // Add depth image view
-		this->framebuffers[i].init(this->swapChain.getNumImages(), &this->renderPass, imageViews, this->swapChain.getExtent());
-	}
-
-	this->frame.init(&this->window, &this->swapChain);
 	initFramebuffers(&this->renderPass, this->depthTexture.getVkImageView());
 
 	setupPost();

@@ -1,7 +1,12 @@
 #include "jaspch.h"
 #include "RenderTest.h"
 
+#pragma warning(push)
+#pragma warning(disable : 4996)
 #include <stb/stb_image.h>
+#pragma warning(pop)
+
+#include <imgui.h>
 
 void RenderTest::init()
 {
@@ -45,11 +50,16 @@ void RenderTest::init()
 void RenderTest::loop(float dt)
 {
 	this->memory.directTransfer(&this->camBuffer, (void*)& this->camera->getMatrix()[0], sizeof(glm::mat4), 0);
+	this->camera->update(dt);
 
 	getFrame()->beginFrame();
+
+	ImGui::Begin("Hello world!");
+	ImGui::Text("Cool text");
+	ImGui::End();
+
 	getFrame()->submit(Instance::get().getGraphicsQueue().queue, cmdBuffs);
 	getFrame()->endFrame();
-	this->camera->update(dt);
 }
 
 void RenderTest::cleanup()
