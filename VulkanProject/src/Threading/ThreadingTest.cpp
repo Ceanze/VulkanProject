@@ -113,7 +113,11 @@ void ThreadingTest::init()
 
 void ThreadingTest::run()
 {
-	float dt = 0.0f;
+	auto currentTime = std::chrono::high_resolution_clock::now();
+	auto prevTime = currentTime;
+	float dt = 0;
+	unsigned frames = 0;
+	double elapsedTime = 0;
 	while (running && this->window.isOpen())
 	{
 		glfwPollEvents();
@@ -131,10 +135,17 @@ void ThreadingTest::run()
 		this->frame.endFrame();
 		this->camera->update(dt);
 
-		auto endTime = std::chrono::high_resolution_clock::now();
-		dt = std::chrono::duration<float>(endTime - startTime).count();
+		currentTime = std::chrono::high_resolution_clock::now();
+		dt = std::chrono::duration<float>(currentTime - prevTime).count();
+		elapsedTime += dt;
+		frames++;
+		prevTime = currentTime;
 
-		this->window.setTitle("Delta Time: " + std::to_string(dt * 1000.f) + " ms");
+		if (elapsedTime >= 1.0) {
+			this->window.setTitle("FPS: " + std::to_string(frames) + " [Delta time: " + std::to_string((elapsedTime / frames) * 1000.f) + " ms]");
+			elapsedTime = 0;
+			frames = 0;
+		}
 	}
 }
 
@@ -168,7 +179,7 @@ void ThreadingTest::shutdown()
 
 void ThreadingTest::prepareBuffers()
 {
-	this->numThreads = this->threadManager.getMaxNumConcurrentThreads();
+	this->numThreads = 1;// this->threadManager.getMaxNumConcurrentThreads();
 	this->threadManager.init(this->numThreads);
 
 	// Utils function for random numbers.
