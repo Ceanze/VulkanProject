@@ -1,41 +1,23 @@
 #include "jaspch.h"
-
 #include "ThreadingTest.h"
-
-#include "Vulkan/Instance.h"
-#include <GLFW/glfw3.h>
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/rotate_vector.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include <random>
 
 #include "Models/GLTFLoader.h"
 
-ThreadingTest::ThreadingTest()
-{
-}
-
-ThreadingTest::~ThreadingTest()
-{
-}
-
 void ThreadingTest::init()
 {
-	Logger::init();
-
-	this->window.init(1280, 720, "Vulkan Project");
-	this->camera = new Camera(this->window.getAspectRatio(), 45.f, { 0.f, 0.f, 4.f }, { 0.f, 0.f, 0.f }, 2.0f);
-
-	Instance::get().init(&this->window);
-	this->swapChain.init(this->window.getWidth(), this->window.getHeight());
+	this->graphicsCommandPool.init(CommandPool::Queue::GRAPHICS, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+	this->camera = new Camera(getWindow()->getAspectRatio(), 45.f, { 0.f, 0.f, 1.f }, { 0.f, 0.f, 0.f }, 0.8f);
 
 	this->shader.addStage(Shader::Type::VERTEX, "ThreadingTest\\threadingVert.spv");
 	this->shader.addStage(Shader::Type::FRAGMENT, "ThreadingTest\\threadingFrag.spv");
 	this->shader.init();
 
 	// Add attachments
-	this->renderPass.addDefaultColorAttachment(this->swapChain.getImageFormat());
+	this->renderPass.addDefaultColorAttachment(getSwapChain()->getImageFormat());
 	this->renderPass.addDefaultDepthAttachment();
 
 	RenderPass::SubpassInfo subpassInfo;
@@ -53,15 +35,12 @@ void ThreadingTest::init()
 	this->renderPass.addSubpassDependency(subpassDependency);
 	this->renderPass.init();
 
-	this->commandPool.init(CommandPool::Queue::GRAPHICS, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
-	JAS_INFO("Created Command Pool!");
-
-	setupPreTEMP();
+	setupPre();
 
 	// Depth texture
 	VkFormat depthFormat = findDepthFormat(Instance::get().getPhysicalDevice());
 	std::vector<uint32_t> queueIndices = { findQueueIndex(VK_QUEUE_GRAPHICS_BIT, Instance::get().getPhysicalDevice()) };
-	this->depthTexture.init(this->swapChain.getExtent().width, this->swapChain.getExtent().height,
+	this->depthTexture.init(getSwapChain()->getExtent().width, getSwapChain()->getExtent().height,
 		depthFormat, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, queueIndices);
 
 	// Bind image to memory.
@@ -76,12 +55,12 @@ void ThreadingTest::init()
 	desc.format = VK_FORMAT_R8G8B8A8_UNORM;
 	desc.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	desc.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-	desc.pool = &this->commandPool;
+	desc.pool = &this->graphicsCommandPool;
 	this->depthTexture.getImage().transistionLayout(desc);
 
 	this->pipeline.setPushConstants(this->pushConstants);
 	this->pipeline.setDescriptorLayouts(this->descManager.getLayouts());
-	this->pipeline.setGraphicsPipelineInfo(this->swapChain.getExtent(), &this->renderPass);
+	this->pipeline.setGraphicsPipelineInfo(getSwapChain()->getExtent(), &this->renderPass);
 	PipelineInfo pipInfo;
 	// Vertex input info
 	pipInfo.vertexInputInfo = {};
@@ -96,86 +75,35 @@ void ThreadingTest::init()
 	this->pipeline.init(Pipeline::Type::GRAPHICS, &this->shader);
 	JAS_INFO("Created Renderer!");
 
-	this->framebuffers.resize(this->swapChain.getNumImages());
+	initFramebuffers(&this->renderPass, this->depthTexture.getVkImageView());
 
-	for (size_t i = 0; i < this->swapChain.getNumImages(); i++)
-	{
-		std::vector<VkImageView> imageViews;
-		imageViews.push_back(this->swapChain.getImageViews()[i]);  // Add color attachment
-		imageViews.push_back(this->depthTexture.getVkImageView()); // Add depth image view
-		this->framebuffers[i].init(this->swapChain.getNumImages(), &this->renderPass, imageViews, this->swapChain.getExtent());
-	}
-
-	this->frame.init(&this->window, &this->swapChain);
-
-	setupPostTEMP();
+	setupPost();
 }
 
-void ThreadingTest::run()
+void ThreadingTest::loop(float dt)
 {
-	auto currentTime = std::chrono::high_resolution_clock::now();
-	auto prevTime = currentTime;
-	float dt = 0;
-	unsigned frames = 0;
-	double elapsedTime = 0;
-	while (running && this->window.isOpen())
-	{
-		glfwPollEvents();
+	getFrame()->beginFrame();
+	updateBuffers(getFrame()->getCurrentImageIndex(), dt);
 
-		if (glfwGetKey(this->window.getNativeWindow(), GLFW_KEY_ESCAPE) == GLFW_PRESS)
-			running = false;
-
-		auto startTime = std::chrono::high_resolution_clock::now();
-
-		this->frame.beginFrame();
-		updateBuffers(this->frame.getCurrentImageIndex(), dt);
-
-		// Render
-		this->frame.submit(Instance::get().getGraphicsQueue().queue, this->primaryBuffers.data());
-		this->frame.endFrame();
-		this->camera->update(dt);
-
-		currentTime = std::chrono::high_resolution_clock::now();
-		dt = std::chrono::duration<float>(currentTime - prevTime).count();
-		elapsedTime += dt;
-		frames++;
-		prevTime = currentTime;
-
-		if (elapsedTime >= 1.0) {
-			this->window.setTitle("FPS: " + std::to_string(frames) + " [Delta time: " + std::to_string((elapsedTime / frames) * 1000.f) + " ms]");
-			elapsedTime = 0;
-			frames = 0;
-		}
-	}
+	// Render
+	getFrame()->submit(Instance::get().getGraphicsQueue().queue, this->primaryBuffers.data());
+	getFrame()->endFrame();
+	this->camera->update(dt);
 }
 
-void ThreadingTest::shutdown()
+void ThreadingTest::cleanup()
 {
-	vkDeviceWaitIdle(Instance::get().getDevice());
-
+	delete this->camera;
 	for (ThreadData& tData : this->threadData)
-	{
 		tData.cmdPool.cleanup();
-	}
-
+	this->graphicsCommandPool.cleanup();
 	this->depthTexture.cleanup();
 	this->imageMemory.cleanup();
-
-	delete this->camera;
 	this->model.cleanup();
-
 	this->descManager.cleanup();
-
-	this->frame.cleanup();
-	this->commandPool.cleanup();
-	for (auto& framebuffer : this->framebuffers)
-		framebuffer.cleanup();
 	this->pipeline.cleanup();
 	this->renderPass.cleanup();
 	this->shader.cleanup();
-	this->swapChain.cleanup();
-	Instance::get().cleanup();
-	this->window.cleanup();
 }
 
 void ThreadingTest::prepareBuffers()
@@ -185,15 +113,15 @@ void ThreadingTest::prepareBuffers()
 
 	// Utils function for random numbers.
 	std::srand((unsigned int)std::time(NULL));
-	auto rnd11 = [](int precision=10000) { return (float)(std::rand() % precision) / (float)precision; };
-	auto rnd = [rnd11](float min, float max) { return min + rnd11(RAND_MAX)*glm::abs(max-min); };
+	auto rnd11 = [](int precision = 10000) { return (float)(std::rand() % precision) / (float)precision; };
+	auto rnd = [rnd11](float min, float max) { return min + rnd11(RAND_MAX) * glm::abs(max - min); };
 	static float RAD_PER_DEG = glm::pi<float>() / 180.f;
 
-	static float RANGE = 10.f;
-	static uint32_t NUM_OBJECTS = 1000;
+	static float RANGE = 15.f;
+	static uint32_t NUM_OBJECTS = 500;
 
 	// Create primary command buffers, one per swap chain image.
-	this->primaryBuffers = this->commandPool.createCommandBuffers(this->swapChain.getNumImages(), VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+	this->primaryBuffers = this->graphicsCommandPool.createCommandBuffers(getSwapChain()->getNumImages(), VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 
 	this->threadData.resize(this->numThreads);
 	for (uint32_t t = 0; t < this->numThreads; t++)
@@ -201,7 +129,7 @@ void ThreadingTest::prepareBuffers()
 		// Create secondary buffers.
 		ThreadData& tData = this->threadData[t];
 		tData.cmdPool.init(CommandPool::Queue::GRAPHICS, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
-		tData.cmdBuffs = tData.cmdPool.createCommandBuffers(this->swapChain.getNumImages(), VK_COMMAND_BUFFER_LEVEL_SECONDARY);
+		tData.cmdBuffs = tData.cmdPool.createCommandBuffers(getSwapChain()->getNumImages(), VK_COMMAND_BUFFER_LEVEL_SECONDARY);
 
 		// Set the objects which the thread will render.
 		glm::vec4 threadColor(rnd11(), rnd11(), rnd11(), 1.0f);
@@ -266,12 +194,12 @@ void ThreadingTest::updateBuffers(uint32_t frameIndex, float dt)
 	clearValues.push_back(value);
 	value.depthStencil = { 1.0f, 0 };
 	clearValues.push_back(value);
-	this->primaryBuffers[frameIndex]->cmdBeginRenderPass(&this->renderPass, this->framebuffers[frameIndex].getFramebuffer(), this->swapChain.getExtent(), clearValues, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+	this->primaryBuffers[frameIndex]->cmdBeginRenderPass(&this->renderPass, getFramebuffers()[frameIndex].getFramebuffer(), getSwapChain()->getExtent(), clearValues, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 
 	VkCommandBufferInheritanceInfo inheritanceInfo = {};
 	inheritanceInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
 	inheritanceInfo.renderPass = this->renderPass.getRenderPass();
-	inheritanceInfo.framebuffer = this->framebuffers[frameIndex].getFramebuffer();
+	inheritanceInfo.framebuffer = getFramebuffers()[frameIndex].getFramebuffer();
 	inheritanceInfo.subpass = 0;
 
 	for (uint32_t t = 0; t < this->numThreads; t++)
@@ -287,18 +215,18 @@ void ThreadingTest::updateBuffers(uint32_t frameIndex, float dt)
 		commandBuffers.push_back(tData.cmdBuffs[frameIndex]->getCommandBuffer());
 
 	this->primaryBuffers[frameIndex]->cmdExecuteCommands(static_cast<uint32_t>(commandBuffers.size()), commandBuffers.data());
-	
+
 	this->primaryBuffers[frameIndex]->cmdEndRenderPass();
 	this->primaryBuffers[frameIndex]->end();
 }
 
-void ThreadingTest::setupPreTEMP()
+void ThreadingTest::setupPre()
 {
 	this->descLayout.add(new SSBO(VK_SHADER_STAGE_VERTEX_BIT, 1, nullptr)); // Vertices
 	this->descLayout.init();
 
 	this->descManager.addLayout(this->descLayout);
-	this->descManager.init(this->swapChain.getNumImages());
+	this->descManager.init(getSwapChain()->getNumImages());
 
 	const std::string filePath = "..\\assets\\Models\\Cube\\Cube.gltf";
 	GLTFLoader::load(filePath, &this->model);
@@ -308,10 +236,10 @@ void ThreadingTest::setupPreTEMP()
 	this->pushConstants.push_back(pushConsts);
 }
 
-void ThreadingTest::setupPostTEMP()
+void ThreadingTest::setupPost()
 {
 	// Update descriptor
-	for (uint32_t i = 0; i < this->swapChain.getNumImages(); i++)
+	for (uint32_t i = 0; i < getSwapChain()->getNumImages(); i++)
 	{
 		VkDeviceSize vertexBufferSize = this->model.vertices.size() * sizeof(Vertex);
 		this->descManager.updateBufferDesc(0, 0, this->model.vertexBuffer.getBuffer(), 0, vertexBufferSize);
