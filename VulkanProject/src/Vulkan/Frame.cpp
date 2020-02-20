@@ -4,14 +4,30 @@
 #include "Vulkan/Instance.h"
 #include "Vulkan/SwapChain.h"
 #include "Vulkan/CommandBuffer.h"
+#include "VKImgui.h"
+#include "Core/Window.h"
 
-void Frame::init(SwapChain* swapChain)
+Frame::Frame()
+	: window(nullptr), imgui(nullptr), swapChain(nullptr), numImages(0), framesInFlight(0),
+	currentFrame(0), imageIndex(0)
+{
+}
+
+Frame::~Frame()
+{
+}
+
+void Frame::init(Window* window, SwapChain* swapChain)
 {
 	this->swapChain = swapChain;
 	this->numImages = swapChain->getNumImages();
+	this->window = window;
 	this->framesInFlight = 2; // Unsure of purpose
 	this->currentFrame = 0;
 	this->imageIndex = 0;
+
+	this->imgui = new VKImgui();
+	this->imgui->init(window, swapChain);
 
 	createSyncObjects();
 }
@@ -19,10 +35,15 @@ void Frame::init(SwapChain* swapChain)
 void Frame::cleanup()
 {
 	destroySyncObjects();
+	this->imgui->cleanup();
+	delete this->imgui;
 }
 
 void Frame::submit(VkQueue queue, CommandBuffer** commandBuffers)
 {
+	this->imgui->end();
+	this->imgui->render();
+
 	VkSubmitInfo submitInfo = {};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
@@ -32,12 +53,12 @@ void Frame::submit(VkQueue queue, CommandBuffer** commandBuffers)
 	submitInfo.pWaitSemaphores = waitSemaphores;
 
 	VkSemaphore signalSemaphores[] = { this->renderFinishedSemaphores[this->currentFrame] };
-	VkCommandBuffer buffer = commandBuffers[this->imageIndex]->getCommandBuffer();
+	std::vector<VkCommandBuffer> buffers = { commandBuffers[this->imageIndex]->getCommandBuffer(), this->imgui->getCurrentCommandBuffer() };
 	submitInfo.signalSemaphoreCount = 1;
 	submitInfo.pSignalSemaphores = signalSemaphores;
-	submitInfo.pCommandBuffers = &buffer;
+	submitInfo.pCommandBuffers = buffers.data();
 	submitInfo.pWaitDstStageMask = waitStages;
-	submitInfo.commandBufferCount = 1;
+	submitInfo.commandBufferCount = (uint32_t)buffers.size();
 
 	vkResetFences(Instance::get().getDevice(), 1, &this->inFlightFences[this->currentFrame]);
 	ERROR_CHECK(vkQueueSubmit(queue, 1, &submitInfo, this->inFlightFences[this->currentFrame]), "Failed to sumbit commandbuffer!");
@@ -64,6 +85,8 @@ bool Frame::beginFrame()
 		This current frame will use the image with index imageIndex, mark this so that we now wen we can use this again. 
 	*/
 	this->imagesInFlight[this->imageIndex] = this->inFlightFences[this->currentFrame];
+
+	this->imgui->begin(this->imageIndex, 0.016f);
 
 	return true;
 }

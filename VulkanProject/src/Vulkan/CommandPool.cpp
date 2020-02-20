@@ -98,7 +98,7 @@ std::vector<CommandBuffer*> CommandPool::createCommandBuffers(uint32_t count, Vk
 	allocInfo.level = level;
 	allocInfo.commandBufferCount = count;
 
-	ERROR_CHECK(vkAllocateCommandBuffers(Instance::get().getDevice(), &allocInfo, vkBuffers.data()), "Failed to allocate command buffers!")
+	ERROR_CHECK(vkAllocateCommandBuffers(Instance::get().getDevice(), &allocInfo, vkBuffers.data()), "Failed to allocate command buffers!");
 
 	std::vector<CommandBuffer*> b(count);
 	for (size_t i = 0; i < count; i++) {
@@ -127,7 +127,7 @@ void CommandPool::createCommandPool(VkCommandPoolCreateFlags flags)
 	VkCommandPoolCreateInfo poolInfo = {};
 	poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 	poolInfo.queueFamilyIndex = index;
-	poolInfo.flags = flags; // Optional
+	poolInfo.flags = flags;
 	poolInfo.pNext = nullptr;
 
 	ERROR_CHECK(vkCreateCommandPool(instance.getDevice(), &poolInfo, nullptr, &this->pool), "Failed to create command pool!");

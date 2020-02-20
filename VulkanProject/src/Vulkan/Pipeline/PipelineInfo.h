@@ -7,7 +7,10 @@ enum class PipelineInfoFlag {
 	MULTISAMPLE = 4,
 	DEAPTH_STENCIL = 8,
 	COLOR_BLEND_ATTACHMENT = 16,
-	COLOR_BLEND = 32
+	COLOR_BLEND = 32,
+	INPUT_ASSEMBLY = 64,
+	VIEWPORT = 128,
+	SCISSOR = 256
 };
 
 inline int operator&(PipelineInfoFlag a, PipelineInfoFlag b)
@@ -28,6 +31,9 @@ struct PipelineInfo
 	VkPipelineDepthStencilStateCreateInfo depthStencil;
 	VkPipelineColorBlendAttachmentState colorBlendAttachment;
 	VkPipelineColorBlendStateCreateInfo colorBlending;
+	VkPipelineInputAssemblyStateCreateInfo inputAssembly;
+	VkViewport viewport;
+	VkRect2D scissor;
 
 	PipelineInfo& PipelineInfo::operator =(const PipelineInfo& other)
 	{
@@ -37,5 +43,8 @@ struct PipelineInfo
 		this->depthStencil = other.depthStencil;
 		this->colorBlendAttachment = other.colorBlendAttachment;
 		this->colorBlending = other.colorBlending;
+		this->inputAssembly = other.inputAssembly;
+		this->viewport = other.viewport;
+		this->scissor = other.scissor;
 	}
 };

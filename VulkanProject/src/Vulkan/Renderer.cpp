@@ -4,10 +4,16 @@
 #include "Core/Input.h"
 
 #include <GLFW/glfw3.h>
-//#define STB_IMAGE_IMPLEMENTATION
+
+#pragma warning(push)
+#pragma warning(disable : 4996)
 #include <stb/stb_image.h>
+#pragma warning(pop)
+
+#include <imgui.h>
 
 Renderer::Renderer()
+	: camera(nullptr)
 {
 }
 
@@ -31,7 +37,18 @@ void Renderer::init()
 	this->shader.init();
 
 	// Add attachments
-	this->renderPass.addDefaultColorAttachment(this->swapChain.getImageFormat());
+	VkAttachmentDescription attachment = {};
+	attachment.format = this->swapChain.getImageFormat();
+	attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+	attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+	attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	attachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	// Change final layout to VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL when using ImGui
+	// as this renderpass will no longer be the last (and therefore not present) (VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
+	this->renderPass.addColorAttachment(attachment);
 
 	RenderPass::SubpassInfo subpassInfo;
 	subpassInfo.colorAttachmentIndices = {0};
@@ -66,7 +83,7 @@ void Renderer::init()
 		this->framebuffers[i].init(this->swapChain.getNumImages(), &this->renderPass, imageViews, this->swapChain.getExtent());
 	}
 
-	this->frame.init(&this->swapChain);
+	this->frame.init(&this->window, &this->swapChain);
 
 	setupPostTEMP();
 }
@@ -107,6 +124,11 @@ void Renderer::run()
 		this->memory.directTransfer(&this->camBuffer, (void*)&this->camera->getMatrix()[0], sizeof(glm::mat4), 0);
 
 		this->frame.beginFrame();
+
+		ImGui::Begin("Hello world!");
+		ImGui::Text("Cool text");
+		ImGui::End();
+
 		this->frame.submit(Instance::get().getGraphicsQueue().queue, cmdBuffs);
 		this->frame.endFrame();
 		this->camera->update(dt);
