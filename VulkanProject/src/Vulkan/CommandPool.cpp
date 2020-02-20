@@ -13,10 +13,10 @@ CommandPool::~CommandPool()
 {
 }
 
-void CommandPool::init(Queue queueFamily)
+void CommandPool::init(Queue queueFamily, VkCommandPoolCreateFlags flags)
 {
 	this->queueFamily = queueFamily;
-	createCommandPool();
+	createCommandPool(flags);
 }
 
 void CommandPool::cleanup()
@@ -97,9 +97,9 @@ std::vector<CommandBuffer*> CommandPool::createCommandBuffers(uint32_t count)
 	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 	allocInfo.commandBufferCount = count;
 
-	ERROR_CHECK(vkAllocateCommandBuffers(Instance::get().getDevice(), &allocInfo, vkBuffers.data()), "Failed to allocate command buffers!")
+	ERROR_CHECK(vkAllocateCommandBuffers(Instance::get().getDevice(), &allocInfo, vkBuffers.data()), "Failed to allocate command buffers!");
 
-	std::vector<CommandBuffer*> b;
+	std::vector<CommandBuffer*> b(count);
 	for (size_t i = 0; i < count; i++) {
 		b[i] = new CommandBuffer;
 		b[i]->init(this->pool);
@@ -116,7 +116,7 @@ void CommandPool::removeCommandBuffer(CommandBuffer* buffer)
 	delete buffer;
 }
 
-void CommandPool::createCommandPool()
+void CommandPool::createCommandPool(VkCommandPoolCreateFlags flags)
 {
 	// Get queues
 	Instance& instance = Instance::get();
@@ -126,7 +126,7 @@ void CommandPool::createCommandPool()
 	VkCommandPoolCreateInfo poolInfo = {};
 	poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 	poolInfo.queueFamilyIndex = index;
-	poolInfo.flags = 0; // Optional
+	poolInfo.flags = flags;
 	poolInfo.pNext = nullptr;
 
 	ERROR_CHECK(vkCreateCommandPool(instance.getDevice(), &poolInfo, nullptr, &this->pool), "Failed to create command pool!");
