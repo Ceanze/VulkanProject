@@ -5,17 +5,22 @@
 
 class SwapChain;
 class CommandBuffer;
+class VKImgui;
+class Window;
 
 class Frame
 {
 public:
-	void init(SwapChain* swapChain);
+	void init(Window* window, SwapChain* swapChain);
 	void cleanup();
 
 	void submit(VkQueue queue, CommandBuffer** commandBuffers);
 
 	bool beginFrame();
 	bool endFrame();
+
+	uint32_t getCurrentImageIndex() const;
+
 private:
 	void createSyncObjects();
 	void destroySyncObjects();
@@ -29,4 +34,7 @@ private:
 	uint32_t imageIndex;
 	uint32_t numImages;
 	SwapChain* swapChain;
+
+	VKImgui* imgui;
+	Window* window;
 };

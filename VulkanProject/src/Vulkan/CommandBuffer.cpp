@@ -29,29 +29,29 @@ void CommandBuffer::setCommandBuffer(VkCommandBuffer buffer)
 	this->buffer = buffer;
 }
 
-void CommandBuffer::createCommandBuffer()
+void CommandBuffer::createCommandBuffer(VkCommandBufferLevel level)
 {
 	VkCommandBufferAllocateInfo allocInfo = {};
 	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 	allocInfo.commandPool = this->pool;
-	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	allocInfo.level = level;
 	allocInfo.commandBufferCount = 1;
 	allocInfo.pNext = nullptr;
 
 	ERROR_CHECK(vkAllocateCommandBuffers(Instance::get().getDevice(), &allocInfo, &this->buffer), "Failed to allocate command buffer!");
 }
 
-void CommandBuffer::begin(VkCommandBufferUsageFlags flags)
+void CommandBuffer::begin(VkCommandBufferUsageFlags flags, VkCommandBufferInheritanceInfo* instanceInfo)
 {
 	VkCommandBufferBeginInfo beginInfo = {};
 	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 	beginInfo.flags = flags; // Optional
-	beginInfo.pInheritanceInfo = nullptr; // Optional
+	beginInfo.pInheritanceInfo = instanceInfo; // Optional
 
 	ERROR_CHECK(vkBeginCommandBuffer(this->buffer, &beginInfo), "Failed to begin recording command buffer!");
 }
 
-void CommandBuffer::cmdBeginRenderPass(RenderPass* renderPass, VkFramebuffer framebuffer, VkExtent2D extent, const std::vector<VkClearValue>& clearValues)
+void CommandBuffer::cmdBeginRenderPass(RenderPass* renderPass, VkFramebuffer framebuffer, VkExtent2D extent, const std::vector<VkClearValue>& clearValues, VkSubpassContents subpassContents)
 {	
 	VkRenderPassBeginInfo renderPassInfo = {};
 	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -63,7 +63,7 @@ void CommandBuffer::cmdBeginRenderPass(RenderPass* renderPass, VkFramebuffer fra
 	renderPassInfo.pClearValues = clearValues.data();
 	renderPassInfo.pNext = nullptr;
 
-	vkCmdBeginRenderPass(this->buffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+	vkCmdBeginRenderPass(this->buffer, &renderPassInfo, subpassContents);
 }
 
 void CommandBuffer::cmdBindPipeline(Pipeline* pipeline)
@@ -89,7 +89,7 @@ void CommandBuffer::cmdPushConstants(Pipeline* pipeline, const PushConstants* pu
 void CommandBuffer::cmdBindDescriptorSets(Pipeline* pipeline, uint32_t firstSet, const std::vector<VkDescriptorSet>& sets, const std::vector<uint32_t>& offsets)
 {
 	vkCmdBindDescriptorSets(this->buffer, (VkPipelineBindPoint)pipeline->getType(),
-		pipeline->getPipelineLayout(), 0, sets.size(), sets.data(), offsets.size(), offsets.data());
+		pipeline->getPipelineLayout(), 0, static_cast<uint32_t>(sets.size()), sets.data(), static_cast<uint32_t>(offsets.size()), offsets.data());
 }
 
 void CommandBuffer::cmdDraw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
@@ -100,6 +100,11 @@ void CommandBuffer::cmdDraw(uint32_t vertexCount, uint32_t instanceCount, uint32
 void CommandBuffer::cmdDrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, uint32_t vertexOffset, uint32_t firstInstance)
 {
 	vkCmdDrawIndexed(this->buffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
+}
+
+void CommandBuffer::cmdExecuteCommands(uint32_t bufferCount, const VkCommandBuffer* secondaryBuffers)
+{
+	vkCmdExecuteCommands(this->buffer, bufferCount, secondaryBuffers);
 }
 
 void CommandBuffer::cmdEndRenderPass()

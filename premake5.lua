@@ -30,6 +30,7 @@ OUTPUT_DIR = "%{cfg.buildcfg}-%{cfg.architecture}"
 
 -- Static library
 include "libs/glfw"
+include "libs/imgui/imgui"
 
 project "VulkanProject"
     location "VulkanProject"
@@ -50,7 +51,8 @@ project "VulkanProject"
     links
     {
         "vulkan-1",
-        "glfw"
+        "glfw",
+        "imgui"
     }
 
     includedirs
@@ -60,7 +62,8 @@ project "VulkanProject"
         "libs/spdlog/include",
         "libs/glm",
         "libs/stb",
-        "libs/glTF"
+        "libs/glTF",
+        "libs/imgui/imgui"
     }
 
     libdirs

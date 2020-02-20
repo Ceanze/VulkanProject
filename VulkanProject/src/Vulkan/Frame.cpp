@@ -4,13 +4,20 @@
 #include "Vulkan/Instance.h"
 #include "Vulkan/SwapChain.h"
 #include "Vulkan/CommandBuffer.h"
+#include "VKImgui.h"
+#include "Core/Window.h"
 
-void Frame::init(SwapChain* swapChain)
+void Frame::init(Window* window, SwapChain* swapChain)
 {
 	this->swapChain = swapChain;
 	this->numImages = swapChain->getNumImages();
+	this->window = window;
 	this->framesInFlight = 2; // Unsure of purpose
 	this->currentFrame = 0;
+	this->imageIndex = 0;
+
+	this->imgui = new VKImgui();
+	this->imgui->init(window, swapChain);
 
 	createSyncObjects();
 }
@@ -18,10 +25,15 @@ void Frame::init(SwapChain* swapChain)
 void Frame::cleanup()
 {
 	destroySyncObjects();
+	this->imgui->cleanup();
+	delete this->imgui;
 }
 
 void Frame::submit(VkQueue queue, CommandBuffer** commandBuffers)
 {
+	this->imgui->end();
+	this->imgui->render();
+
 	VkSubmitInfo submitInfo = {};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
@@ -31,12 +43,12 @@ void Frame::submit(VkQueue queue, CommandBuffer** commandBuffers)
 	submitInfo.pWaitSemaphores = waitSemaphores;
 
 	VkSemaphore signalSemaphores[] = { this->renderFinishedSemaphores[this->currentFrame] };
-	VkCommandBuffer buffer = commandBuffers[this->imageIndex]->getCommandBuffer();
+	std::vector<VkCommandBuffer> buffers = { commandBuffers[this->imageIndex]->getCommandBuffer(), this->imgui->getCurrentCommandBuffer() };
 	submitInfo.signalSemaphoreCount = 1;
 	submitInfo.pSignalSemaphores = signalSemaphores;
-	submitInfo.pCommandBuffers = &buffer;
+	submitInfo.pCommandBuffers = buffers.data();
 	submitInfo.pWaitDstStageMask = waitStages;
-	submitInfo.commandBufferCount = 1;
+	submitInfo.commandBufferCount = buffers.size();
 
 	vkResetFences(Instance::get().getDevice(), 1, &this->inFlightFences[this->currentFrame]);
 	ERROR_CHECK(vkQueueSubmit(queue, 1, &submitInfo, this->inFlightFences[this->currentFrame]), "Failed to sumbit commandbuffer!");
@@ -53,25 +65,30 @@ bool Frame::beginFrame()
 	}
 	JAS_ASSERT(result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR, "Failed to aquire swap chain image!");
 	
-	// Check if previous frame is using this image
+	// Check if a previous frame is using this image (Wait for this image to be free for use)
 	if (this->imagesInFlight[this->imageIndex] != VK_NULL_HANDLE) {
 		vkWaitForFences(Instance::get().getDevice(), 1, &this->imagesInFlight[this->imageIndex], VK_TRUE, UINT64_MAX);
 	}
-	// Marked image as being used by this frame
-	this->imagesInFlight[this->imageIndex] = this->imagesInFlight[this->currentFrame];
+	
+	/*
+		Marked image as being used by this frame
+		This current frame will use the image with index imageIndex, mark this so that we now wen we can use this again. 
+	*/
+	this->imagesInFlight[this->imageIndex] = this->inFlightFences[this->currentFrame];
+
+	this->imgui->begin(this->imageIndex, 0.016);
 
 	return true;
 }
 
 bool Frame::endFrame()
 {
-	VkSemaphore waitSemaphores[] = { this->imageAvailableSemaphores[this->currentFrame] };
-	VkSemaphore signalSemaphores[] = { this->renderFinishedSemaphores[this->currentFrame] };
+	VkSemaphore waitSemaphores[] = { this->renderFinishedSemaphores[this->currentFrame] };
 
 	VkPresentInfoKHR presentInfo = {};
 	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 	presentInfo.waitSemaphoreCount = 1;
-	presentInfo.pWaitSemaphores = signalSemaphores;
+	presentInfo.pWaitSemaphores = waitSemaphores;
 
 	presentInfo.swapchainCount = 1;
 	VkSwapchainKHR swapchain = this->swapChain->getSwapChain();
@@ -90,6 +107,11 @@ bool Frame::endFrame()
 	return true;
 }
 
+uint32_t Frame::getCurrentImageIndex() const
+{
+	return this->imageIndex;
+}
+
 void Frame::createSyncObjects()
 {
 	this->imageAvailableSemaphores.resize(this->framesInFlight);
@@ -97,7 +119,7 @@ void Frame::createSyncObjects()
 	this->inFlightFences.resize(this->framesInFlight);
 	this->imagesInFlight.resize(this->numImages, VK_NULL_HANDLE);
 
-	for (int i = 0; i < this->framesInFlight; i++) {
+	for (uint32_t i = 0; i < this->framesInFlight; i++) {
 		VkSemaphoreCreateInfo SemaCreateInfo = {};
 		SemaCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 		VkFenceCreateInfo fenceCreateInfo = {};
@@ -111,7 +133,7 @@ void Frame::createSyncObjects()
 
 void Frame::destroySyncObjects()
 {
-	for (int i = 0; i < this->framesInFlight; i++) {
+	for (uint32_t i = 0; i < this->framesInFlight; i++) {
 		vkDestroySemaphore(Instance::get().getDevice(), this->imageAvailableSemaphores[i], nullptr);
 		vkDestroySemaphore(Instance::get().getDevice(), this->renderFinishedSemaphores[i], nullptr);
 		vkDestroyFence(Instance::get().getDevice(), this->inFlightFences[i], nullptr);

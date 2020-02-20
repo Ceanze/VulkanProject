@@ -7,6 +7,8 @@
 //#define STB_IMAGE_IMPLEMENTATION
 #include <stb/stb_image.h>
 
+#include <imgui.h>
+
 Renderer::Renderer()
 {
 }
@@ -31,7 +33,18 @@ void Renderer::init()
 	this->shader.init();
 
 	// Add attachments
-	this->renderPass.addDefaultColorAttachment(this->swapChain.getImageFormat());
+	VkAttachmentDescription attachment = {};
+	attachment.format = this->swapChain.getImageFormat();
+	attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+	attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+	attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	attachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	// Change final layout to VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL when using ImGui
+	// as this renderpass will no longer be the last (and therefore not present) (VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
+	this->renderPass.addColorAttachment(attachment);
 
 	RenderPass::SubpassInfo subpassInfo;
 	subpassInfo.colorAttachmentIndices = {0};
@@ -54,8 +67,8 @@ void Renderer::init()
 	this->pipeline.init(Pipeline::Type::GRAPHICS, &this->shader);
 	JAS_INFO("Created Renderer!");
 
-	this->commandPool.init(CommandPool::Queue::GRAPHICS);
-	this->transferCommandPool.init(CommandPool::Queue::TRANSFER);
+	this->commandPool.init(CommandPool::Queue::GRAPHICS, 0);
+	this->transferCommandPool.init(CommandPool::Queue::TRANSFER, 0);
 
 	this->framebuffers.resize(this->swapChain.getNumImages());
 
@@ -66,7 +79,7 @@ void Renderer::init()
 		this->framebuffers[i].init(this->swapChain.getNumImages(), &this->renderPass, imageViews, this->swapChain.getExtent());
 	}
 
-	this->frame.init(&this->swapChain);
+	this->frame.init(&this->window, &this->swapChain);
 
 	setupPostTEMP();
 }
@@ -74,14 +87,14 @@ void Renderer::init()
 void Renderer::run()
 {
 	CommandBuffer* cmdBuffs[3];
-	for (int i = 0; i < this->swapChain.getNumImages(); i++) {
-		cmdBuffs[i] = this->commandPool.createCommandBuffer();
-		cmdBuffs[i]->begin(0);
+	for (uint32_t i = 0; i < this->swapChain.getNumImages(); i++) {
+		cmdBuffs[i] = this->commandPool.createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+		cmdBuffs[i]->begin(0, nullptr);
 		std::vector<VkClearValue> clearValues = {};
 		VkClearValue value;
 		value.color = { 0.0f, 0.0f, 0.0f, 1.0f };
 		clearValues.push_back(value);
-		cmdBuffs[i]->cmdBeginRenderPass(&this->renderPass, this->framebuffers[i].getFramebuffer(), this->swapChain.getExtent(), clearValues);
+		cmdBuffs[i]->cmdBeginRenderPass(&this->renderPass, this->framebuffers[i].getFramebuffer(), this->swapChain.getExtent(), clearValues, VK_SUBPASS_CONTENTS_INLINE);
 		cmdBuffs[i]->cmdBindPipeline(&this->pipeline);
 		std::vector<VkDescriptorSet> sets = { this->descManager.getSet(i, 0) };
 		std::vector<uint32_t> offsets;
@@ -107,6 +120,11 @@ void Renderer::run()
 		this->memory.directTransfer(&this->camBuffer, (void*)&this->camera->getMatrix()[0], sizeof(glm::mat4), 0);
 
 		this->frame.beginFrame();
+
+		ImGui::Begin("Hello world!");
+		ImGui::Text("Cool text");
+		ImGui::End();
+
 		this->frame.submit(Instance::get().getGraphicsQueue().queue, cmdBuffs);
 		this->frame.endFrame();
 		this->camera->update(dt);
@@ -224,7 +242,7 @@ void Renderer::setupPostTEMP()
 	image.transistionLayout(desc);
 
 	// Update descriptor
-	for (size_t i = 0; i < this->swapChain.getNumImages(); i++)
+	for (uint32_t i = 0; i < this->swapChain.getNumImages(); i++)
 	{
 		this->descManager.updateBufferDesc(0, 0, this->buffer.getBuffer(), 0, size + size2);
 		this->descManager.updateBufferDesc(0, 1, this->camBuffer.getBuffer(), 0, sizeof(glm::mat4));

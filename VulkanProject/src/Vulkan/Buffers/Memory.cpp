@@ -17,13 +17,13 @@ Memory::~Memory()
 void Memory::bindBuffer(Buffer* buffer)
 {
 	this->bufferOffsets[buffer] = this->currentOffset;
-	this->currentOffset += buffer->getMemReq().size;
+	this->currentOffset += static_cast<Offset>(buffer->getMemReq().size);
 }
 
 void Memory::bindTexture(Texture* texture)
 {
 	this->textureOffsets[texture] = this->currentOffset;
-	this->currentOffset += texture->getMemReq().size;
+	this->currentOffset += static_cast<Offset>(texture->getMemReq().size);
 }
 
 void Memory::directTransfer(Buffer* buffer, const void* data, uint32_t size, Offset bufferOffset)
