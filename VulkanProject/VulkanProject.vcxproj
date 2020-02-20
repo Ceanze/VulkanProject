@@ -110,8 +110,8 @@
     <ClInclude Include="src\Models\GLTFLoader.h" />
     <ClInclude Include="src\Models\GLTFTest.h" />
     <ClInclude Include="src\Models\Model\Model.h" />
-    <ClInclude Include="src\Threading\ThreadingTest.h" />
     <ClInclude Include="src\Threading\ThreadManager.h" />
+    <ClInclude Include="src\Threading\ThreadingTest.h" />
     <ClInclude Include="src\Vulkan\Buffers\Buffer.h" />
     <ClInclude Include="src\Vulkan\Buffers\Framebuffer.h" />
     <ClInclude Include="src\Vulkan\Buffers\Image.h" />
@@ -146,8 +146,8 @@
     <ClCompile Include="src\Models\GLTFLoader.cpp" />
     <ClCompile Include="src\Models\GLTFTest.cpp" />
     <ClCompile Include="src\Models\Model\Model.cpp" />
-    <ClCompile Include="src\Threading\ThreadingTest.cpp" />
     <ClCompile Include="src\Threading\ThreadManager.cpp" />
+    <ClCompile Include="src\Threading\ThreadingTest.cpp" />
     <ClCompile Include="src\Vulkan\Buffers\Buffer.cpp" />
     <ClCompile Include="src\Vulkan\Buffers\Framebuffer.cpp" />
     <ClCompile Include="src\Vulkan\Buffers\Image.cpp" />

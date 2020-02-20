@@ -30,8 +30,17 @@ public:
 	void setupPreTEMP();
 	void setupPostTEMP();
 private:
+	struct Particle {
+		alignas(16) glm::vec3 position;
+		alignas(16) glm::vec3 velocity;
+	};
+	std::vector<Particle> particles;
+	std::vector<glm::vec4> particleColors;
+
+	void generateParticleData();
 	void initComputePipeline();
 	void initGraphicsPipeline();
+
 	Window window;
 	SwapChain swapChain;
 	Shader shader;
@@ -41,16 +50,21 @@ private:
 	std::vector<Framebuffer> framebuffers;
 	Frame frame;
 
-	Camera* camera;
+	// Compute 
+	Shader computeShader;
+	Pipeline computePipeline;
+	CommandPool computeCommandPool;
+	DescriptorLayout computeDescLayout;
+	DescriptorManager computeDescManager;
+	Buffer particleBuffer;
+	Memory particleMemory;
 
+	Camera* camera;
 	bool running = true;
 
 	// TEMP
-	CommandPool transferCommandPool;
-	Buffer buffer;
 	Buffer camBuffer;
 	Memory memory;
-
 	DescriptorLayout descLayout;
 	DescriptorManager descManager;
 	std::vector<PushConstants> pushConstants;

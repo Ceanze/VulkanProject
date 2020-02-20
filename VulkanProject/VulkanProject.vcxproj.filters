@@ -1,14 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
+    <Filter Include="ComputeTest">
+      <UniqueIdentifier>{E20953CD-4EBF-CBC2-D7B3-C5994368C2C6}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Core">
       <UniqueIdentifier>{2EB4837C-1AEB-840D-C3D7-6A10AFED000F}</UniqueIdentifier>
     </Filter>
-    <Filter Include="GLTFTest">
-      <UniqueIdentifier>{923253A5-7EFF-ADB0-A718-9C589344E33E}</UniqueIdentifier>
+    <Filter Include="Models">
+      <UniqueIdentifier>{096F8DC3-F510-B899-DECB-CBEDCA0C3FEA}</UniqueIdentifier>
     </Filter>
-    <Filter Include="GLTFTest\Model">
-      <UniqueIdentifier>{52C17951-3E8F-6D57-2723-DE7D139049BC}</UniqueIdentifier>
+    <Filter Include="Models\Model">
+      <UniqueIdentifier>{093BC321-F59D-52C6-9E23-8B7C8A651E49}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Threading">
+      <UniqueIdentifier>{DB1BCC5F-4786-80D6-90C4-317CFC6D5E2B}</UniqueIdentifier>
     </Filter>
     <Filter Include="Vulkan">
       <UniqueIdentifier>{D6EAFCD8-C28C-27AF-AB47-3B039788AEFF}</UniqueIdentifier>
@@ -21,6 +27,9 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\ComputeTest\ComputeTest.h">
+      <Filter>ComputeTest</Filter>
+    </ClInclude>
     <ClInclude Include="src\Core\Camera.h">
       <Filter>Core</Filter>
     </ClInclude>
@@ -33,11 +42,20 @@
     <ClInclude Include="src\Core\Window.h">
       <Filter>Core</Filter>
     </ClInclude>
-    <ClInclude Include="src\GLTFTest\GLTFLoader.h">
-      <Filter>GLTFTest</Filter>
+    <ClInclude Include="src\Models\GLTFLoader.h">
+      <Filter>Models</Filter>
     </ClInclude>
-    <ClInclude Include="src\GLTFTest\Model\Model.h">
-      <Filter>GLTFTest\Model</Filter>
+    <ClInclude Include="src\Models\GLTFTest.h">
+      <Filter>Models</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Models\Model\Model.h">
+      <Filter>Models\Model</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Threading\ThreadManager.h">
+      <Filter>Threading</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Threading\ThreadingTest.h">
+      <Filter>Threading</Filter>
     </ClInclude>
     <ClInclude Include="src\Vulkan\Buffers\Buffer.h">
       <Filter>Vulkan\Buffers</Filter>
@@ -102,27 +120,18 @@
     <ClInclude Include="src\Vulkan\Texture.h">
       <Filter>Vulkan</Filter>
     </ClInclude>
-    <ClInclude Include="src\jaspch.h" />
-    <ClInclude Include="src\Vulkan\Texture.h">
     <ClInclude Include="src\Vulkan\VKImgui.h">
       <Filter>Vulkan</Filter>
     </ClInclude>
-    <ClInclude Include="src\Vulkan\Sampler.h" />
-    <ClInclude Include="src\Core\Camera.h" />
-    <ClInclude Include="src\Core\Input.h" />
-    <ClInclude Include="src\Vulkan\Pipeline\PushConstants.h" />
-    <ClInclude Include="src\ComputeTest\ComputeTest.h" />
-    <ClInclude Include="src\Threading\ThreadManager.h" />
-    <ClInclude Include="src\Threading\ThreadingTest.h" />
-    <ClInclude Include="src\Models\Model\Model.h" />
-    <ClInclude Include="src\Models\GLTFLoader.h" />
-    <ClInclude Include="src\Models\GLTFTest.h" />
     <ClInclude Include="src\Vulkan\VulkanCommon.h">
       <Filter>Vulkan</Filter>
     </ClInclude>
     <ClInclude Include="src\jaspch.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\ComputeTest\ComputeTest.cpp">
+      <Filter>ComputeTest</Filter>
+    </ClCompile>
     <ClCompile Include="src\Core\Camera.cpp">
       <Filter>Core</Filter>
     </ClCompile>
@@ -135,11 +144,20 @@
     <ClCompile Include="src\Core\Window.cpp">
       <Filter>Core</Filter>
     </ClCompile>
-    <ClCompile Include="src\GLTFTest\GLTFLoader.cpp">
-      <Filter>GLTFTest</Filter>
+    <ClCompile Include="src\Models\GLTFLoader.cpp">
+      <Filter>Models</Filter>
     </ClCompile>
-    <ClCompile Include="src\GLTFTest\Model\Model.cpp">
-      <Filter>GLTFTest\Model</Filter>
+    <ClCompile Include="src\Models\GLTFTest.cpp">
+      <Filter>Models</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Models\Model\Model.cpp">
+      <Filter>Models\Model</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Threading\ThreadManager.cpp">
+      <Filter>Threading</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Threading\ThreadingTest.cpp">
+      <Filter>Threading</Filter>
     </ClCompile>
     <ClCompile Include="src\Vulkan\Buffers\Buffer.cpp">
       <Filter>Vulkan\Buffers</Filter>
@@ -195,11 +213,6 @@
     <ClCompile Include="src\Vulkan\SwapChain.cpp">
       <Filter>Vulkan</Filter>
     </ClCompile>
-    <ClCompile Include="src\jaspch.cpp" />
-    <ClCompile Include="src\main.cpp" />
-    <ClCompile Include="src\Vulkan\Sampler.cpp" />
-    <ClCompile Include="src\Core\Camera.cpp" />
-    <ClCompile Include="src\Core\Input.cpp" />
     <ClCompile Include="src\Vulkan\Texture.cpp">
       <Filter>Vulkan</Filter>
     </ClCompile>
@@ -208,12 +221,5 @@
     </ClCompile>
     <ClCompile Include="src\jaspch.cpp" />
     <ClCompile Include="src\main.cpp" />
-    <ClCompile Include="src\Vulkan\Pipeline\PushConstants.cpp" />
-    <ClCompile Include="src\Threading\ThreadManager.cpp" />
-    <ClCompile Include="src\Threading\ThreadingTest.cpp" />
-    <ClCompile Include="src\Models\Model\Model.cpp" />
-    <ClCompile Include="src\Models\GLTFLoader.cpp" />
-    <ClCompile Include="src\Models\GLTFTest.cpp" />
-    <ClCompile Include="src\ComputeTest\ComputeTest.cpp" />
   </ItemGroup>
 </Project>
