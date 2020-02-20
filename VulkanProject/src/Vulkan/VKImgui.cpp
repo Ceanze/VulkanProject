@@ -80,8 +80,8 @@ void VKImgui::end()
 
 void VKImgui::render()
 {
-	this->commandBuffers[this->frameIndex]->begin(0);
-	this->commandBuffers[this->frameIndex]->cmdBeginRenderPass(this->renderPass, this->framebuffers[this->frameIndex]->getFramebuffer(), this->swapChain->getExtent(), { {0.0f, 0.0f, 0.0f, 1.0f} });
+	this->commandBuffers[this->frameIndex]->begin(0, nullptr);
+	this->commandBuffers[this->frameIndex]->cmdBeginRenderPass(this->renderPass, this->framebuffers[this->frameIndex]->getFramebuffer(), this->swapChain->getExtent(), { {0.0f, 0.0f, 0.0f, 1.0f} }, VK_SUBPASS_CONTENTS_INLINE);
 	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), this->commandBuffers[this->frameIndex]->getCommandBuffer());
 	this->commandBuffers[this->frameIndex]->cmdEndRenderPass();
 	this->commandBuffers[this->frameIndex]->end();
@@ -111,7 +111,7 @@ void VKImgui::createCommandPoolAndBuffer()
 	this->commandPool->init(CommandPool::Queue::GRAPHICS, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
 
 	// Number of command buffers might differ in diferent implementations
-	this->commandBuffers = this->commandPool->createCommandBuffers(this->swapChain->getNumImages());
+	this->commandBuffers = this->commandPool->createCommandBuffers(this->swapChain->getNumImages(), VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 }
 
 void VKImgui::createDescriptorPool()
