@@ -4,9 +4,6 @@
 #include <stdlib.h>
 #include <crtdbg.h>
 
-// TEMP
-#include "GLTFTest/GLTFLoader.h"
-
 int main(int argv, char* argc[])
 {
 	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
@@ -15,6 +12,6 @@ int main(int argv, char* argc[])
 	renderer.init();
 	renderer.run();
 	renderer.shutdown();
-
+	
 	return 0;
 }
