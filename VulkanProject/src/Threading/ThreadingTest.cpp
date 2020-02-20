@@ -184,7 +184,7 @@ void ThreadingTest::prepareBuffers()
 	this->threadManager.init(this->numThreads);
 
 	// Utils function for random numbers.
-	std::srand(std::time(NULL));
+	std::srand((unsigned int)std::time(NULL));
 	auto rnd11 = [](int precision=10000) { return (float)(std::rand() % precision) / (float)precision; };
 	auto rnd = [rnd11](float min, float max) { return min + rnd11(RAND_MAX)*glm::abs(max-min); };
 	static float RAD_PER_DEG = glm::pi<float>() / 180.f;
@@ -234,7 +234,7 @@ void ThreadingTest::recordThread(uint32_t threadId, uint32_t frameIndex, VkComma
 	cmdBuff->begin(VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, &inheritanceInfo);
 	cmdBuff->cmdBindPipeline(&this->pipeline); // Think I need to do this, don't think this is inherited.
 
-	const uint32_t numObjs = tData.objects.size();
+	const uint32_t numObjs = static_cast<uint32_t>(tData.objects.size());
 	for (uint32_t i = 0; i < numObjs; i++)
 	{
 		ObjectData& objData = tData.objects[i];
@@ -311,7 +311,7 @@ void ThreadingTest::setupPreTEMP()
 void ThreadingTest::setupPostTEMP()
 {
 	// Update descriptor
-	for (size_t i = 0; i < this->swapChain.getNumImages(); i++)
+	for (uint32_t i = 0; i < this->swapChain.getNumImages(); i++)
 	{
 		VkDeviceSize vertexBufferSize = this->model.vertices.size() * sizeof(Vertex);
 		this->descManager.updateBufferDesc(0, 0, this->model.vertexBuffer.getBuffer(), 0, vertexBufferSize);

@@ -87,12 +87,12 @@ static uint32_t findQueueIndex(VkQueueFlagBits queueFamily, VkPhysicalDevice dev
 	std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
 	vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
 
-	for (size_t i = 0; i < queueFamilies.size(); i++) {
+	for (uint32_t i = 0; i < static_cast<uint32_t>(queueFamilies.size()); i++) {
 
 		VkQueueFlags desiredQueue = queueFamilies[i].queueFlags & queueFamily;
 		VkQueueFlags graphicsCheck = queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT;
 
-		if ((queueFamily & VK_QUEUE_GRAPHICS_BIT == 1) && (queueFamilies[i].queueFlags & queueFamily))
+		if (((queueFamily & VK_QUEUE_GRAPHICS_BIT) == 1) && (queueFamilies[i].queueFlags & queueFamily))
 			return i;
 		// If not requesting graphics queue, should return a queue without graphics support (to avoid non-unique queue)
 		else if ((desiredQueue) && (graphicsCheck == 0))
@@ -118,6 +118,7 @@ static VkFormat findSupportedFormat(VkPhysicalDevice physicalDevice, const std::
 		}
 	}
 	JAS_ASSERT(false, "Failed to find supported format!");
+	return VK_FORMAT_UNDEFINED;
 }
 
 static VkFormat findDepthFormat(VkPhysicalDevice physicalDevice)

@@ -195,7 +195,7 @@ void GLTFTest::setupPostTEMP()
 	this->memory.directTransfer(&this->bufferUniform, (void*)& uboData, unsiformBufferSize, 0);
 
 	// Update descriptor
-	for (size_t i = 0; i < this->swapChain.getNumImages(); i++)
+	for (uint32_t i = 0; i < static_cast<uint32_t>(this->swapChain.getNumImages()); i++)
 	{
 		VkDeviceSize vertexBufferSize = this->model.vertices.size() * sizeof(Vertex);
 		this->descManager.updateBufferDesc(0, 0, this->model.vertexBuffer.getBuffer(), 0, vertexBufferSize);
@@ -204,7 +204,7 @@ void GLTFTest::setupPostTEMP()
 	}
 
 	// Record command buffers
-	for (int i = 0; i < this->swapChain.getNumImages(); i++) {
+	for (uint32_t i = 0; i < this->swapChain.getNumImages(); i++) {
 		this->cmdBuffs[i] = this->commandPool.createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 		this->cmdBuffs[i]->begin(0, nullptr);
 		std::vector<VkClearValue> clearValues = {};

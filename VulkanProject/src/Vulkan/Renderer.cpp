@@ -74,7 +74,7 @@ void Renderer::init()
 void Renderer::run()
 {
 	CommandBuffer* cmdBuffs[3];
-	for (int i = 0; i < this->swapChain.getNumImages(); i++) {
+	for (uint32_t i = 0; i < this->swapChain.getNumImages(); i++) {
 		cmdBuffs[i] = this->commandPool.createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 		cmdBuffs[i]->begin(0, nullptr);
 		std::vector<VkClearValue> clearValues = {};
@@ -224,7 +224,7 @@ void Renderer::setupPostTEMP()
 	image.transistionLayout(desc);
 
 	// Update descriptor
-	for (size_t i = 0; i < this->swapChain.getNumImages(); i++)
+	for (uint32_t i = 0; i < this->swapChain.getNumImages(); i++)
 	{
 		this->descManager.updateBufferDesc(0, 0, this->buffer.getBuffer(), 0, size + size2);
 		this->descManager.updateBufferDesc(0, 1, this->camBuffer.getBuffer(), 0, sizeof(glm::mat4));

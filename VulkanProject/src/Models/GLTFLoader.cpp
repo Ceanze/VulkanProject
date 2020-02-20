@@ -245,7 +245,7 @@ void GLTFLoader::loadNode(Model& model, Model::Node* node, tinygltf::Model& gltf
 			tinygltf::BufferView& posBufferView = gltfModel.bufferViews[posAccessor.bufferView];
 			tinygltf::Buffer& posBuffer = gltfModel.buffers[posBufferView.buffer];
 			posData = &posBuffer.data.at(0) + posBufferView.byteOffset;
-			primitive.vertexCount = posAccessor.count;
+			primitive.vertexCount = static_cast<uint32_t>(posAccessor.count);
 			posByteStride = posAccessor.ByteStride(posBufferView);
 
 			// NORMAL
