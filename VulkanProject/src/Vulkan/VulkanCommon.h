@@ -98,6 +98,8 @@ static uint32_t findQueueIndex(VkQueueFlagBits queueFamily, VkPhysicalDevice dev
 		else if ((desiredQueue) && (graphicsCheck == 0))
 			return i;
 	}
+	JAS_ASSERT(false, "Failed to find queue index!");
+	return 0;
 }
 
 static VkFormat findSupportedFormat(VkPhysicalDevice physicalDevice, const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features)
@@ -140,4 +142,5 @@ static uint32_t findMemoryType(VkPhysicalDevice physicalDevice, uint32_t typeFil
 	}
 
 	JAS_ASSERT(false, "Failed to find suitable memory type!");
+	return 0;
 }

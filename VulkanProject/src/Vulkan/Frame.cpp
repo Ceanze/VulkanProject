@@ -106,7 +106,7 @@ void Frame::createSyncObjects()
 	this->inFlightFences.resize(this->framesInFlight);
 	this->imagesInFlight.resize(this->numImages, VK_NULL_HANDLE);
 
-	for (int i = 0; i < this->framesInFlight; i++) {
+	for (uint32_t i = 0; i < this->framesInFlight; i++) {
 		VkSemaphoreCreateInfo SemaCreateInfo = {};
 		SemaCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 		VkFenceCreateInfo fenceCreateInfo = {};
@@ -120,7 +120,7 @@ void Frame::createSyncObjects()
 
 void Frame::destroySyncObjects()
 {
-	for (int i = 0; i < this->framesInFlight; i++) {
+	for (uint32_t i = 0; i < this->framesInFlight; i++) {
 		vkDestroySemaphore(Instance::get().getDevice(), this->imageAvailableSemaphores[i], nullptr);
 		vkDestroySemaphore(Instance::get().getDevice(), this->renderFinishedSemaphores[i], nullptr);
 		vkDestroyFence(Instance::get().getDevice(), this->inFlightFences[i], nullptr);

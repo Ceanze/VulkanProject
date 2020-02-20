@@ -89,7 +89,7 @@ void CommandBuffer::cmdPushConstants(Pipeline* pipeline, const PushConstants* pu
 void CommandBuffer::cmdBindDescriptorSets(Pipeline* pipeline, uint32_t firstSet, const std::vector<VkDescriptorSet>& sets, const std::vector<uint32_t>& offsets)
 {
 	vkCmdBindDescriptorSets(this->buffer, (VkPipelineBindPoint)pipeline->getType(),
-		pipeline->getPipelineLayout(), 0, sets.size(), sets.data(), offsets.size(), offsets.data());
+		pipeline->getPipelineLayout(), 0, static_cast<uint32_t>(sets.size()), sets.data(), static_cast<uint32_t>(offsets.size()), offsets.data());
 }
 
 void CommandBuffer::cmdDraw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)

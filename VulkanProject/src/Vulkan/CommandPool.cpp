@@ -42,6 +42,7 @@ QueueVK CommandPool::getQueue() const
 	case Queue::COMPUTE:
 		return Instance::get().getComputeQueue();
 	}
+	return QueueVK();
 }
 
 CommandBuffer* CommandPool::beginSingleTimeCommand()

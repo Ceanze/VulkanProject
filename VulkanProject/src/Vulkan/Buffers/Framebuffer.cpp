@@ -21,7 +21,7 @@ void Framebuffer::init(size_t numFrameBuffers, RenderPass* renderpass, const std
 	framebufferInfo.height = extent.height;
 	framebufferInfo.layers = 1;
 
-	framebufferInfo.attachmentCount = attachments.size();
+	framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
 	framebufferInfo.pAttachments = attachments.data();
 
 	ERROR_CHECK(vkCreateFramebuffer(Instance::get().getDevice(), &framebufferInfo, nullptr, &this->framebuffer), "Failed to create framebuffer");

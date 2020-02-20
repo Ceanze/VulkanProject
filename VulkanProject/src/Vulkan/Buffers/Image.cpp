@@ -38,7 +38,7 @@ void Image::init(uint32_t width, uint32_t height, VkFormat format, VkImageUsageF
 	else
 		imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-	imageInfo.queueFamilyIndexCount = queueFamilyIndices.size();
+	imageInfo.queueFamilyIndexCount = static_cast<uint32_t>(queueFamilyIndices.size());
 	imageInfo.pQueueFamilyIndices = queueFamilyIndices.data();
 
 
