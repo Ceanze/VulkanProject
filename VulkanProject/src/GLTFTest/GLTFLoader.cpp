@@ -55,7 +55,7 @@ void GLTFLoader::init()
 	this->renderPass.addSubpassDependency(subpassDependency);
 	this->renderPass.init();
 
-	this->commandPool.init(CommandPool::Queue::GRAPHICS);
+	this->commandPool.init(CommandPool::Queue::GRAPHICS, 0);
 	JAS_INFO("Created Command Pool!");
 
 	setupPreTEMP();
@@ -107,7 +107,7 @@ void GLTFLoader::init()
 		this->framebuffers[i].init(this->swapChain.getNumImages(), &this->renderPass, imageViews, this->swapChain.getExtent());
 	}
 
-	this->frame.init(&this->swapChain);
+	this->frame.init(&this->window, &this->swapChain);
 
 	setupPostTEMP();
 }
