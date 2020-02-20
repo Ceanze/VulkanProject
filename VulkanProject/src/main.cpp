@@ -4,22 +4,14 @@
 #include <stdlib.h>
 #include <crtdbg.h>
 
-// TEMP
-#include "Threading/ThreadingTest.h"
-
 int main(int argv, char* argc[])
 {
 	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 
-	ThreadingTest tt;
-	tt.init();
-	tt.run();
-	tt.shutdown();
-
-	/*Renderer renderer;
+	Renderer renderer;
 	renderer.init();
 	renderer.run();
 	renderer.shutdown();
-	*/
+	
 	return 0;
 }

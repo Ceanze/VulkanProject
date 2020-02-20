@@ -161,6 +161,7 @@ void ThreadingTest::shutdown()
 	this->depthTexture.cleanup();
 	this->imageMemory.cleanup();
 
+	delete this->camera;
 	this->model.cleanup();
 
 	this->descManager.cleanup();
