@@ -245,7 +245,7 @@ void Pipeline::createGraphicsPipeline()
 	VkGraphicsPipelineCreateInfo pipelineInfo = {};
 	pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 	std::vector<VkPipelineShaderStageCreateInfo> infos = this->shader->getShaderCreateInfos();
-	pipelineInfo.stageCount = infos.size();
+	pipelineInfo.stageCount = (uint32_t)infos.size();
 	pipelineInfo.pStages = infos.data();
 	pipelineInfo.pVertexInputState = &vertexInputInfo;
 	pipelineInfo.pInputAssemblyState = &inputAssembly;

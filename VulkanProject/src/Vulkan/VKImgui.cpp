@@ -9,6 +9,7 @@
 #include "Core/Window.h"
 #include "SwapChain.h"
 #include "Buffers/Framebuffer.h"
+#include "Core/Input.h"
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
@@ -22,6 +23,8 @@
 // TODO: When recreating swapChain make sure that this class works
 
 VKImgui::VKImgui()
+	: window(nullptr), swapChain(nullptr), renderPass(nullptr), frameIndex(0),
+	descPool(nullptr), commandPool(nullptr)
 {
 }
 
@@ -73,7 +76,9 @@ void VKImgui::begin(uint32_t frameIndex, float dt)
 
 void VKImgui::end()
 {
-	//ImGui::ShowDemoWindow(); // TEMP
+	if (Input::get().isKeyToggled(GLFW_KEY_C))
+		ImGui::SetMouseCursor(ImGuiMouseCursor_None);
+
 	ImGui::EndFrame();
 	ImGui::Render();
 }
