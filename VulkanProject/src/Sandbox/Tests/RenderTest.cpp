@@ -86,10 +86,14 @@ void RenderTest::setupPre()
 {
 	this->descLayout.add(new SSBO(VK_SHADER_STAGE_VERTEX_BIT, 1, nullptr));
 	this->descLayout.add(new UBO(VK_SHADER_STAGE_VERTEX_BIT, 1, nullptr));
-	this->descLayout.add(new IMG(VK_SHADER_STAGE_FRAGMENT_BIT, 1, nullptr));
 	this->descLayout.init();
 
+	DescriptorLayout descLayout2;
+	descLayout2.add(new IMG(VK_SHADER_STAGE_FRAGMENT_BIT, 1, nullptr));
+	descLayout2.init();
+
 	this->descManager.addLayout(this->descLayout);
+	this->descManager.addLayout(descLayout2);
 	this->descManager.init(getSwapChain()->getNumImages());
 
 	PushConstants pushConsts;
@@ -157,8 +161,8 @@ void RenderTest::setupPost()
 	{
 		this->descManager.updateBufferDesc(0, 0, this->buffer.getBuffer(), 0, size + size2);
 		this->descManager.updateBufferDesc(0, 1, this->camBuffer.getBuffer(), 0, sizeof(glm::mat4));
-		this->descManager.updateImageDesc(0, 2, image.getLayout(), this->texture.getVkImageView(), this->sampler.getSampler());
-		this->descManager.updateSets(i);
+		this->descManager.updateImageDesc(1, 0, image.getLayout(), this->texture.getVkImageView(), this->sampler.getSampler());
+		this->descManager.updateSets({0, 1}, i);
 	}
 
 	for (uint32_t i = 0; i < getSwapChain()->getNumImages(); i++) {
@@ -170,7 +174,7 @@ void RenderTest::setupPost()
 		clearValues.push_back(value);
 		cmdBuffs[i]->cmdBeginRenderPass(&this->renderPass, getFramebuffers()[i].getFramebuffer(), getSwapChain()->getExtent(), clearValues, VK_SUBPASS_CONTENTS_INLINE);
 		cmdBuffs[i]->cmdBindPipeline(&this->pipeline);
-		std::vector<VkDescriptorSet> sets = { this->descManager.getSet(i, 0) };
+		std::vector<VkDescriptorSet> sets = { this->descManager.getSet(i, 0), this->descManager.getSet(i, 1) };
 		std::vector<uint32_t> offsets;
 		cmdBuffs[i]->cmdBindDescriptorSets(&this->pipeline, 0, sets, offsets);
 		const glm::vec4 tintData(0.3f, 0.4f, 0.4f, 1.0f);

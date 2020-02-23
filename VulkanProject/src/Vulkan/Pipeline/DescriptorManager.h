@@ -18,7 +18,7 @@ public:
 	// Cannot update buffers for different copies at the same time!
 	void updateBufferDesc(SetIndex index, uint32_t binding, VkBuffer buffer, VkDeviceSize offset, VkDeviceSize range);
 	void updateImageDesc(SetIndex index, uint32_t binding, VkImageLayout layout, VkImageView view, VkSampler sampler);
-	void updateSets(uint32_t copyIndex);
+	void updateSets(std::vector<SetIndex> sets, uint32_t copyIndex);
 
 	void cleanup();
 
