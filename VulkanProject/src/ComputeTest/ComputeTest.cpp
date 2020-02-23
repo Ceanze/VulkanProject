@@ -192,7 +192,7 @@ void ComputeTest::setupPostTEMP()
 	{
 		this->descManager.updateBufferDesc(0, 0, this->particleBuffer.getBuffer(), 0, sizeof(Particle) * this->particles.size());
 		this->descManager.updateBufferDesc(0, 1, this->camBuffer.getBuffer(), 0, sizeof(glm::mat4));
-		this->descManager.updateSets(i);
+		this->descManager.updateSets({ 0 }, i);
 	}
 }
 
@@ -237,7 +237,7 @@ void ComputeTest::generateParticleData()
 	for (size_t i = 0; i < this->swapChain.getNumImages(); i++)
 	{
 		this->computeDescManager.updateBufferDesc(0, 0, this->particleBuffer.getBuffer(), 0, size);
-		this->computeDescManager.updateSets(i);
+		this->computeDescManager.updateSets({0}, i);
 	}
 }
 
