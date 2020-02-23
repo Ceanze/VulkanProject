@@ -1,40 +1,23 @@
 #include "jaspch.h"
-
 #include "GLTFTest.h"
-
-#include "Vulkan/Instance.h"
-#include <GLFW/glfw3.h>
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/rotate_vector.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "GLTFLoader.h"
-
-GLTFTest::GLTFTest()
-{
-}
-
-GLTFTest::~GLTFTest()
-{
-}
+#include "Models/GLTFLoader.h"
 
 void GLTFTest::init()
 {
-	Logger::init();
-
-	this->window.init(1280, 720, "Vulkan Project");
-	this->camera = new Camera(this->window.getAspectRatio(), 45.f, { 0.f, 0.f, 10.f }, { 0.f, 0.f, 0.f }, 0.8f);
-
-	Instance::get().init(&this->window);
-	this->swapChain.init(this->window.getWidth(), this->window.getHeight());
+	this->graphicsCommandPool.init(CommandPool::Queue::GRAPHICS, 0);
+	this->camera = new Camera(getWindow()->getAspectRatio(), 45.f, { 0.f, 0.f, 1.f }, { 0.f, 0.f, 0.f }, 0.8f);
 
 	this->shader.addStage(Shader::Type::VERTEX, "gltfTestVert.spv");
 	this->shader.addStage(Shader::Type::FRAGMENT, "gltfTestFrag.spv");
 	this->shader.init();
 
 	// Add attachments
-	this->renderPass.addDefaultColorAttachment(this->swapChain.getImageFormat());
+	this->renderPass.addDefaultColorAttachment(getSwapChain()->getImageFormat());
 	this->renderPass.addDefaultDepthAttachment();
 
 	RenderPass::SubpassInfo subpassInfo;
@@ -52,15 +35,12 @@ void GLTFTest::init()
 	this->renderPass.addSubpassDependency(subpassDependency);
 	this->renderPass.init();
 
-	this->commandPool.init(CommandPool::Queue::GRAPHICS, 0);
-	JAS_INFO("Created Command Pool!");
-
-	setupPreTEMP();
+	setupPre();
 
 	// Depth texture
 	VkFormat depthFormat = findDepthFormat(Instance::get().getPhysicalDevice());
 	std::vector<uint32_t> queueIndices = { findQueueIndex(VK_QUEUE_GRAPHICS_BIT, Instance::get().getPhysicalDevice()) };
-	this->depthTexture.init(this->swapChain.getExtent().width, this->swapChain.getExtent().height,
+	this->depthTexture.init(getSwapChain()->getExtent().width, getSwapChain()->getExtent().height,
 		depthFormat, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, queueIndices);
 
 	// Bind image to memory.
@@ -75,11 +55,11 @@ void GLTFTest::init()
 	desc.format = VK_FORMAT_R8G8B8A8_UNORM;
 	desc.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	desc.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-	desc.pool = &this->commandPool;
+	desc.pool = &this->graphicsCommandPool;
 	this->depthTexture.getImage().transistionLayout(desc);
 
 	this->pipeline.setDescriptorLayouts(this->descManager.getLayouts());
-	this->pipeline.setGraphicsPipelineInfo(this->swapChain.getExtent(), &this->renderPass);
+	this->pipeline.setGraphicsPipelineInfo(getSwapChain()->getExtent(), &this->renderPass);
 	PipelineInfo pipInfo;
 	// Vertex input info
 	pipInfo.vertexInputInfo = {};
@@ -94,89 +74,52 @@ void GLTFTest::init()
 	this->pipeline.init(Pipeline::Type::GRAPHICS, &this->shader);
 	JAS_INFO("Created Renderer!");
 
-	this->framebuffers.resize(this->swapChain.getNumImages());
+	initFramebuffers(&this->renderPass, this->depthTexture.getVkImageView());
 
-	for (size_t i = 0; i < this->swapChain.getNumImages(); i++)
-	{
-		std::vector<VkImageView> imageViews;
-		imageViews.push_back(this->swapChain.getImageViews()[i]);  // Add color attachment
-		imageViews.push_back(this->depthTexture.getVkImageView()); // Add depth image view
-		this->framebuffers[i].init(this->swapChain.getNumImages(), &this->renderPass, imageViews, this->swapChain.getExtent());
-	}
-
-	this->frame.init(&this->window, &this->swapChain);
-
-	setupPostTEMP();
+	setupPost();
 }
 
-void GLTFTest::run()
+void GLTFTest::loop(float dt)
 {
-	float dt = 0.0f;
-	while (running && this->window.isOpen())
-	{
-		glfwPollEvents();
+	// Update view matrix
+	this->memory.directTransfer(&this->bufferUniform, (void*)& this->camera->getMatrix()[0], sizeof(glm::mat4), (Offset)offsetof(UboData, vp));
 
-		if (glfwGetKey(this->window.getNativeWindow(), GLFW_KEY_ESCAPE) == GLFW_PRESS)
-			running = false;
-
-		auto startTime = std::chrono::high_resolution_clock::now();
-
-		// Update view matrix
-		this->memory.directTransfer(&this->bufferUniform, (void*)& this->camera->getMatrix()[0], sizeof(glm::mat4), (Offset)offsetof(UboData, vp));
-
-		// Render
-		this->frame.beginFrame();
-		this->frame.submit(Instance::get().getGraphicsQueue().queue, this->cmdBuffs);
-		this->frame.endFrame();
-		this->camera->update(dt);
-
-		auto endTime = std::chrono::high_resolution_clock::now();
-		dt = std::chrono::duration<float>(endTime - startTime).count();
-
-		this->window.setTitle("Delta Time: " + std::to_string(dt * 1000.f) + " ms");
-	}
+	// Render
+	getFrame()->beginFrame();
+	getFrame()->submit(Instance::get().getGraphicsQueue().queue, this->cmdBuffs);
+	getFrame()->endFrame();
+	this->camera->update(dt);
 }
 
-void GLTFTest::shutdown()
+void GLTFTest::cleanup()
 {
-	vkDeviceWaitIdle(Instance::get().getDevice());
-
+	this->graphicsCommandPool.cleanup();
 	this->depthTexture.cleanup();
 	this->imageMemory.cleanup();
-
 	this->bufferUniform.cleanup();
 	this->memory.cleanup();
-
 	this->model.cleanup();
-
 	this->descManager.cleanup();
-
-	this->frame.cleanup();
-	this->commandPool.cleanup();
-	for (auto& framebuffer : this->framebuffers)
-		framebuffer.cleanup();
 	this->pipeline.cleanup();
 	this->renderPass.cleanup();
 	this->shader.cleanup();
-	this->swapChain.cleanup();
-	Instance::get().cleanup();
-	this->window.cleanup();
+	delete this->camera;
 }
 
-void GLTFTest::setupPreTEMP()
+void GLTFTest::setupPre()
 {
-	this->descLayout.add(new SSBO(VK_SHADER_STAGE_VERTEX_BIT, 1, nullptr)); // Uniforms
+	this->descLayout.add(new SSBO(VK_SHADER_STAGE_VERTEX_BIT, 1, nullptr)); // Vertices
 	this->descLayout.add(new UBO(VK_SHADER_STAGE_VERTEX_BIT, 1, nullptr)); // Uniforms
 	this->descLayout.init();
 
 	this->descManager.addLayout(this->descLayout);
-	this->descManager.init(this->swapChain.getNumImages());
+	this->descManager.init(getSwapChain()->getNumImages());
 
 	const std::string filePath = "..\\assets\\Models\\Cube\\Cube.gltf";
 	GLTFLoader::load(filePath, &this->model);
 }
 
-void GLTFTest::setupPostTEMP()
+void GLTFTest::setupPost()
 {
 	// Set uniform data.
 	UboData uboData;
@@ -195,17 +138,17 @@ void GLTFTest::setupPostTEMP()
 	this->memory.directTransfer(&this->bufferUniform, (void*)& uboData, unsiformBufferSize, 0);
 
 	// Update descriptor
-	for (uint32_t i = 0; i < static_cast<uint32_t>(this->swapChain.getNumImages()); i++)
+	for (uint32_t i = 0; i < static_cast<uint32_t>(getSwapChain()->getNumImages()); i++)
 	{
 		VkDeviceSize vertexBufferSize = this->model.vertices.size() * sizeof(Vertex);
 		this->descManager.updateBufferDesc(0, 0, this->model.vertexBuffer.getBuffer(), 0, vertexBufferSize);
 		this->descManager.updateBufferDesc(0, 1, this->bufferUniform.getBuffer(), 0, unsiformBufferSize);
-		this->descManager.updateSets(i);
+		this->descManager.updateSets({ 0 }, i);
 	}
 
 	// Record command buffers
-	for (uint32_t i = 0; i < this->swapChain.getNumImages(); i++) {
-		this->cmdBuffs[i] = this->commandPool.createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+	for (uint32_t i = 0; i < getSwapChain()->getNumImages(); i++) {
+		this->cmdBuffs[i] = this->graphicsCommandPool.createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 		this->cmdBuffs[i]->begin(0, nullptr);
 		std::vector<VkClearValue> clearValues = {};
 		VkClearValue value;
@@ -213,7 +156,7 @@ void GLTFTest::setupPostTEMP()
 		clearValues.push_back(value);
 		value.depthStencil = { 1.0f, 0 };
 		clearValues.push_back(value);
-		this->cmdBuffs[i]->cmdBeginRenderPass(&this->renderPass, this->framebuffers[i].getFramebuffer(), this->swapChain.getExtent(), clearValues, VK_SUBPASS_CONTENTS_INLINE);
+		this->cmdBuffs[i]->cmdBeginRenderPass(&this->renderPass, getFramebuffers()[i].getFramebuffer(), getSwapChain()->getExtent(), clearValues, VK_SUBPASS_CONTENTS_INLINE);
 
 		std::vector<VkDescriptorSet> sets = { this->descManager.getSet(i, 0) };
 		std::vector<uint32_t> offsets;

@@ -1,23 +1,22 @@
 #include "jaspch.h"
-#include "Vulkan/Renderer.h"
-#include "ComputeTest/ComputeTest.h"
 #define _CRTDBG_MAP_ALLOC
 #include <stdlib.h>
 #include <crtdbg.h>
+
+#include "Sandbox/SandboxManager.h"
+#include "Sandbox/Tests/RenderTest.h"
+#include "Sandbox/Tests/GLTFTest.h"
+#include "Sandbox/Tests/ThreadingTest.h"
 
 int main(int argv, char* argc[])
 {
 	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 
-	/*Renderer renderer;
-	renderer.init();
-	renderer.run();
-	renderer.shutdown();*/
-
-	ComputeTest computeTest;
-	computeTest.init();
-	computeTest.run();
-	computeTest.shutdown(); 
-
+	SandboxManager sm;
+	sm.set(new RenderTest());
+	sm.init();
+	sm.run();
+	sm.cleanup();
+	
 	return 0;
 }

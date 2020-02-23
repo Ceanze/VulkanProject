@@ -353,3 +353,4 @@ MigrationBackup/
 
 # Custom
 *.sln
+*.tlog

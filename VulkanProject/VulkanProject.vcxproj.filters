@@ -13,6 +13,12 @@
     <Filter Include="Models\Model">
       <UniqueIdentifier>{093BC321-F59D-52C6-9E23-8B7C8A651E49}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Sandbox">
+      <UniqueIdentifier>{F4C124E3-60A1-A37E-69B9-2E55D5170AE0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Sandbox\Tests">
+      <UniqueIdentifier>{B6433F28-2204-BB5E-EB3E-04DC57BEFF3A}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Threading">
       <UniqueIdentifier>{DB1BCC5F-4786-80D6-90C4-317CFC6D5E2B}</UniqueIdentifier>
     </Filter>
@@ -45,16 +51,25 @@
     <ClInclude Include="src\Models\GLTFLoader.h">
       <Filter>Models</Filter>
     </ClInclude>
-    <ClInclude Include="src\Models\GLTFTest.h">
-      <Filter>Models</Filter>
-    </ClInclude>
     <ClInclude Include="src\Models\Model\Model.h">
       <Filter>Models\Model</Filter>
     </ClInclude>
-    <ClInclude Include="src\Threading\ThreadManager.h">
-      <Filter>Threading</Filter>
+    <ClInclude Include="src\Sandbox\SandboxManager.h">
+      <Filter>Sandbox</Filter>
     </ClInclude>
-    <ClInclude Include="src\Threading\ThreadingTest.h">
+    <ClInclude Include="src\Sandbox\Tests\GLTFTest.h">
+      <Filter>Sandbox\Tests</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Sandbox\Tests\RenderTest.h">
+      <Filter>Sandbox\Tests</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Sandbox\Tests\ThreadingTest.h">
+      <Filter>Sandbox\Tests</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Sandbox\VKSandboxBase.h">
+      <Filter>Sandbox</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Threading\ThreadManager.h">
       <Filter>Threading</Filter>
     </ClInclude>
     <ClInclude Include="src\Vulkan\Buffers\Buffer.h">
@@ -147,16 +162,25 @@
     <ClCompile Include="src\Models\GLTFLoader.cpp">
       <Filter>Models</Filter>
     </ClCompile>
-    <ClCompile Include="src\Models\GLTFTest.cpp">
-      <Filter>Models</Filter>
-    </ClCompile>
     <ClCompile Include="src\Models\Model\Model.cpp">
       <Filter>Models\Model</Filter>
     </ClCompile>
-    <ClCompile Include="src\Threading\ThreadManager.cpp">
-      <Filter>Threading</Filter>
+    <ClCompile Include="src\Sandbox\SandboxManager.cpp">
+      <Filter>Sandbox</Filter>
     </ClCompile>
-    <ClCompile Include="src\Threading\ThreadingTest.cpp">
+    <ClCompile Include="src\Sandbox\Tests\GLTFTest.cpp">
+      <Filter>Sandbox\Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Sandbox\Tests\RenderTest.cpp">
+      <Filter>Sandbox\Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Sandbox\Tests\ThreadingTest.cpp">
+      <Filter>Sandbox\Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Sandbox\VKSandboxBase.cpp">
+      <Filter>Sandbox</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Threading\ThreadManager.cpp">
       <Filter>Threading</Filter>
     </ClCompile>
     <ClCompile Include="src\Vulkan\Buffers\Buffer.cpp">

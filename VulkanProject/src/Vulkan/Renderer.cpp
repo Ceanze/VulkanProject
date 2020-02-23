@@ -4,10 +4,14 @@
 #include "Core/Input.h"
 
 #include <GLFW/glfw3.h>
-//#define STB_IMAGE_IMPLEMENTATION
+
+#pragma warning(push)
+#pragma warning(disable : 4996)
 #include <stb/stb_image.h>
+#pragma warning(pop)
 
 Renderer::Renderer()
+	: camera(nullptr)
 {
 }
 
@@ -245,6 +249,6 @@ void Renderer::setupPostTEMP()
 		this->descManager.updateBufferDesc(0, 0, this->buffer.getBuffer(), 0, size + size2);
 		this->descManager.updateBufferDesc(0, 1, this->camBuffer.getBuffer(), 0, sizeof(glm::mat4));
 		this->descManager.updateImageDesc(0, 2, image.getLayout(), this->texture.getVkImageView(), this->sampler.getSampler());
-		this->descManager.updateSets(i);
+		this->descManager.updateSets({0}, i);
 	}
 }
