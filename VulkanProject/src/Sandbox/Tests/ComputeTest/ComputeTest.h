@@ -11,61 +11,68 @@
 #include "Vulkan/Buffers/Framebuffer.h"
 #include "Vulkan/Frame.h"
 
+// Sandbox
+#include "Sandbox/VKSandboxBase.h"
+
 // TEMP
 #include "Vulkan/Buffers/Buffer.h"
 #include "Vulkan/Buffers/Memory.h"
 #include "Vulkan/Pipeline/DescriptorManager.h"
 #include "Vulkan/Pipeline/PushConstants.h"
 
-class ComputeTest
+class ComputeTest : public VKSandboxBase
 {
 public:
 	ComputeTest();
 	~ComputeTest();
 
 	void init();
-	void run();
-	void shutdown();
+	void loop(float dt);
+	void cleanup();
 
-	void setupPreTEMP();
-	void setupPostTEMP();
+	void setupDescriptors();
 private:
+	enum class Shaders {
+		COMPUTE,
+		PARTICLE,
+		SIZE
+	};
+
+	enum class PipelineObject {
+		COMPUTE,
+		PARTICLE,
+		SIZE
+	};
+
+	typedef PipelineObject PO;
+
 	struct Particle {
 		alignas(16) glm::vec3 position;
 		alignas(16) glm::vec3 velocity;
 	};
 	std::vector<Particle> particles;
-	std::vector<glm::vec4> particleColors;
 
+	void updateBufferDescs();
 	void generateParticleData();
 	void initComputePipeline();
 	void initGraphicsPipeline();
 
-	Window window;
-	SwapChain swapChain;
-	Shader shader;
-	Pipeline pipeline;
 	RenderPass renderPass;
 	CommandPool commandPool;
-	std::vector<Framebuffer> framebuffers;
-	Frame frame;
 
 	// Compute 
-	Shader computeShader;
-	Pipeline computePipeline;
-	CommandPool computeCommandPool;
 	DescriptorLayout computeDescLayout;
-	DescriptorManager computeDescManager;
 	Buffer particleBuffer;
 	Memory particleMemory;
 
 	Camera* camera;
 	bool running = true;
-
-	// TEMP
 	Buffer camBuffer;
 	Memory memory;
+
 	DescriptorLayout descLayout;
 	DescriptorManager descManager;
 	std::vector<PushConstants> pushConstants;
+
+	CommandBuffer* cmdBuffs[3];
 };

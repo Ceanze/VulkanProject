@@ -8,6 +8,8 @@
 //#define STB_IMAGE_IMPLEMENTATION
 #include <stb/stb_image.h>
 
+#define NUM_PARTICLES 10000
+
 ComputeTest::ComputeTest()
 {
 }
@@ -18,14 +20,12 @@ ComputeTest::~ComputeTest()
 
 void ComputeTest::init()
 {
-	Logger::init();
+	this->camera = new Camera(getWindow()->getAspectRatio(), 45.f, { 0.f, 0.f, 1.f }, { 0.f, 0.f, 0.f }, 0.8f);
+	
+	setupDescriptors();
 
-	this->window.init(1280, 720, "Vulkan Project");
-
-	this->camera = new Camera(this->window.getAspectRatio(), 45.f, { 0.f, 0.f, 1.f }, { 0.f, 0.f, 0.f }, 0.8f);
-
-	Instance::get().init(&this->window);
-	this->swapChain.init(this->window.getWidth(), this->window.getHeight());
+	getShaders().resize((unsigned)Shaders::SIZE);
+	getPipelines().resize((unsigned)PipelineObject::SIZE);
 
 	initComputePipeline();
 	JAS_INFO("Created Compute Pipeline!");
@@ -34,31 +34,16 @@ void ComputeTest::init()
 
 	this->commandPool.init(CommandPool::Queue::GRAPHICS, 0);
 
-	this->framebuffers.resize(this->swapChain.getNumImages());
+	initFramebuffers(&this->renderPass, VK_NULL_HANDLE);
 
-	for (size_t i = 0; i < this->swapChain.getNumImages(); i++)
-	{
-		std::vector<VkImageView> imageViews;
-		imageViews.push_back(this->swapChain.getImageViews()[i]);
-		this->framebuffers[i].init(this->swapChain.getNumImages(), &this->renderPass, imageViews, this->swapChain.getExtent());
-	}
-
-	this->frame.init(&this->window,&this->swapChain);
-
-	setupPostTEMP();
-}
-
-void ComputeTest::run()
-{
-	CommandBuffer* cmdBuffs[3];
-	for (int i = 0; i < this->swapChain.getNumImages(); i++) {
+	for (int i = 0; i < getSwapChain()->getNumImages(); i++) {
 		cmdBuffs[i] = this->commandPool.createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 		cmdBuffs[i]->begin(0, nullptr);
 		std::vector<VkClearValue> clearValues = {};
 		VkClearValue value;
 		value.color = { 0.0f, 0.0f, 0.0f, 1.0f };
 		clearValues.push_back(value);
-		
+
 		// Compute
 		// Wait for vertex shader to finish using the memory the computer shader will manipulate
 		VkMemoryBarrier memoryBarrier = {};
@@ -69,10 +54,10 @@ void ComputeTest::run()
 		std::vector<VkMemoryBarrier> memoryBarriers = { memoryBarrier };
 		cmdBuffs[i]->cmdMemoryBarrier(VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_DEPENDENCY_BY_REGION_BIT, memoryBarriers);
 
-		cmdBuffs[i]->cmdBindPipeline(&this->computePipeline);
-		std::vector<VkDescriptorSet> sets = { this->computeDescManager.getSet(i, 0) };
+		cmdBuffs[i]->cmdBindPipeline(&getPipeline((unsigned)PO::COMPUTE));
+		std::vector<VkDescriptorSet> sets = { this->descManager.getSet(i, 1) };
 		std::vector<uint32_t> offsets;
-		cmdBuffs[i]->cmdBindDescriptorSets(&this->computePipeline, 0, sets, offsets);
+		cmdBuffs[i]->cmdBindDescriptorSets(&getPipeline((unsigned)PO::COMPUTE), 0, sets, offsets);
 
 		const size_t NUM_PARTICLES_PER_WORKGROUP = 16;
 		cmdBuffs[i]->cmdDispatch(std::ceilf((float)this->particles.size() / NUM_PARTICLES_PER_WORKGROUP), 1, 1);
@@ -82,101 +67,81 @@ void ComputeTest::run()
 		memoryBarrier.dstAccessMask = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
 		memoryBarriers[0] = memoryBarrier;
 		cmdBuffs[i]->cmdMemoryBarrier(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, 0, memoryBarriers);
-	
+
 		// Graphics 
-		cmdBuffs[i]->cmdBeginRenderPass(&this->renderPass, this->framebuffers[i].getFramebuffer(), this->swapChain.getExtent(), clearValues, VK_SUBPASS_CONTENTS_INLINE);
-		cmdBuffs[i]->cmdBindPipeline(&this->pipeline);
+		cmdBuffs[i]->cmdBeginRenderPass(&this->renderPass, getFramebuffers()[i].getFramebuffer(), getSwapChain()->getExtent(), clearValues, VK_SUBPASS_CONTENTS_INLINE);
+		cmdBuffs[i]->cmdBindPipeline(&getPipeline((unsigned)PO::PARTICLE));
 		sets[0] = { this->descManager.getSet(i, 0) };
-		cmdBuffs[i]->cmdBindDescriptorSets(&this->pipeline, 0, sets, offsets);
+		cmdBuffs[i]->cmdBindDescriptorSets(&getPipeline((unsigned)PO::PARTICLE), 0, sets, offsets);
 		const glm::vec4 tintData(0.3f, 0.8f, 0.4f, 1.0f);
 		this->pushConstants[0].setDataPtr(&tintData[0]);
-		cmdBuffs[i]->cmdPushConstants(&this->pipeline, &this->pushConstants[0]);
-		cmdBuffs[i]->cmdDraw(100, 1, 0, 0);
+		cmdBuffs[i]->cmdPushConstants(&getPipeline((unsigned)PO::PARTICLE), &this->pushConstants[0]);
+		cmdBuffs[i]->cmdDraw(NUM_PARTICLES, 1, 0, 0);
 		cmdBuffs[i]->cmdEndRenderPass();
 		cmdBuffs[i]->end();
 	}
-
-	auto currentTime = std::chrono::high_resolution_clock::now();
-	auto prevTime = currentTime;
-	float dt = 0;
-	unsigned frames = 0;
-	double elapsedTime = 0;
-
-	while (running && this->window.isOpen())
-	{
-		glfwPollEvents();
-
-		this->memory.directTransfer(&this->camBuffer, (void*)&this->camera->getMatrix()[0], sizeof(glm::mat4), 0);
-		
-		this->frame.beginFrame();
-
-		ImGui::Begin("Hello world!");
-		ImGui::Text("Cool text");
-		ImGui::End();
-
-		this->frame.submit(Instance::get().getGraphicsQueue().queue, cmdBuffs);
-		this->frame.endFrame();
-		this->camera->update(dt);
-		
-		currentTime = std::chrono::high_resolution_clock::now();
-		dt = std::chrono::duration<float>(currentTime - prevTime).count();
-		elapsedTime += dt;
-		frames++;
-		prevTime = currentTime;
-
-		if (elapsedTime >= 1.0) {
-			this->window.setTitle("FPS: " + std::to_string(frames) + " [Delta time: " + std::to_string((elapsedTime / frames) * 1000.f) + " ms]");
-			elapsedTime = 0;
-			frames = 0;
-		}
-	}
 }
 
-void ComputeTest::shutdown()
+void ComputeTest::loop(float dt)
 {
-	vkDeviceWaitIdle(Instance::get().getDevice());
+	this->memory.directTransfer(&this->camBuffer, (void*)&this->camera->getMatrix()[0], sizeof(glm::mat4), 0);
 
+	getFrame()->beginFrame();
+
+	ImGui::Begin("Hello world!");
+	ImGui::Text("Cool text");
+	ImGui::End();
+
+	getFrame()->submit(Instance::get().getGraphicsQueue().queue, cmdBuffs);
+	getFrame()->endFrame();
+	this->camera->update(dt);
+}
+
+void ComputeTest::cleanup()
+{
 	// Compute
 	this->particleBuffer.cleanup();
 	this->particleMemory.cleanup();
-	this->computeDescManager.cleanup();
-	this->computeCommandPool.cleanup();
-	this->computePipeline.cleanup();
-	this->computeShader.cleanup();
-
 	this->camBuffer.cleanup();
 	this->memory.cleanup();
-	this->descManager.cleanup();
-
-	this->frame.cleanup();
 	this->commandPool.cleanup();
-	for (auto& framebuffer : this->framebuffers)
-		framebuffer.cleanup();
-	this->pipeline.cleanup();
+	
+	for (auto& pipeline : getPipelines())
+		pipeline.cleanup();
+
+	this->descManager.cleanup();
 	this->renderPass.cleanup();
-	this->shader.cleanup();
-	this->swapChain.cleanup();
-	Instance::get().cleanup();
-	this->window.cleanup();
+
+	for (auto& shader : getShaders())
+		shader.cleanup();
 
 	delete this->camera;
 }
 
-void ComputeTest::setupPreTEMP()
+void ComputeTest::setupDescriptors()
 {
 	this->descLayout.add(new SSBO(VK_SHADER_STAGE_VERTEX_BIT, 1, nullptr));
 	this->descLayout.add(new UBO(VK_SHADER_STAGE_VERTEX_BIT, 1, nullptr));
 	this->descLayout.init();
-
+	// Set 0
 	this->descManager.addLayout(this->descLayout);
-	this->descManager.init(this->swapChain.getNumImages());
+
+	this->computeDescLayout.add(new SSBO(VK_SHADER_STAGE_COMPUTE_BIT, 1, nullptr));
+	this->computeDescLayout.init();
+	// Set 1
+	this->descManager.addLayout(this->computeDescLayout);
+
+	this->descManager.init(getSwapChain()->getNumImages());
+
+	generateParticleData();
+	updateBufferDescs();
 
 	PushConstants pushConsts;
 	pushConsts.setLayout(VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(glm::vec4), 0);
 	this->pushConstants.push_back(pushConsts);
 }
 
-void ComputeTest::setupPostTEMP()
+void ComputeTest::updateBufferDescs()
 {
 	std::vector<uint32_t> queueIndices = { findQueueIndex(VK_QUEUE_GRAPHICS_BIT, Instance::get().getPhysicalDevice()) };
 	this->camBuffer.init(sizeof(glm::mat4), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, queueIndices);
@@ -188,7 +153,7 @@ void ComputeTest::setupPostTEMP()
 	this->memory.directTransfer(&this->camBuffer, (void*)&this->camera->getMatrix()[0], sizeof(glm::mat4), 0);
 
 	// Update descriptor
-	for (size_t i = 0; i < this->swapChain.getNumImages(); i++)
+	for (size_t i = 0; i < getSwapChain()->getNumImages(); i++)
 	{
 		this->descManager.updateBufferDesc(0, 0, this->particleBuffer.getBuffer(), 0, sizeof(Particle) * this->particles.size());
 		this->descManager.updateBufferDesc(0, 1, this->camBuffer.getBuffer(), 0, sizeof(glm::mat4));
@@ -198,26 +163,16 @@ void ComputeTest::setupPostTEMP()
 
 void ComputeTest::generateParticleData()
 {
-	const unsigned NUM_PARTICLES = 100;
 	this->particles.resize(NUM_PARTICLES);
-	this->particleColors.resize(NUM_PARTICLES);
 
 	std::uniform_real_distribution<float> uniform(-1.0f, 1.0f);
 	std::mt19937 engine;
 	for (unsigned i = 0; i < NUM_PARTICLES; i++)
 	{
 		this->particles[i].position = glm::vec3(0.2f * uniform(engine), 0.2f * uniform(engine), 0.2f * uniform(engine));
-		float velocity = 0.00008f + 0.00003f * uniform(engine);
+		float velocity = 0.0008f + 0.0003f * uniform(engine);
 		float angle = 100.0f * uniform(engine);
 		this->particles[i].velocity = (velocity * glm::vec3(glm::cos(angle), glm::sin(angle), glm::sin(angle)));
-
-		float y = 0.8f + 0.2f * uniform(engine);
-		float saturation = 0.8f + 0.2f * uniform(engine);
-		float hue = 100.0f * uniform(engine);
-		float u = saturation * glm::cos(hue);
-		float v = saturation * glm::sin(hue);
-		glm::vec3 rgb = glm::mat3(1.0f, 1.0f, 1.0f, 0.0f, -0.39465f, 2.03211f, 1.13983f, -0.58060f, 0.0f) * glm::vec3(y, u, v);
-		this->particleColors[i] = glm::vec4(rgb, 0.4f);
 	}
 
 	std::vector<uint32_t> queueIndices = { findQueueIndex(VK_QUEUE_COMPUTE_BIT, Instance::get().getPhysicalDevice()) };
@@ -234,38 +189,34 @@ void ComputeTest::generateParticleData()
 	this->particleMemory.directTransfer(&this->particleBuffer, (void*)&this->particles[0], size, 0);
 
 	// Update descriptor
-	for (size_t i = 0; i < this->swapChain.getNumImages(); i++)
+	for (size_t i = 0; i < getSwapChain()->getNumImages(); i++)
 	{
-		this->computeDescManager.updateBufferDesc(0, 0, this->particleBuffer.getBuffer(), 0, size);
-		this->computeDescManager.updateSets({0}, i);
+		this->descManager.updateBufferDesc(1, 0, this->particleBuffer.getBuffer(), 0, size);
+		this->descManager.updateSets({1}, i);
 	}
 }
 
 void ComputeTest::initComputePipeline()
 {
-	this->computeShader.addStage(Shader::Type::COMPUTE, "ComputeTest/computeTest.spv");
-	this->computeShader.init();
 
-	this->computeDescLayout.add(new SSBO(VK_SHADER_STAGE_COMPUTE_BIT, 1, nullptr));
-	this->computeDescLayout.init();
+	getShader((unsigned)Shaders::COMPUTE).addStage(Shader::Type::COMPUTE, "ComputeTest/computeTest.spv");
+	getShader((unsigned)Shaders::COMPUTE).init();
 
-	this->computeDescManager.addLayout(this->computeDescLayout);
-	this->computeDescManager.init(this->swapChain.getNumImages());
-	generateParticleData();
-
-	this->computePipeline.setDescriptorLayouts(this->computeDescManager.getLayouts());
-	this->computePipeline.init(Pipeline::Type::COMPUTE, &this->computeShader);
+	std::vector<DescriptorLayout> setLayout = { this->descManager.getLayouts()[1] };
+	
+	getPipeline((unsigned)PO::COMPUTE).setDescriptorLayouts(setLayout);
+	getPipeline((unsigned)PO::COMPUTE).init(Pipeline::Type::COMPUTE, &getShader((unsigned)Shaders::COMPUTE));
 }
 
 void ComputeTest::initGraphicsPipeline()
 {
-	this->shader.addStage(Shader::Type::VERTEX, "ComputeTest/particleVertex.spv");
-	this->shader.addStage(Shader::Type::FRAGMENT, "ComputeTest/particleFragment.spv");
-	this->shader.init();
+	getShader((unsigned)Shaders::PARTICLE).addStage(Shader::Type::VERTEX, "ComputeTest/particleVertex.spv");
+	getShader((unsigned)Shaders::PARTICLE).addStage(Shader::Type::FRAGMENT, "ComputeTest/particleFragment.spv");
+	getShader((unsigned)Shaders::PARTICLE).init();
 
 	// Add attachments
 	VkAttachmentDescription attachment = {};
-	attachment.format = this->swapChain.getImageFormat();
+	attachment.format = getSwapChain()->getImageFormat();
 	attachment.samples = VK_SAMPLE_COUNT_1_BIT;
 	attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 	attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -291,9 +242,12 @@ void ComputeTest::initGraphicsPipeline()
 	this->renderPass.addSubpassDependency(subpassDependency);
 	this->renderPass.init();
 
-	setupPreTEMP();
-	this->pipeline.setPushConstants(this->pushConstants);
-	this->pipeline.setDescriptorLayouts(this->descManager.getLayouts());
+	
+	getPipeline((unsigned)PO::PARTICLE).setPushConstants(this->pushConstants);
+
+	std::vector<DescriptorLayout> setLayout = { this->descManager.getLayouts()[0] };
+	getPipeline((unsigned)PO::PARTICLE).setDescriptorLayouts(setLayout);
+
 	PipelineInfo info = {};
 	VkPipelineColorBlendAttachmentState blendAttachmentInfo = {};
 	blendAttachmentInfo.blendEnable = true;
@@ -321,7 +275,7 @@ void ComputeTest::initGraphicsPipeline()
 	inputAssemblyInfo.primitiveRestartEnable = VK_FALSE;
 	info.inputAssembly = inputAssemblyInfo;
 
-	this->pipeline.setPipelineInfo(PipelineInfoFlag::INPUT_ASSEMBLY, info);
-	this->pipeline.setGraphicsPipelineInfo(this->swapChain.getExtent(), &this->renderPass);
-	this->pipeline.init(Pipeline::Type::GRAPHICS, &this->shader);
+	getPipeline((unsigned)PO::PARTICLE).setPipelineInfo(PipelineInfoFlag::INPUT_ASSEMBLY, info);
+	getPipeline((unsigned)PO::PARTICLE).setGraphicsPipelineInfo(getSwapChain()->getExtent(), &this->renderPass);
+	getPipeline((unsigned)PO::PARTICLE).init(Pipeline::Type::GRAPHICS, &getShader((unsigned)Shaders::PARTICLE));
 }
