@@ -135,6 +135,7 @@
     <ClInclude Include="src\Vulkan\VKImgui.h" />
     <ClInclude Include="src\Vulkan\VulkanCommon.h" />
     <ClInclude Include="src\jaspch.h" />
+    <ClInclude Include="src\Vulkan\VulkanProfiler.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Core\Camera.cpp" />
@@ -170,6 +171,7 @@
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\Vulkan\VulkanProfiler.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\libs\glfw\GLFW.vcxproj">
