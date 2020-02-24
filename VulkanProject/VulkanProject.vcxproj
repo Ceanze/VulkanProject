@@ -112,6 +112,7 @@
     <ClInclude Include="src\Models\Model\Model.h" />
     <ClInclude Include="src\Sandbox\SandboxManager.h" />
     <ClInclude Include="src\Sandbox\Tests\GLTFTest.h" />
+    <ClInclude Include="src\Sandbox\Tests\HeightmapTest.h" />
     <ClInclude Include="src\Sandbox\Tests\RenderTest.h" />
     <ClInclude Include="src\Sandbox\Tests\ThreadingTest.h" />
     <ClInclude Include="src\Sandbox\VKSandboxBase.h" />
@@ -152,6 +153,7 @@
     <ClCompile Include="src\Models\Model\Model.cpp" />
     <ClCompile Include="src\Sandbox\SandboxManager.cpp" />
     <ClCompile Include="src\Sandbox\Tests\GLTFTest.cpp" />
+    <ClCompile Include="src\Sandbox\Tests\HeightmapTest.cpp" />
     <ClCompile Include="src\Sandbox\Tests\RenderTest.cpp" />
     <ClCompile Include="src\Sandbox\Tests\ThreadingTest.cpp" />
     <ClCompile Include="src\Sandbox\VKSandboxBase.cpp" />

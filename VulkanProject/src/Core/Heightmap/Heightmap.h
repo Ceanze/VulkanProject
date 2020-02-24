@@ -5,22 +5,37 @@
 class Heightmap 
 {
 public:
-	struct HeightmapData {
+	struct HeightmapRawData {
 		int width, height;
 		size_t size;
 		unsigned char* data;
+	};
+
+	struct HeightmapVertexData {
+		int width, height;
+		std::vector<unsigned> indicies;
+		std::vector<glm::vec4> verticies;
 	};
 
 public:
 	Heightmap();
 	~Heightmap();
 
-	HeightmapData getData(unsigned index);
+	void setMinZ(float value);
+	void setMaxZ(float value);
+	void setVertexDist(float value);
+
+	HeightmapVertexData getVertexData(unsigned index);
+	HeightmapRawData getData(unsigned index);
 	void loadImage(const std::string& path);
 
 	void cleanup();
 
-
 private:
-	std::vector<HeightmapData> data;
+	float minZ;
+	float maxZ;
+	float vertDist;
+
+	std::vector<HeightmapVertexData> vertexData;
+	std::vector<HeightmapRawData> rawData;
 };
