@@ -355,3 +355,4 @@ MigrationBackup/
 *.sln
 *.tlog
 imgui.ini
+*.lastbuildstate
