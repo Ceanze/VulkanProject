@@ -125,7 +125,7 @@ void GLTFTest::run()
 		this->memory.directTransfer(&this->bufferUniform, (void*)& this->camera->getMatrix()[0], sizeof(glm::mat4), (Offset)offsetof(UboData, vp));
 
 		// Render
-		this->frame.beginFrame();
+		this->frame.beginFrame(dt);
 		this->frame.submit(Instance::get().getGraphicsQueue().queue, this->cmdBuffs);
 		this->frame.endFrame();
 		this->camera->update(dt);

@@ -127,7 +127,7 @@ void ThreadingTest::run()
 
 		auto startTime = std::chrono::high_resolution_clock::now();
 
-		this->frame.beginFrame();
+		this->frame.beginFrame(dt);
 		updateBuffers(this->frame.getCurrentImageIndex(), dt);
 
 		// Render
