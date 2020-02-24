@@ -109,7 +109,9 @@ void TransferTest::setupPre()
 	this->descManager.init(getSwapChain()->getNumImages());
 
 	// This can now be done in another thread.
-	const std::string filePath = "..\\assets\\Models\\Cube\\Cube.gltf";
+	//const std::string filePath = "..\\assets\\Models\\Cube\\Cube.gltf";
+	const std::string filePath = "..\\assets\\Models\\Sponza\\glTF\\Sponza.gltf";
+	//GLTFLoader::load(filePath, &this->model);
 	GLTFLoader::loadToStagingBuffer(filePath, &this->model, &this->stagingBuffer, &this->stagingMemory);
 	
 	// Use the transfer queue, create a single command buffer and copy the contents of the staging buffer to the model's buffers.
@@ -121,7 +123,7 @@ void TransferTest::setupPost()
 	// Set uniform data.
 	UboData uboData;
 	uboData.vp = this->camera->getMatrix();
-	uboData.world = glm::mat4(1.0f);
+	uboData.world = glm::mat4(0.01f);
 	uboData.world[3][3] = 1.0f;
 	uint32_t unsiformBufferSize = sizeof(UboData);
 
@@ -140,7 +142,7 @@ void TransferTest::setupPost()
 		VkDeviceSize vertexBufferSize = this->model.vertices.size() * sizeof(Vertex);
 		this->descManager.updateBufferDesc(0, 0, this->model.vertexBuffer.getBuffer(), 0, vertexBufferSize);
 		this->descManager.updateBufferDesc(0, 1, this->bufferUniform.getBuffer(), 0, unsiformBufferSize);
-		this->descManager.updateSets(i);
+		this->descManager.updateSets({0}, i);
 	}
 
 	// Record command buffers

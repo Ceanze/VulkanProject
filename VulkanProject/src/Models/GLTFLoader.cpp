@@ -37,12 +37,12 @@ void GLTFLoader::transferToModel(CommandPool* transferCommandPool, Model* model,
 	uint32_t indicesSize = (uint32_t)(model->indices.size() * sizeof(uint32_t));
 	if (indicesSize > 0)
 	{
-		model->indexBuffer.init(indicesSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, queueIndices);
+		model->indexBuffer.init(indicesSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, queueIndices);
 		model->bufferMemory.bindBuffer(&model->indexBuffer);
 	}
 
 	uint32_t verticesSize = (uint32_t)(model->vertices.size() * sizeof(Vertex));
-	model->vertexBuffer.init(verticesSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, queueIndices);
+	model->vertexBuffer.init(verticesSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, queueIndices);
 	model->bufferMemory.bindBuffer(&model->vertexBuffer);
 
 	// Create memory with the binded buffers
@@ -74,7 +74,9 @@ void GLTFLoader::transferToModel(CommandPool* transferCommandPool, Model* model,
 void GLTFLoader::recordDraw(Model* model, CommandBuffer* commandBuffer, Pipeline* pipeline, const std::vector<VkDescriptorSet>& sets, const std::vector<uint32_t>& offsets)
 {
 	// TODO: Use different materials, can still use same pipeline if all meshes uses same type of material (i.e. PBR)!
-	
+	if (model->vertexBuffer.getBuffer() == VK_NULL_HANDLE)
+		return;
+
 	//VkBuffer vertexBuffers[] = { this->model.vertexBuffer.getBuffer() };
 	//VkDeviceSize vertOffsets[] = { 0 };
 	//this->cmdBuffs[i]->cmdBindVertexBuffers(0, 1, vertexBuffers, vertOffsets);
@@ -243,8 +245,6 @@ void GLTFLoader::loadNode(Model& model, Model::Node* node, tinygltf::Model& gltf
 				tinygltf::Accessor& indAccessor = gltfModel.accessors[gltfPrimitive.indices];
 				tinygltf::BufferView& indBufferView = gltfModel.bufferViews[indAccessor.bufferView];
 				tinygltf::Buffer& indBuffer = gltfModel.buffers[indBufferView.buffer];
-				unsigned char* indicesData = &indBuffer.data.at(0) + indBufferView.byteOffset;
-				size_t indByteStride = indAccessor.ByteStride(indBufferView);
 
 				primitive.indexCount = static_cast<uint32_t>(indAccessor.count);
 				const void* dataPtr = &indBuffer.data.at(0) + indBufferView.byteOffset;
@@ -395,7 +395,7 @@ void GLTFLoader::loadScenes(Model& model, tinygltf::Model& gltfModel, Buffer* st
 	uint32_t verticesSize = (uint32_t)(model.vertices.size() * sizeof(Vertex));
 
 	stagingBuff->init(verticesSize + indicesSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, queueIndices);
-	stagingMemory->bindBuffer(&model.vertexBuffer);
+	stagingMemory->bindBuffer(stagingBuff);
 
 	// Create memory with the binded buffers
 	stagingMemory->init(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
