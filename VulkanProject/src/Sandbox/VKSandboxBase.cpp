@@ -60,6 +60,26 @@ std::vector<Framebuffer>& VKSandboxBase::getFramebuffers()
 	return this->framebuffers;
 }
 
+std::vector<Pipeline>& VKSandboxBase::getPipelines()
+{
+	return this->pipelines;
+}
+
+std::vector<Shader>& VKSandboxBase::getShaders()
+{
+	return this->shaders;
+}
+
+Pipeline& VKSandboxBase::getPipeline(unsigned index)
+{
+	return this->pipelines[index];
+}
+
+Shader& VKSandboxBase::getShader(unsigned index)
+{
+	return this->shaders[index];
+}
+
 Frame* VKSandboxBase::getFrame()
 {
 	return this->frame;

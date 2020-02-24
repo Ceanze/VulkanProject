@@ -102,6 +102,45 @@ void CommandBuffer::cmdDrawIndexed(uint32_t indexCount, uint32_t instanceCount, 
 	vkCmdDrawIndexed(this->buffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
 }
 
+void CommandBuffer::cmdMemoryBarrier(VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask, VkDependencyFlags dependencyFlag, std::vector<VkMemoryBarrier> barriers)
+{
+	vkCmdPipelineBarrier(
+		this->buffer,
+		srcStageMask,
+		dstStageMask,
+		dependencyFlag,
+		barriers.size(), barriers.data(),
+		0, nullptr,
+		0, nullptr);
+}
+
+void CommandBuffer::cmdBufferMemoryBarrier(VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask, VkDependencyFlags dependencyFlag, std::vector<VkBufferMemoryBarrier>barriers)
+{
+	vkCmdPipelineBarrier(this->buffer,
+		srcStageMask,
+		dstStageMask,
+		dependencyFlag,
+		0, nullptr,
+		barriers.size(), barriers.data(),
+		0, nullptr);
+}
+
+void CommandBuffer::cmdImageMemoryBarrier(VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask, VkDependencyFlags dependencyFlag, std::vector<VkImageMemoryBarrier> barriers)
+{
+	vkCmdPipelineBarrier(this->buffer,
+		srcStageMask,
+		dstStageMask,
+		dependencyFlag,
+		0, nullptr,
+		0, nullptr,
+		barriers.size(), barriers.data());
+}
+
+void CommandBuffer::cmdDispatch(uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ)
+{
+	vkCmdDispatch(this->buffer, groupCountX, groupCountY, groupCountZ);
+}
+
 void CommandBuffer::cmdExecuteCommands(uint32_t bufferCount, const VkCommandBuffer* secondaryBuffers)
 {
 	vkCmdExecuteCommands(this->buffer, bufferCount, secondaryBuffers);

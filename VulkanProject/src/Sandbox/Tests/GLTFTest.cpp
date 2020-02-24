@@ -143,7 +143,7 @@ void GLTFTest::setupPost()
 		VkDeviceSize vertexBufferSize = this->model.vertices.size() * sizeof(Vertex);
 		this->descManager.updateBufferDesc(0, 0, this->model.vertexBuffer.getBuffer(), 0, vertexBufferSize);
 		this->descManager.updateBufferDesc(0, 1, this->bufferUniform.getBuffer(), 0, unsiformBufferSize);
-		this->descManager.updateSets(i);
+		this->descManager.updateSets({ 0 }, i);
 	}
 
 	// Record command buffers

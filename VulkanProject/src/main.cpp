@@ -5,6 +5,7 @@
 
 #include "Sandbox/SandboxManager.h"
 #include "Sandbox/Tests/RenderTest.h"
+#include "Sandbox/Tests/ComputeTest/ComputeTest.h"
 #include "Sandbox/Tests/GLTFTest.h"
 #include "Sandbox/Tests/ThreadingTest.h"
 #include "Sandbox/Tests/TransferTest.h"

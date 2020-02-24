@@ -202,6 +202,59 @@ void ThreadingTest::updateBuffers(uint32_t frameIndex, float dt)
 	inheritanceInfo.framebuffer = getFramebuffers()[frameIndex].getFramebuffer();
 	inheritanceInfo.subpass = 0;
 
+	/*
+	// ----------------- INIT -----------------
+	// Set number of threads and the threads data structure
+	struct DataStructure
+	{
+		CommandPool cmdPool;
+		std::vector<CommandBuffer*> cmdBuffs;
+		std::vector<ObjectData> objects;
+		std::vector<PushConstants> pushConstants;
+		WorkType workType;
+	} dataStruct[numThreads];
+	this->threadManager.setNumThreads(numThreads, dataStruct);
+	commandBuffers.resize(numThreads);
+	// ----------------- LOOP -----------------
+	// Get threads which are done with their work.
+	auto& freeThreads = this->threadManager.getFreeThread();
+	for(auto& freeThread : freeThreads)
+		if(worklist)
+		commandBuffers[freeThread.workIndex] = freeThread.cmdBuffs[frameIndex]->getCommandBuffer();
+	submit();
+
+	// Fetch their work.
+	std::vector<VkCommandBuffer> commandBuffers;
+	std::sort(freeThreads, [](auto a, auto b) { return a.workType < b.workType;})
+	for(auto& freeThread : freeThreads)
+		commandBuffers.push_back(freeThread.cmdBuffs[frameIndex]->getCommandBuffer());
+	submit()
+	// Add new work for them.
+	for(auto& freeThread : freeThreads)
+	{
+		workList
+	}
+	freeThread.addWork([=] { recordThread(t, frameIndex, inheritanceInfo); });
+
+	Time A 
+		T -> A
+		C -> A -> R
+
+	Time B
+		T -> B
+		C -> B -> R
+
+	Render 
+
+	WorkType:
+		TRANSFER ( <- Mesh)
+		COMPUTE (Culling of Mesh)
+		RENDER (IndirectDraw on Mesh buffer)
+
+	workList ordning viktig!
+	commandBuffers.resize(workList.size())
+	*/
+
 	for (uint32_t t = 0; t < this->numThreads; t++)
 	{
 		// Add work to a specific thread, the thread has a queue which it will go through.
@@ -243,7 +296,7 @@ void ThreadingTest::setupPost()
 	{
 		VkDeviceSize vertexBufferSize = this->model.vertices.size() * sizeof(Vertex);
 		this->descManager.updateBufferDesc(0, 0, this->model.vertexBuffer.getBuffer(), 0, vertexBufferSize);
-		this->descManager.updateSets(i);
+		this->descManager.updateSets({ 0 }, i);
 	}
 
 	prepareBuffers();
