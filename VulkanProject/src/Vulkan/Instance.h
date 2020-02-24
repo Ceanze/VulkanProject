@@ -32,6 +32,9 @@ public:
 	QueueVK getTransferQueue() const { return this->transferQueue; }
 	QueueVK getComputeQueue() const { return this->computeQueue; }
 
+	VkQueueFamilyProperties getQueueProperties(uint32_t queueIndex);
+	VkPhysicalDeviceProperties getPhysicalDeviceProperties();
+
 private:
 	Instance();
 	Instance(Instance& other) = delete;
