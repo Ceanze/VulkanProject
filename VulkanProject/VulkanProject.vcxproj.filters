@@ -66,6 +66,9 @@
     <ClInclude Include="src\Sandbox\Tests\ThreadingTest.h">
       <Filter>Sandbox\Tests</Filter>
     </ClInclude>
+    <ClInclude Include="src\Sandbox\Tests\TransferTest.h">
+      <Filter>Sandbox\Tests</Filter>
+    </ClInclude>
     <ClInclude Include="src\Sandbox\VKSandboxBase.h">
       <Filter>Sandbox</Filter>
     </ClInclude>
@@ -145,10 +148,7 @@
       <Filter>Vulkan</Filter>
     </ClInclude>
     <ClInclude Include="src\jaspch.h" />
-    <ClInclude Include="src\Sandbox\Tests\TransferTest.h" />
-    <ClInclude Include="src\Sandbox\Tests\ComputeTest\ComputeTest.h">
-      <Filter>ComputeTest</Filter>
-    </ClInclude>
+    <ClInclude Include="src\Core\CPUProfiler.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Core\Camera.cpp">
@@ -182,6 +182,9 @@
       <Filter>Sandbox\Tests</Filter>
     </ClCompile>
     <ClCompile Include="src\Sandbox\Tests\ThreadingTest.cpp">
+      <Filter>Sandbox\Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Sandbox\Tests\TransferTest.cpp">
       <Filter>Sandbox\Tests</Filter>
     </ClCompile>
     <ClCompile Include="src\Sandbox\VKSandboxBase.cpp">
@@ -255,9 +258,6 @@
     </ClCompile>
     <ClCompile Include="src\jaspch.cpp" />
     <ClCompile Include="src\main.cpp" />
-    <ClCompile Include="src\Sandbox\Tests\TransferTest.cpp" />
-    <ClCompile Include="src\Sandbox\Tests\ComputeTest\ComputeTest.cpp">
-      <Filter>ComputeTest</Filter>
-    </ClCompile>
+    <ClCompile Include="src\Core\CPUProfiler.cpp" />
   </ItemGroup>
 </Project>
