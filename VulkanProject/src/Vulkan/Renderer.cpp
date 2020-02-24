@@ -88,11 +88,6 @@ void Renderer::init()
 	this->frame.init(&this->window, &this->swapChain);
 
 	setupPostTEMP();
-
-	// TEMP
-	VulkanProfiler::get().init(4, 60, 60);
-	VulkanProfiler::get().addTimestamp("Draw time");
-	VulkanProfiler::get().addTimestamp("Whole commandbuffer");
 }
 
 void Renderer::run()
@@ -101,14 +96,11 @@ void Renderer::run()
 	for (uint32_t i = 0; i < this->swapChain.getNumImages(); i++) {
 		cmdBuffs[i] = this->commandPool.createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 		cmdBuffs[i]->begin(0, nullptr);
-		if (i == 0) { VulkanProfiler::get().resetTimestamp("Draw time", cmdBuffs[0]); }
-		if (i == 0) { VulkanProfiler::get().resetTimestamp("Whole commandbuffer", cmdBuffs[0]); }
 		std::vector<VkClearValue> clearValues = {};
 		VkClearValue value;
 		value.color = { 0.0f, 0.0f, 0.0f, 1.0f };
 		clearValues.push_back(value);
 
-		if (i == 0) { VulkanProfiler::get().startTimestamp("Whole commandbuffer", cmdBuffs[i], VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT); }
 		cmdBuffs[i]->cmdBeginRenderPass(&this->renderPass, this->framebuffers[i].getFramebuffer(), this->swapChain.getExtent(), clearValues, VK_SUBPASS_CONTENTS_INLINE);
 		cmdBuffs[i]->cmdBindPipeline(&this->pipeline);
 		std::vector<VkDescriptorSet> sets = { this->descManager.getSet(i, 0) };
@@ -118,12 +110,9 @@ void Renderer::run()
 		this->pushConstants[0].setDataPtr(&tintData[0]);
 		cmdBuffs[i]->cmdPushConstants(&this->pipeline, &this->pushConstants[0]);
 
-		if (i == 0) { VulkanProfiler::get().startTimestamp("Draw time", cmdBuffs[i], VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT); }
 		cmdBuffs[i]->cmdDraw(3, 1, 0, 0);
-		if (i == 0) { VulkanProfiler::get().endTimestamp("Draw time", cmdBuffs[i], VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT); }
 
 		cmdBuffs[i]->cmdEndRenderPass();
-		if (i == 0) { VulkanProfiler::get().endTimestamp("Whole commandbuffer", cmdBuffs[i], VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT); }
 		cmdBuffs[i]->end();
 	}
 

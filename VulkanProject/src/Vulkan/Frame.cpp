@@ -67,7 +67,7 @@ void Frame::submit(VkQueue queue, CommandBuffer** commandBuffers)
 	ERROR_CHECK(vkQueueSubmit(queue, 1, &submitInfo, this->inFlightFences[this->currentFrame]), "Failed to sumbit commandbuffer!");
 
 	if (this->imageIndex == 0) {
-		VulkanProfiler::get().getTimestamps();
+		VulkanProfiler::get().getAllQueries();
 	}
 }
 
