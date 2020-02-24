@@ -25,10 +25,58 @@ void GLTFLoader::load(const std::string& filePath, Model* model)
 	loadModel(*model, filePath);
 }
 
+void GLTFLoader::loadToStagingBuffer(const std::string& filePath, Model* model, Buffer* stagingBuff, Memory* stagingMemory)
+{
+	loadModel(*model, filePath, stagingBuff, stagingMemory);
+}
+
+void GLTFLoader::transferToModel(CommandPool* transferCommandPool, Model* model, Buffer* stagingBuff, Memory* stagingMemory)
+{
+	// Create memory and buffers.
+	std::vector<uint32_t> queueIndices = { findQueueIndex(VK_QUEUE_TRANSFER_BIT, Instance::get().getPhysicalDevice()) };
+	uint32_t indicesSize = (uint32_t)(model->indices.size() * sizeof(uint32_t));
+	if (indicesSize > 0)
+	{
+		model->indexBuffer.init(indicesSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, queueIndices);
+		model->bufferMemory.bindBuffer(&model->indexBuffer);
+	}
+
+	uint32_t verticesSize = (uint32_t)(model->vertices.size() * sizeof(Vertex));
+	model->vertexBuffer.init(verticesSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, queueIndices);
+	model->bufferMemory.bindBuffer(&model->vertexBuffer);
+
+	// Create memory with the binded buffers
+	model->bufferMemory.init(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+	// Copy data to the new buffers.
+	CommandBuffer* cbuff = transferCommandPool->beginSingleTimeCommand();
+
+	// Copy indices data.
+	if (indicesSize > 0)
+	{
+		VkBufferCopy region = {};
+		region.srcOffset = 0;
+		region.dstOffset = 0;
+		region.size = indicesSize;
+		cbuff->cmdCopyBuffer(stagingBuff->getBuffer(), model->indexBuffer.getBuffer(), 1, &region);
+	}
+
+	// Copy vertex data.
+	VkBufferCopy region = {};
+	region.srcOffset = indicesSize;
+	region.dstOffset = 0;
+	region.size = verticesSize;
+	cbuff->cmdCopyBuffer(stagingBuff->getBuffer(), model->vertexBuffer.getBuffer(), 1, &region);
+
+	transferCommandPool->endSingleTimeCommand(cbuff);
+}
+
 void GLTFLoader::recordDraw(Model* model, CommandBuffer* commandBuffer, Pipeline* pipeline, const std::vector<VkDescriptorSet>& sets, const std::vector<uint32_t>& offsets)
 {
 	// TODO: Use different materials, can still use same pipeline if all meshes uses same type of material (i.e. PBR)!
-	
+	if (model->vertexBuffer.getBuffer() == VK_NULL_HANDLE)
+		return;
+
 	//VkBuffer vertexBuffers[] = { this->model.vertexBuffer.getBuffer() };
 	//VkDeviceSize vertOffsets[] = { 0 };
 	//this->cmdBuffs[i]->cmdBindVertexBuffers(0, 1, vertexBuffers, vertOffsets);
@@ -197,8 +245,6 @@ void GLTFLoader::loadNode(Model& model, Model::Node* node, tinygltf::Model& gltf
 				tinygltf::Accessor& indAccessor = gltfModel.accessors[gltfPrimitive.indices];
 				tinygltf::BufferView& indBufferView = gltfModel.bufferViews[indAccessor.bufferView];
 				tinygltf::Buffer& indBuffer = gltfModel.buffers[indBufferView.buffer];
-				unsigned char* indicesData = &indBuffer.data.at(0) + indBufferView.byteOffset;
-				size_t indByteStride = indAccessor.ByteStride(indBufferView);
 
 				primitive.indexCount = static_cast<uint32_t>(indAccessor.count);
 				const void* dataPtr = &indBuffer.data.at(0) + indBufferView.byteOffset;
@@ -300,4 +346,62 @@ void GLTFLoader::drawNode(CommandBuffer* commandBuffer, Model::Node& node)
 	}
 	for (Model::Node& child : node.children)
 		drawNode(commandBuffer, child);
+}
+
+void GLTFLoader::loadModel(Model& model, const std::string& filePath, Buffer* stagingBuff, Memory* stagingMemory)
+{
+	tinygltf::Model gltfModel;
+	bool ret = false;
+	size_t pos = filePath.rfind('.');
+	if (pos != std::string::npos)
+	{
+		std::string err;
+		std::string warn;
+
+		std::string prefix = filePath.substr(pos);
+		if (prefix == ".gltf")
+			ret = loader.LoadASCIIFromFile(&gltfModel, &err, &warn, filePath);
+		else if (prefix == ".glb")
+			ret = loader.LoadBinaryFromFile(&gltfModel, &err, &warn, filePath); // for binary glTF(.glb)
+
+		if (!warn.empty()) JAS_WARN("GLTF Waring: {0}", warn.c_str());
+		if (!err.empty()) JAS_ERROR("GLTF Error: {0}", err.c_str());
+	}
+
+	JAS_ASSERT(ret, "Failed to parse glTF\n");
+
+	loadTextures(model, gltfModel);
+	loadMaterials(model, gltfModel);
+	loadScenes(model, gltfModel, stagingBuff, stagingMemory);
+}
+
+void GLTFLoader::loadScenes(Model& model, tinygltf::Model& gltfModel, Buffer* stagingBuff, Memory* stagingMemory)
+{
+	for (auto& scene : gltfModel.scenes)
+	{
+		//JAS_INFO("Scene: {0}", scene.name.c_str());
+		// Load each node in the scene
+		model.nodes.resize(scene.nodes.size());
+		for (size_t nodeIndex = 0; nodeIndex < scene.nodes.size(); nodeIndex++)
+		{
+			tinygltf::Node& node = gltfModel.nodes[scene.nodes[nodeIndex]];
+			loadNode(model, &model.nodes[nodeIndex], gltfModel, node, " ");
+		}
+	}
+
+	// Create vertex and index buffers
+	std::vector<uint32_t> queueIndices = { findQueueIndex(VK_QUEUE_TRANSFER_BIT, Instance::get().getPhysicalDevice()) };
+	uint32_t indicesSize = (uint32_t)(model.indices.size() * sizeof(uint32_t));
+	uint32_t verticesSize = (uint32_t)(model.vertices.size() * sizeof(Vertex));
+
+	stagingBuff->init(verticesSize + indicesSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, queueIndices);
+	stagingMemory->bindBuffer(stagingBuff);
+
+	// Create memory with the binded buffers
+	stagingMemory->init(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+	// Transfer data to buffers
+	if (indicesSize > 0)
+		stagingMemory->directTransfer(stagingBuff, (const void*)model.indices.data(), indicesSize, 0);
+	stagingMemory->directTransfer(stagingBuff, (const void*)model.vertices.data(), verticesSize, (Offset)indicesSize);
 }

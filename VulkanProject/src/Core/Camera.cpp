@@ -37,9 +37,9 @@ void Camera::update(float dt)
 		this->position -= this->forward * this->speed * dt* this->speedFactor;
 
 	if (input.isKeyDown(GLFW_KEY_SPACE))
-		this->position -= this->up * this->speed * dt * this->speedFactor;
-	if (input.isKeyDown(GLFW_KEY_LEFT_CONTROL))
 		this->position += this->up * this->speed * dt * this->speedFactor;
+	if (input.isKeyDown(GLFW_KEY_LEFT_CONTROL))
+		this->position -= this->up * this->speed * dt * this->speedFactor;
 
 	if (input.isKeyDown(GLFW_KEY_LEFT_SHIFT))
 		this->speedFactor = 5.f;
@@ -50,7 +50,7 @@ void Camera::update(float dt)
 	cursorDelta *= 0.1f;
 
 	this->yaw += cursorDelta.x;
-	this->pitch += cursorDelta.y;
+	this->pitch -= cursorDelta.y;
 
 	if (this->pitch > 89.0f)
 		this->pitch = 89.0f;
@@ -82,6 +82,6 @@ glm::mat4 Camera::getMatrix() const
 {
 	glm::mat4 view = glm::lookAt(this->position, this->target, this->up);
 	glm::mat4 proj = glm::perspective(this->fov, this->aspect, this->nearPlane, this->farPlane);
-
+	proj[1][1] *= -1;
 	return proj * view;
 }
