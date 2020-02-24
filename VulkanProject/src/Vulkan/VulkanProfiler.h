@@ -10,11 +10,19 @@ typedef std::pair<uint64_t, uint64_t> Timestamp;
 class VulkanProfiler
 {
 public:
+	enum class TimeUnit
+	{
+		NANO = 1,
+		MICRO = 1000,
+		MILLI = 1000000,
+		SECONDS = 1000000000
+	};
+public:
 	static VulkanProfiler& get();
 	VulkanProfiler(VulkanProfiler& other) = delete;
 	~VulkanProfiler();
 
-	void init(uint32_t plotDataCount, float updateFreq);
+	void init(uint32_t plotDataCount, float updateFreq, TimeUnit timeUnit);
 	void cleanup();
 
 	// Render results using ImGui
@@ -44,6 +52,7 @@ public:
 
 private:
 	VulkanProfiler();
+	std::string getTimeUnitName();
 
 	VkQueryPool timestampQueryPool;
 	VkQueryPool pipelineStatPool;
@@ -53,6 +62,7 @@ private:
 	size_t plotDataCount;
 	float timeSinceUpdate;
 	float updateFreq;
+	TimeUnit timeUnit;
 	std::unordered_map<std::string, std::vector<float>> plotResults;
 	std::unordered_map<std::string, Timestamp> results;
 	std::unordered_map<std::string, Timestamp> timestamps;

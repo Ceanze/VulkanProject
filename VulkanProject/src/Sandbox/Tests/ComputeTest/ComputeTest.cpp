@@ -37,7 +37,7 @@ void ComputeTest::init()
 
 	initFramebuffers(&this->renderPass, VK_NULL_HANDLE);
 
-	VulkanProfiler::get().init(60, 60);
+	VulkanProfiler::get().init(60, 60, VulkanProfiler::TimeUnit::MILLI);
 	VulkanProfiler::get().createPipelineStats();
 	VulkanProfiler::get().createTimestamps(4);
 	VulkanProfiler::get().addTimestamp("Dispatch");

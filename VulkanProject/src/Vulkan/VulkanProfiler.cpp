@@ -16,10 +16,11 @@ VulkanProfiler::~VulkanProfiler()
 {
 }
 
-void VulkanProfiler::init(uint32_t plotDataCount, float updateFreq)
+void VulkanProfiler::init(uint32_t plotDataCount, float updateFreq, VulkanProfiler::TimeUnit timeUnit)
 {
 	this->plotDataCount = plotDataCount;
 	this->updateFreq = updateFreq;
+	this->timeUnit = timeUnit;
 }
 
 void VulkanProfiler::cleanup()
@@ -47,7 +48,7 @@ void VulkanProfiler::render(float dt)
 			float average = this->averages[r.first];
 			if (this->timeSinceUpdate > 1 / this->updateFreq) {
 				average = 0.0f;
-				this->plotResults[r.first][this->plotResults[r.first].size() - 1] = ((r.second.second - r.second.first) * timestampPeriod);
+				this->plotResults[r.first][this->plotResults[r.first].size() - 1] = ((r.second.second - r.second.first) * timestampPeriod) / (uint32_t)this->timeUnit;
 				for (size_t i = 0; i < this->plotResults[r.first].size() - 1; i++) {
 					this->plotResults[r.first][i] = this->plotResults[r.first][i + 1];
 					average += this->plotResults[r.first][i];
@@ -58,7 +59,7 @@ void VulkanProfiler::render(float dt)
 			average /= this->plotDataCount;
 			std::ostringstream overlay;
 			overlay.precision(2);
-			overlay << "Average: " << std::fixed << average << " ns";
+			overlay << "Average: " << std::fixed << average << getTimeUnitName();
 
 			std::string s = "Timings of " + r.first;
 			ImGui::PlotLines(s.c_str(), this->plotResults[r.first].data(), this->plotResults[r.first].size(), 0, overlay.str().c_str(), -1.f, 1.f, { 0, 80 });
@@ -237,4 +238,24 @@ VulkanProfiler::VulkanProfiler()
 	: freeIndex(0), timestampQueryPool(VK_NULL_HANDLE), timestampCount(0),
 	plotDataCount(0), timeSinceUpdate(0.0f), updateFreq(0), pipelineStatPool(VK_NULL_HANDLE)
 {
+}
+
+std::string VulkanProfiler::getTimeUnitName()
+{
+	std::string buf;
+	switch (this->timeUnit) {
+	case TimeUnit::MICRO:
+		buf = "us";
+		break;
+	case TimeUnit::MILLI:
+		buf = "ms";
+		break;
+	case TimeUnit::NANO:
+		buf = "ns";
+		break;
+	case TimeUnit::SECONDS:
+		buf = "s";
+		break;
+	}
+	return buf;
 }
