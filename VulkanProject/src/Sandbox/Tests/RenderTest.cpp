@@ -52,7 +52,7 @@ void RenderTest::loop(float dt)
 	this->memory.directTransfer(&this->camBuffer, (void*)& this->camera->getMatrix()[0], sizeof(glm::mat4), 0);
 	this->camera->update(dt);
 
-	getFrame()->beginFrame();
+	getFrame()->beginFrame(dt);
 
 	ImGui::Begin("Hello world!");
 	ImGui::Text("Cool text");

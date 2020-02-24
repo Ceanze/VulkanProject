@@ -93,6 +93,9 @@ void VulkanProfiler::endTimestamp(std::string name, CommandBuffer* commandBuffer
 
 void VulkanProfiler::getTimestamps()
 {
+	if (this->queryCount == 0)
+		return;
+
 	Instance& instance = Instance::get();
 
 	uint32_t timestampValidBits = instance.getQueueProperties(instance.getGraphicsQueue().queueIndex).timestampValidBits;

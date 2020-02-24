@@ -86,7 +86,7 @@ void ComputeTest::loop(float dt)
 {
 	this->memory.directTransfer(&this->camBuffer, (void*)&this->camera->getMatrix()[0], sizeof(glm::mat4), 0);
 
-	getFrame()->beginFrame();
+	getFrame()->beginFrame(dt);
 
 	ImGui::Begin("Hello world!");
 	ImGui::Text("Cool text");
