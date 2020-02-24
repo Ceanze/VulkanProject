@@ -9,7 +9,7 @@
 
 void TransferTest::init()
 {
-	this->graphicsCommandPool.init(CommandPool::Queue::GRAPHICS, 0);
+	this->graphicsCommandPool.init(CommandPool::Queue::GRAPHICS, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
 	this->transferCommandPool.init(CommandPool::Queue::TRANSFER, 0);
 	this->camera = new Camera(getWindow()->getAspectRatio(), 45.f, { 0.f, 0.f, 1.f }, { 0.f, 0.f, 0.f }, 0.8f);
 
@@ -76,6 +76,7 @@ void TransferTest::loop(float dt)
 
 	// Render
 	getFrame()->beginFrame();
+	record();
 	getFrame()->submit(Instance::get().getGraphicsQueue().queue, this->cmdBuffs);
 	getFrame()->endFrame();
 	this->camera->update(dt);
@@ -83,13 +84,17 @@ void TransferTest::loop(float dt)
 
 void TransferTest::cleanup()
 {
+	this->thread->join();
+	delete this->thread;
+
+	this->transferModel.cleanup();
+	this->defaultModel.cleanup();
 	this->stagingBuffer.cleanup();
 	this->stagingMemory.cleanup();
 	this->depthTexture.cleanup();
 	this->imageMemory.cleanup();
 	this->bufferUniform.cleanup();
 	this->memory.cleanup();
-	this->model.cleanup();
 	this->descManager.cleanup();
 	this->pipeline.cleanup();
 	this->renderPass.cleanup();
@@ -109,13 +114,10 @@ void TransferTest::setupPre()
 	this->descManager.init(getSwapChain()->getNumImages());
 
 	// This can now be done in another thread.
-	//const std::string filePath = "..\\assets\\Models\\Cube\\Cube.gltf";
-	const std::string filePath = "..\\assets\\Models\\Sponza\\glTF\\Sponza.gltf";
-	//GLTFLoader::load(filePath, &this->model);
-	GLTFLoader::loadToStagingBuffer(filePath, &this->model, &this->stagingBuffer, &this->stagingMemory);
-	
-	// Use the transfer queue, create a single command buffer and copy the contents of the staging buffer to the model's buffers.
-	GLTFLoader::transferToModel(&this->transferCommandPool, &this->model, &this->stagingBuffer, &this->stagingMemory);
+	const std::string filePath = "..\\assets\\Models\\Cube\\Cube.gltf";
+	GLTFLoader::load(filePath, &this->defaultModel);
+	this->isTransferDone = false;
+	this->thread = new std::thread(&TransferTest::loadingThread, this);
 }
 
 void TransferTest::setupPost()
@@ -123,7 +125,7 @@ void TransferTest::setupPost()
 	// Set uniform data.
 	UboData uboData;
 	uboData.vp = this->camera->getMatrix();
-	uboData.world = glm::mat4(0.01f);
+	uboData.world = glm::translate(glm::mat4(1.0f), glm::vec3{0.0f, 0.0f, -1.0f});
 	uboData.world[3][3] = 1.0f;
 	uint32_t unsiformBufferSize = sizeof(UboData);
 
@@ -139,30 +141,76 @@ void TransferTest::setupPost()
 	// Update descriptor
 	for (uint32_t i = 0; i < static_cast<uint32_t>(getSwapChain()->getNumImages()); i++)
 	{
-		VkDeviceSize vertexBufferSize = this->model.vertices.size() * sizeof(Vertex);
-		this->descManager.updateBufferDesc(0, 0, this->model.vertexBuffer.getBuffer(), 0, vertexBufferSize);
+		VkDeviceSize vertexBufferSize = this->defaultModel.vertices.size() * sizeof(Vertex);
+		this->descManager.updateBufferDesc(0, 0, this->defaultModel.vertexBuffer.getBuffer(), 0, vertexBufferSize);
 		this->descManager.updateBufferDesc(0, 1, this->bufferUniform.getBuffer(), 0, unsiformBufferSize);
-		this->descManager.updateSets({0}, i);
+		this->descManager.updateSets({ 0 }, i);
 	}
 
-	// Record command buffers
-	for (uint32_t i = 0; i < getSwapChain()->getNumImages(); i++) {
+	for (uint32_t i = 0; i < getSwapChain()->getNumImages(); i++)
 		this->cmdBuffs[i] = this->graphicsCommandPool.createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
-		this->cmdBuffs[i]->begin(0, nullptr);
-		std::vector<VkClearValue> clearValues = {};
-		VkClearValue value;
-		value.color = { 0.0f, 0.0f, 0.0f, 1.0f };
-		clearValues.push_back(value);
-		value.depthStencil = { 1.0f, 0 };
-		clearValues.push_back(value);
-		this->cmdBuffs[i]->cmdBeginRenderPass(&this->renderPass, getFramebuffers()[i].getFramebuffer(), getSwapChain()->getExtent(), clearValues, VK_SUBPASS_CONTENTS_INLINE);
+}
 
-		std::vector<VkDescriptorSet> sets = { this->descManager.getSet(i, 0) };
-		std::vector<uint32_t> offsets;
-		this->cmdBuffs[i]->cmdBindPipeline(&this->pipeline);
-		GLTFLoader::recordDraw(&this->model, this->cmdBuffs[i], &this->pipeline, sets, offsets);
+void TransferTest::loadingThread()
+{
+	const std::string filePath = "..\\assets\\Models\\Sponza\\glTF\\Sponza.gltf";
 
-		this->cmdBuffs[i]->cmdEndRenderPass();
-		this->cmdBuffs[i]->end();
+	GLTFLoader::loadToStagingBuffer(filePath, &this->transferModel, &this->stagingBuffer, &this->stagingMemory);
+
+	// Use the transfer queue, create a single command buffer and copy the contents of the staging buffer to the model's buffers.
+	GLTFLoader::transferToModel(&this->transferCommandPool, &this->transferModel, &this->stagingBuffer, &this->stagingMemory);
+
+	{
+		std::lock_guard<std::mutex> lock(this->mutex);
+		this->isTransferDone = true;
 	}
+}
+
+void TransferTest::record()
+{
+	static bool useTransferedModel = false;
+	{
+		std::lock_guard<std::mutex> lock(this->mutex);
+		if (this->isTransferDone)
+		{
+			this->isTransferDone = false;
+			useTransferedModel = true;
+
+			// Update descriptor
+			for (uint32_t i = 0; i < static_cast<uint32_t>(getSwapChain()->getNumImages()); i++)
+			{
+				VkDeviceSize vertexBufferSize = this->transferModel.vertices.size() * sizeof(Vertex);
+				this->descManager.updateBufferDesc(0, 0, this->transferModel.vertexBuffer.getBuffer(), 0, vertexBufferSize);
+				this->descManager.updateSets({ 0 }, i);
+			}
+			// Update world matrix, because Sponza is big.
+			glm::mat4 world(0.01f);
+			world[3][3] = 1.0f;
+			this->memory.directTransfer(&this->bufferUniform, (void*)&world[0][0], sizeof(world), offsetof(UboData, world));
+		}
+	}
+
+	// Record command buffer
+	uint32_t currentImage = getFrame()->getCurrentImageIndex();
+	this->cmdBuffs[currentImage]->begin(VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT, nullptr);
+	std::vector<VkClearValue> clearValues = {};
+	VkClearValue value;
+	value.color = { 0.0f, 0.0f, 0.0f, 1.0f };
+	clearValues.push_back(value);
+	value.depthStencil = { 1.0f, 0 };
+	clearValues.push_back(value);
+	this->cmdBuffs[currentImage]->cmdBeginRenderPass(&this->renderPass, getFramebuffers()[currentImage].getFramebuffer(), getSwapChain()->getExtent(), clearValues, VK_SUBPASS_CONTENTS_INLINE);
+
+	std::vector<VkDescriptorSet> sets = { this->descManager.getSet(currentImage, 0) };
+	std::vector<uint32_t> offsets;
+	this->cmdBuffs[currentImage]->cmdBindPipeline(&this->pipeline);
+
+		
+	if (useTransferedModel)
+		GLTFLoader::recordDraw(&this->transferModel, this->cmdBuffs[currentImage], &this->pipeline, sets, offsets);
+	else
+		GLTFLoader::recordDraw(&this->defaultModel, this->cmdBuffs[currentImage], &this->pipeline, sets, offsets);
+
+	this->cmdBuffs[currentImage]->cmdEndRenderPass();
+	this->cmdBuffs[currentImage]->end();
 }

@@ -33,7 +33,7 @@ void GLTFLoader::loadToStagingBuffer(const std::string& filePath, Model* model, 
 void GLTFLoader::transferToModel(CommandPool* transferCommandPool, Model* model, Buffer* stagingBuff, Memory* stagingMemory)
 {
 	// Create memory and buffers.
-	std::vector<uint32_t> queueIndices = { findQueueIndex(VK_QUEUE_GRAPHICS_BIT, Instance::get().getPhysicalDevice()) };
+	std::vector<uint32_t> queueIndices = { findQueueIndex(VK_QUEUE_TRANSFER_BIT, Instance::get().getPhysicalDevice()) };
 	uint32_t indicesSize = (uint32_t)(model->indices.size() * sizeof(uint32_t));
 	if (indicesSize > 0)
 	{

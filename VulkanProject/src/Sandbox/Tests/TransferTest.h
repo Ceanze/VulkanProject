@@ -11,6 +11,9 @@
 #include "Vulkan/Pipeline/PushConstants.h"
 #include "Models/Model/Model.h"
 
+#include <thread>
+#include <mutex>
+
 class TransferTest : public VKSandboxBase
 {
 public:
@@ -27,6 +30,9 @@ private:
 
 	void setupPre();
 	void setupPost();
+	
+	void loadingThread();
+	void record();
 
 private:
 	Camera* camera;
@@ -42,7 +48,8 @@ private:
 	DescriptorManager descManager;
 
 	// For loading model
-	Model model;
+	Model defaultModel;
+	Model transferModel;
 	Buffer stagingBuffer;
 	Memory stagingMemory;
 
@@ -50,4 +57,8 @@ private:
 	Texture depthTexture;
 	Memory memory; // Holds uniform data
 	Memory imageMemory; // Holds depth texture
+
+	std::thread* thread;
+	std::mutex mutex;
+	bool isTransferDone;
 };
