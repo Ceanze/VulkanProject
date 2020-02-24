@@ -53,11 +53,6 @@ void RenderTest::loop(float dt)
 	this->camera->update(dt);
 
 	getFrame()->beginFrame(dt);
-
-	ImGui::Begin("Hello world!");
-	ImGui::Text("Cool text");
-	ImGui::End();
-
 	getFrame()->submit(Instance::get().getGraphicsQueue().queue, cmdBuffs);
 	getFrame()->endFrame();
 }
