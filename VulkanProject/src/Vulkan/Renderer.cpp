@@ -269,6 +269,6 @@ void Renderer::setupPostTEMP()
 		this->descManager.updateBufferDesc(0, 0, this->buffer.getBuffer(), 0, size + size2);
 		this->descManager.updateBufferDesc(0, 1, this->camBuffer.getBuffer(), 0, sizeof(glm::mat4));
 		this->descManager.updateImageDesc(0, 2, image.getLayout(), this->texture.getVkImageView(), this->sampler.getSampler());
-		this->descManager.updateSets(i);
+		this->descManager.updateSets({0}, i);
 	}
 }

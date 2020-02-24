@@ -170,7 +170,7 @@ void Pipeline::createGraphicsPipeline()
 		rasterizer.rasterizerDiscardEnable = VK_FALSE;	 // If true disables any output to the framebuffer
 		rasterizer.polygonMode = this->polyMode;
 		rasterizer.lineWidth = 1.0f;
-		rasterizer.cullMode = VK_CULL_MODE_NONE;
+		rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
 		rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 		rasterizer.depthBiasEnable = VK_FALSE;
 		rasterizer.depthBiasConstantFactor = 0.0f; // Optional
@@ -269,17 +269,17 @@ void Pipeline::createComputePipeline()
 {
 	VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
 	pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-	pipelineLayoutInfo.setLayoutCount = 0; // descriptor.getSetLayouts().size();
-	pipelineLayoutInfo.pSetLayouts = nullptr; // descriptor.getSetLayouts().data(); // Uniform buffer objects, images, etc.
-	pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
-	pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
+	pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(this->layouts.size());
+	pipelineLayoutInfo.pSetLayouts = this->layouts.empty() ? nullptr : this->layouts.data();
+	pipelineLayoutInfo.pushConstantRangeCount = static_cast<uint32_t>(this->pushConstantRanges.size()); // Optional
+	pipelineLayoutInfo.pPushConstantRanges = this->pushConstantRanges.empty() ? nullptr : this->pushConstantRanges.data(); // Optional
 
 	ERROR_CHECK(vkCreatePipelineLayout(Instance::get().getDevice(), &pipelineLayoutInfo, nullptr, &this->pipelineLayout), "Failed to create pipeline layout!");
 
 	VkComputePipelineCreateInfo pipelineInfo = {};
 	pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
 	pipelineInfo.pNext = nullptr;
-	pipelineInfo.flags = 0;
+	pipelineInfo.flags = 0; 
 	pipelineInfo.stage = this->shader->getShaderCreateInfo(Shader::Type::COMPUTE);
 	pipelineInfo.layout = this->pipelineLayout;
 	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;

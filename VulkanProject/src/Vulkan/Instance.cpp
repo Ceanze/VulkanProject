@@ -52,6 +52,7 @@ void Instance::init(Window* window)
 {
 	deviceFeatures.samplerAnisotropy = VK_TRUE;
 	deviceFeatures.fillModeNonSolid = VK_TRUE;
+	deviceFeatures.logicOp = VK_TRUE;
 
 	this->createInstance();
 	this->setupDebugMessenger();

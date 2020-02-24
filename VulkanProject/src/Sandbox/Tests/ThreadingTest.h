@@ -1,36 +1,23 @@
 #pragma once
 
-#include "Core/Window.h"
-#include "Vulkan/SwapChain.h"
-#include "Vulkan/Pipeline/Shader.h"
-#include "Vulkan/Pipeline/Pipeline.h"
-#include "Vulkan/Pipeline/RenderPass.h"
-#include "Vulkan/CommandPool.h"
-#include "Vulkan/CommandBuffer.h"
-#include "Vulkan/Buffers/Framebuffer.h"
-#include "Vulkan/Frame.h"
+#include "Sandbox/VKSandboxBase.h"
 
-#include "Vulkan/Pipeline/DescriptorManager.h"
-
-#include "Models/Model/Model.h"
-
+#include "Core/Camera.h"
 #include "Vulkan/Buffers/Buffer.h"
 #include "Vulkan/Buffers/Memory.h"
+#include "Vulkan/Pipeline/DescriptorManager.h"
 #include "Vulkan/Texture.h"
-#include "Core/Camera.h"
-
-#include "Threading/ThreadManager.h"
+#include "Vulkan/Sampler.h"
 #include "Vulkan/Pipeline/PushConstants.h"
+#include "Models/Model/Model.h"
+#include "Threading/ThreadManager.h"
 
-class ThreadingTest
+class ThreadingTest : public VKSandboxBase
 {
 public:
-	ThreadingTest();
-	~ThreadingTest();
-
-	void init();
-	void run();
-	void shutdown();
+	void init() override;
+	void loop(float dt) override;
+	void cleanup() override;
 
 private:
 	struct PushConstantData
@@ -60,27 +47,21 @@ private:
 	void recordThread(uint32_t threadId, uint32_t frameIndex, VkCommandBufferInheritanceInfo inheritanceInfo);
 	void updateBuffers(uint32_t frameIndex, float dt);
 
-	void setupPreTEMP();
-	void setupPostTEMP();
+	void setupPre();
+	void setupPost();
 
 private:
-	Window window;
-	SwapChain swapChain;
+	Camera* camera;
+	CommandBuffer* cmdBuffs[3];
+	CommandPool graphicsCommandPool;
+
 	Shader shader;
 	Pipeline pipeline;
 	RenderPass renderPass;
-	CommandPool commandPool;
-	std::vector<Framebuffer> framebuffers;
-	Frame frame;
-
-	bool running = true;
 
 	DescriptorLayout descLayout;
 	DescriptorManager descManager;
 
-	Camera* camera;
-
-	// For loading model
 	Model model;
 
 	std::vector<CommandBuffer*> primaryBuffers;
