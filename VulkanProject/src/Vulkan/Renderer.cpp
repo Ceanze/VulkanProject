@@ -10,8 +10,6 @@
 #include <stb/stb_image.h>
 #pragma warning(pop)
 
-#include <imgui.h>
-
 Renderer::Renderer()
 	: camera(nullptr)
 {

@@ -49,6 +49,10 @@ public:
 	Window* getWindow();
 	SwapChain* getSwapChain();
 	std::vector<Framebuffer>& getFramebuffers();
+	std::vector<Pipeline>& getPipelines();
+	std::vector<Shader>& getShaders();
+	Pipeline& getPipeline(unsigned index);
+	Shader& getShader(unsigned index);
 	Frame* getFrame();
 
 private:
@@ -57,6 +61,9 @@ private:
 	void setFrame(Frame* frame);
 
 private:
+	std::vector<Pipeline> pipelines;
+	std::vector<Shader> shaders;
+
 	Window* window;
 	SwapChain* swapChain;
 	Frame* frame;
