@@ -112,6 +112,7 @@
     <ClInclude Include="src\Sandbox\Tests\GLTFTest.h" />
     <ClInclude Include="src\Sandbox\Tests\RenderTest.h" />
     <ClInclude Include="src\Sandbox\Tests\ThreadingTest.h" />
+    <ClInclude Include="src\Sandbox\Tests\TransferTest.h" />
     <ClInclude Include="src\Sandbox\VKSandboxBase.h" />
     <ClInclude Include="src\Threading\ThreadManager.h" />
     <ClInclude Include="src\Vulkan\Buffers\Buffer.h" />
@@ -150,6 +151,7 @@
     <ClCompile Include="src\Sandbox\Tests\GLTFTest.cpp" />
     <ClCompile Include="src\Sandbox\Tests\RenderTest.cpp" />
     <ClCompile Include="src\Sandbox\Tests\ThreadingTest.cpp" />
+    <ClCompile Include="src\Sandbox\Tests\TransferTest.cpp" />
     <ClCompile Include="src\Sandbox\VKSandboxBase.cpp" />
     <ClCompile Include="src\Threading\ThreadManager.cpp" />
     <ClCompile Include="src\Vulkan\Buffers\Buffer.cpp" />
@@ -188,4 +190,4 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
-</Project> 
+</Project>

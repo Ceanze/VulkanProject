@@ -7,13 +7,14 @@
 #include "Sandbox/Tests/RenderTest.h"
 #include "Sandbox/Tests/GLTFTest.h"
 #include "Sandbox/Tests/ThreadingTest.h"
+#include "Sandbox/Tests/TransferTest.h"
 
 int main(int argv, char* argc[])
 {
 	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 
 	SandboxManager sm;
-	sm.set(new RenderTest());
+	sm.set(new TransferTest());
 	sm.init();
 	sm.run();
 	sm.cleanup();
