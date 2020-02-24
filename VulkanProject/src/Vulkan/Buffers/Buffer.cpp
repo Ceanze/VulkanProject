@@ -4,7 +4,7 @@
 #include "Vulkan/Instance.h"
 
 
-Buffer::Buffer()
+Buffer::Buffer() : buffer(VK_NULL_HANDLE)
 {
 
 }

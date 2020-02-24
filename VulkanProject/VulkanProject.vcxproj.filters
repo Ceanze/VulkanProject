@@ -139,6 +139,7 @@
       <Filter>Vulkan</Filter>
     </ClInclude>
     <ClInclude Include="src\jaspch.h" />
+    <ClInclude Include="src\Sandbox\Tests\TransferTest.h" />
     <ClInclude Include="src\Sandbox\Tests\ComputeTest\ComputeTest.h">
       <Filter>ComputeTest</Filter>
     </ClInclude>
@@ -242,6 +243,7 @@
     </ClCompile>
     <ClCompile Include="src\jaspch.cpp" />
     <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\Sandbox\Tests\TransferTest.cpp" />
     <ClCompile Include="src\Sandbox\Tests\ComputeTest\ComputeTest.cpp">
       <Filter>ComputeTest</Filter>
     </ClCompile>
