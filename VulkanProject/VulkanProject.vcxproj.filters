@@ -1,41 +1,6 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClCompile Include="src\Core\Camera.cpp" />
-    <ClCompile Include="src\Core\Input.cpp" />
-    <ClCompile Include="src\Core\Logger.cpp" />
-    <ClCompile Include="src\Core\Window.cpp" />
-    <ClCompile Include="src\Models\GLTFLoader.cpp" />
-    <ClCompile Include="src\Models\GLTFTest.cpp" />
-    <ClCompile Include="src\Models\Model\Model.cpp" />
-    <ClCompile Include="src\Threading\ThreadingTest.cpp" />
-    <ClCompile Include="src\Threading\ThreadManager.cpp" />
-    <ClCompile Include="src\Vulkan\Buffers\Buffer.cpp" />
-    <ClCompile Include="src\Vulkan\Buffers\Framebuffer.cpp" />
-    <ClCompile Include="src\Vulkan\Buffers\Image.cpp" />
-    <ClCompile Include="src\Vulkan\Buffers\ImageView.cpp" />
-    <ClCompile Include="src\Vulkan\Buffers\Memory.cpp" />
-    <ClCompile Include="src\Vulkan\CommandBuffer.cpp" />
-    <ClCompile Include="src\Vulkan\CommandPool.cpp" />
-    <ClCompile Include="src\Vulkan\Frame.cpp" />
-    <ClCompile Include="src\Vulkan\Instance.cpp" />
-    <ClCompile Include="src\Vulkan\Pipeline\DescriptorLayout.cpp" />
-    <ClCompile Include="src\Vulkan\Pipeline\DescriptorManager.cpp" />
-    <ClCompile Include="src\Vulkan\Pipeline\Pipeline.cpp" />
-    <ClCompile Include="src\Vulkan\Pipeline\PushConstants.cpp" />
-    <ClCompile Include="src\Vulkan\Pipeline\RenderPass.cpp" />
-    <ClCompile Include="src\Vulkan\Pipeline\Shader.cpp" />
-    <ClCompile Include="src\Vulkan\Renderer.cpp" />
-    <ClCompile Include="src\Vulkan\Sampler.cpp" />
-    <ClCompile Include="src\Vulkan\SwapChain.cpp" />
-    <ClCompile Include="src\Vulkan\Texture.cpp" />
-    <ClCompile Include="src\Vulkan\VKImgui.cpp" />
-    <ClCompile Include="src\jaspch.cpp" />
-    <ClCompile Include="src\main.cpp" />
-    <ClCompile Include="src\Vulkan\VulkanProfiler.cpp" />
-    <Filter Include="ComputeTest">
-      <UniqueIdentifier>{E20953CD-4EBF-CBC2-D7B3-C5994368C2C6}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Core">
       <UniqueIdentifier>{2EB4837C-1AEB-840D-C3D7-6A10AFED000F}</UniqueIdentifier>
     </Filter>
@@ -50,6 +15,9 @@
     </Filter>
     <Filter Include="Sandbox\Tests">
       <UniqueIdentifier>{B6433F28-2204-BB5E-EB3E-04DC57BEFF3A}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Sandbox\Tests\ComputeTest">
+      <UniqueIdentifier>{82EB63AA-EEAD-9734-375E-26C1A35F7012}</UniqueIdentifier>
     </Filter>
     <Filter Include="Threading">
       <UniqueIdentifier>{DB1BCC5F-4786-80D6-90C4-317CFC6D5E2B}</UniqueIdentifier>
@@ -85,6 +53,9 @@
     </ClInclude>
     <ClInclude Include="src\Sandbox\SandboxManager.h">
       <Filter>Sandbox</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Sandbox\Tests\ComputeTest\ComputeTest.h">
+      <Filter>Sandbox\Tests\ComputeTest</Filter>
     </ClInclude>
     <ClInclude Include="src\Sandbox\Tests\GLTFTest.h">
       <Filter>Sandbox\Tests</Filter>
@@ -170,42 +141,10 @@
     <ClInclude Include="src\Vulkan\VulkanCommon.h">
       <Filter>Vulkan</Filter>
     </ClInclude>
-    <ClInclude Include="src\Core\Camera.h" />
-    <ClInclude Include="src\Core\Input.h" />
-    <ClInclude Include="src\Core\Logger.h" />
-    <ClInclude Include="src\Core\Window.h" />
-    <ClInclude Include="src\Models\GLTFLoader.h" />
-    <ClInclude Include="src\Models\GLTFTest.h" />
-    <ClInclude Include="src\Models\Model\Model.h" />
-    <ClInclude Include="src\Threading\ThreadingTest.h" />
-    <ClInclude Include="src\Threading\ThreadManager.h" />
-    <ClInclude Include="src\Vulkan\Buffers\Buffer.h" />
-    <ClInclude Include="src\Vulkan\Buffers\Framebuffer.h" />
-    <ClInclude Include="src\Vulkan\Buffers\Image.h" />
-    <ClInclude Include="src\Vulkan\Buffers\ImageView.h" />
-    <ClInclude Include="src\Vulkan\Buffers\Memory.h" />
-    <ClInclude Include="src\Vulkan\CommandBuffer.h" />
-    <ClInclude Include="src\Vulkan\CommandPool.h" />
-    <ClInclude Include="src\Vulkan\Frame.h" />
-    <ClInclude Include="src\Vulkan\Instance.h" />
-    <ClInclude Include="src\Vulkan\Pipeline\DescriptorLayout.h" />
-    <ClInclude Include="src\Vulkan\Pipeline\DescriptorManager.h" />
-    <ClInclude Include="src\Vulkan\Pipeline\Descriptors.h" />
-    <ClInclude Include="src\Vulkan\Pipeline\Pipeline.h" />
-    <ClInclude Include="src\Vulkan\Pipeline\PipelineInfo.h" />
-    <ClInclude Include="src\Vulkan\Pipeline\PushConstants.h" />
-    <ClInclude Include="src\Vulkan\Pipeline\RenderPass.h" />
-    <ClInclude Include="src\Vulkan\Pipeline\Shader.h" />
-    <ClInclude Include="src\Vulkan\Renderer.h" />
-    <ClInclude Include="src\Vulkan\Sampler.h" />
-    <ClInclude Include="src\Vulkan\SwapChain.h" />
-    <ClInclude Include="src\Vulkan\Texture.h" />
-    <ClInclude Include="src\Vulkan\VKImgui.h" />
-    <ClInclude Include="src\Vulkan\VulkanCommon.h" />
-    <ClInclude Include="src\jaspch.h" />
-    <ClInclude Include="src\Sandbox\Tests\ComputeTest\ComputeTest.h">
-      <Filter>ComputeTest</Filter>
+    <ClInclude Include="src\Vulkan\VulkanProfiler.h">
+      <Filter>Vulkan</Filter>
     </ClInclude>
+    <ClInclude Include="src\jaspch.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Core\Camera.cpp">
@@ -228,6 +167,9 @@
     </ClCompile>
     <ClCompile Include="src\Sandbox\SandboxManager.cpp">
       <Filter>Sandbox</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Sandbox\Tests\ComputeTest\ComputeTest.cpp">
+      <Filter>Sandbox\Tests\ComputeTest</Filter>
     </ClCompile>
     <ClCompile Include="src\Sandbox\Tests\GLTFTest.cpp">
       <Filter>Sandbox\Tests</Filter>
@@ -304,10 +246,10 @@
     <ClCompile Include="src\Vulkan\VKImgui.cpp">
       <Filter>Vulkan</Filter>
     </ClCompile>
+    <ClCompile Include="src\Vulkan\VulkanProfiler.cpp">
+      <Filter>Vulkan</Filter>
+    </ClCompile>
     <ClCompile Include="src\jaspch.cpp" />
     <ClCompile Include="src\main.cpp" />
-    <ClCompile Include="src\Sandbox\Tests\ComputeTest\ComputeTest.cpp">
-      <Filter>ComputeTest</Filter>
-    </ClCompile>
   </ItemGroup>
 </Project>
