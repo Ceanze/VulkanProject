@@ -126,3 +126,13 @@ void CommandBuffer::cmdCopyBufferToImage(VkBuffer srcBuffer, VkImage dstImage, V
 {
 	vkCmdCopyBufferToImage(this->buffer, srcBuffer, dstImage, dstImageLayout, regionCount, pRegions);
 }
+
+void CommandBuffer::cmdWriteTimestamp(VkPipelineStageFlagBits pipelineStage, VkQueryPool queryPool, uint32_t query)
+{
+	vkCmdWriteTimestamp(this->buffer, pipelineStage, queryPool, query);
+}
+
+void CommandBuffer::cmdResetQueryPool(VkQueryPool queryPool, uint32_t firstQuery, uint32_t queryCount)
+{
+	vkCmdResetQueryPool(this->buffer, queryPool, firstQuery, queryCount);
+}
