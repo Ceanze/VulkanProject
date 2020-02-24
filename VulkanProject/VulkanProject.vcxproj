@@ -62,7 +62,7 @@
       <PrecompiledHeaderFile>jaspch.h</PrecompiledHeaderFile>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>JAS_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>src;..\libs\glfw\include;..\libs\spdlog\include;..\libs\glm;..\libs\stb;..\libs\glTF;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>src;..\libs\glfw\include;..\libs\spdlog\include;..\libs\glm;..\libs\stb;..\libs\glTF;..\libs\imgui\imgui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
       <MinimalRebuild>false</MinimalRebuild>
@@ -83,7 +83,7 @@
       <PrecompiledHeaderFile>jaspch.h</PrecompiledHeaderFile>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>JAS_RELEASE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>src;..\libs\glfw\include;..\libs\spdlog\include;..\libs\glm;..\libs\stb;..\libs\glTF;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>src;..\libs\glfw\include;..\libs\spdlog\include;..\libs\glm;..\libs\stb;..\libs\glTF;..\libs\imgui\imgui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
@@ -102,12 +102,19 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="src\Sandbox\Tests\ComputeTest\ComputeTest.h" />
     <ClInclude Include="src\Core\Camera.h" />
     <ClInclude Include="src\Core\Input.h" />
     <ClInclude Include="src\Core\Logger.h" />
     <ClInclude Include="src\Core\Window.h" />
-    <ClInclude Include="src\GLTFTest\GLTFLoader.h" />
-    <ClInclude Include="src\GLTFTest\Model\Model.h" />
+    <ClInclude Include="src\Models\GLTFLoader.h" />
+    <ClInclude Include="src\Models\Model\Model.h" />
+    <ClInclude Include="src\Sandbox\SandboxManager.h" />
+    <ClInclude Include="src\Sandbox\Tests\GLTFTest.h" />
+    <ClInclude Include="src\Sandbox\Tests\RenderTest.h" />
+    <ClInclude Include="src\Sandbox\Tests\ThreadingTest.h" />
+    <ClInclude Include="src\Sandbox\VKSandboxBase.h" />
+    <ClInclude Include="src\Threading\ThreadManager.h" />
     <ClInclude Include="src\Vulkan\Buffers\Buffer.h" />
     <ClInclude Include="src\Vulkan\Buffers\Framebuffer.h" />
     <ClInclude Include="src\Vulkan\Buffers\Image.h" />
@@ -129,16 +136,24 @@
     <ClInclude Include="src\Vulkan\Sampler.h" />
     <ClInclude Include="src\Vulkan\SwapChain.h" />
     <ClInclude Include="src\Vulkan\Texture.h" />
+    <ClInclude Include="src\Vulkan\VKImgui.h" />
     <ClInclude Include="src\Vulkan\VulkanCommon.h" />
     <ClInclude Include="src\jaspch.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\Sandbox\Tests\ComputeTest\ComputeTest.cpp" />
     <ClCompile Include="src\Core\Camera.cpp" />
     <ClCompile Include="src\Core\Input.cpp" />
     <ClCompile Include="src\Core\Logger.cpp" />
     <ClCompile Include="src\Core\Window.cpp" />
-    <ClCompile Include="src\GLTFTest\GLTFLoader.cpp" />
-    <ClCompile Include="src\GLTFTest\Model\Model.cpp" />
+    <ClCompile Include="src\Models\GLTFLoader.cpp" />
+    <ClCompile Include="src\Models\Model\Model.cpp" />
+    <ClCompile Include="src\Sandbox\SandboxManager.cpp" />
+    <ClCompile Include="src\Sandbox\Tests\GLTFTest.cpp" />
+    <ClCompile Include="src\Sandbox\Tests\RenderTest.cpp" />
+    <ClCompile Include="src\Sandbox\Tests\ThreadingTest.cpp" />
+    <ClCompile Include="src\Sandbox\VKSandboxBase.cpp" />
+    <ClCompile Include="src\Threading\ThreadManager.cpp" />
     <ClCompile Include="src\Vulkan\Buffers\Buffer.cpp" />
     <ClCompile Include="src\Vulkan\Buffers\Framebuffer.cpp" />
     <ClCompile Include="src\Vulkan\Buffers\Image.cpp" />
@@ -158,6 +173,7 @@
     <ClCompile Include="src\Vulkan\Sampler.cpp" />
     <ClCompile Include="src\Vulkan\SwapChain.cpp" />
     <ClCompile Include="src\Vulkan\Texture.cpp" />
+    <ClCompile Include="src\Vulkan\VKImgui.cpp" />
     <ClCompile Include="src\jaspch.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
@@ -166,6 +182,9 @@
   <ItemGroup>
     <ProjectReference Include="..\libs\glfw\GLFW.vcxproj">
       <Project>{154B857C-0182-860D-AA6E-6C109684020F}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\libs\imgui\imgui\ImGui.vcxproj">
+      <Project>{C0FF640D-2C14-8DBE-F595-301E616989EF}</Project>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

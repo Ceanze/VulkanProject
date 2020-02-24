@@ -80,4 +80,5 @@ std::pair<VkDescriptorType, GroupIndex> DescriptorLayout::getWriteElem(uint32_t 
 	}
 
 	JAS_ASSERT(false, "Binding out of range!");
+	return std::pair<VkDescriptorType, GroupIndex>();
 }

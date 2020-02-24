@@ -79,6 +79,12 @@ void Pipeline::setPipelineInfo(PipelineInfoFlag flags, PipelineInfo info)
 		this->graphicsPipelineInfo.colorBlendAttachment = info.colorBlendAttachment;
 	if (flags & PipelineInfoFlag::COLOR_BLEND)
 		this->graphicsPipelineInfo.colorBlending = info.colorBlending;
+	if (flags & PipelineInfoFlag::INPUT_ASSEMBLY)
+		this->graphicsPipelineInfo.inputAssembly = info.inputAssembly;
+	if (flags & PipelineInfoFlag::VIEWPORT)
+		this->graphicsPipelineInfo.viewport = info.viewport;
+	if (flags & PipelineInfoFlag::SCISSOR)
+		this->graphicsPipelineInfo.scissor = info.scissor;
 }
 
 void Pipeline::createGraphicsPipeline()
@@ -89,21 +95,33 @@ void Pipeline::createGraphicsPipeline()
 	}
 
 	VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
-	inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-	inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-	inputAssembly.primitiveRestartEnable = VK_FALSE;
+	if (this->graphicsPipelineInfoFlags & PipelineInfoFlag::INPUT_ASSEMBLY)
+		inputAssembly = this->graphicsPipelineInfo.inputAssembly;
+	else {
+		inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+		inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+		inputAssembly.primitiveRestartEnable = VK_FALSE;
+	}
 
 	VkViewport viewport = {};
-	viewport.x = 0.0f;
-	viewport.y = 0.0f;
-	viewport.width = (float)this->extent.width;
-	viewport.height = (float)this->extent.height;
-	viewport.minDepth = 0.0f;
-	viewport.maxDepth = 1.0f;
+	if (this->graphicsPipelineInfoFlags & PipelineInfoFlag::VIEWPORT)
+		viewport = this->graphicsPipelineInfo.viewport;
+	else {
+		viewport.x = 0.0f;
+		viewport.y = 0.0f;
+		viewport.width = (float)this->extent.width;
+		viewport.height = (float)this->extent.height;
+		viewport.minDepth = 0.0f;
+		viewport.maxDepth = 1.0f;
+	}
 
 	VkRect2D scissor = {};
-	scissor.offset = { 0, 0 };
-	scissor.extent = this->extent;
+	if (this->graphicsPipelineInfoFlags & PipelineInfoFlag::SCISSOR)
+		scissor = this->graphicsPipelineInfo.scissor;
+	else {
+		scissor.offset = { 0, 0 };
+		scissor.extent = this->extent;
+	}
 
 	VkPipelineViewportStateCreateInfo viewportState = {};
 	viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -152,7 +170,7 @@ void Pipeline::createGraphicsPipeline()
 		rasterizer.rasterizerDiscardEnable = VK_FALSE;	 // If true disables any output to the framebuffer
 		rasterizer.polygonMode = this->polyMode;
 		rasterizer.lineWidth = 1.0f;
-		rasterizer.cullMode = VK_CULL_MODE_NONE;
+		rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
 		rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 		rasterizer.depthBiasEnable = VK_FALSE;
 		rasterizer.depthBiasConstantFactor = 0.0f; // Optional
@@ -227,7 +245,7 @@ void Pipeline::createGraphicsPipeline()
 	VkGraphicsPipelineCreateInfo pipelineInfo = {};
 	pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 	std::vector<VkPipelineShaderStageCreateInfo> infos = this->shader->getShaderCreateInfos();
-	pipelineInfo.stageCount = infos.size();
+	pipelineInfo.stageCount = (uint32_t)infos.size();
 	pipelineInfo.pStages = infos.data();
 	pipelineInfo.pVertexInputState = &vertexInputInfo;
 	pipelineInfo.pInputAssemblyState = &inputAssembly;
@@ -251,17 +269,17 @@ void Pipeline::createComputePipeline()
 {
 	VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
 	pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-	pipelineLayoutInfo.setLayoutCount = 0; // descriptor.getSetLayouts().size();
-	pipelineLayoutInfo.pSetLayouts = nullptr; // descriptor.getSetLayouts().data(); // Uniform buffer objects, images, etc.
-	pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
-	pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
+	pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(this->layouts.size());
+	pipelineLayoutInfo.pSetLayouts = this->layouts.empty() ? nullptr : this->layouts.data();
+	pipelineLayoutInfo.pushConstantRangeCount = static_cast<uint32_t>(this->pushConstantRanges.size()); // Optional
+	pipelineLayoutInfo.pPushConstantRanges = this->pushConstantRanges.empty() ? nullptr : this->pushConstantRanges.data(); // Optional
 
 	ERROR_CHECK(vkCreatePipelineLayout(Instance::get().getDevice(), &pipelineLayoutInfo, nullptr, &this->pipelineLayout), "Failed to create pipeline layout!");
 
 	VkComputePipelineCreateInfo pipelineInfo = {};
 	pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
 	pipelineInfo.pNext = nullptr;
-	pipelineInfo.flags = 0;
+	pipelineInfo.flags = 0; 
 	pipelineInfo.stage = this->shader->getShaderCreateInfo(Shader::Type::COMPUTE);
 	pipelineInfo.layout = this->pipelineLayout;
 	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;

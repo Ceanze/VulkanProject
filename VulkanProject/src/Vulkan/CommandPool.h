@@ -19,7 +19,7 @@ public:
 	CommandPool();
 	~CommandPool();
 	
-	void init(Queue queueFamily);
+	void init(Queue queueFamily, VkCommandPoolCreateFlags flags);
 	void cleanup();
 	Queue getQueueFamily() const { return this->queueFamily; }
 	QueueVK getQueue() const;
@@ -27,12 +27,12 @@ public:
 	CommandBuffer* beginSingleTimeCommand();
 	void endSingleTimeCommand(CommandBuffer* buffer);
 
-	CommandBuffer* createCommandBuffer();
-	std::vector<CommandBuffer*> createCommandBuffers(uint32_t count);
+	CommandBuffer* createCommandBuffer(VkCommandBufferLevel level);
+	std::vector<CommandBuffer*> createCommandBuffers(uint32_t count, VkCommandBufferLevel level);
 	void removeCommandBuffer(CommandBuffer* buffer);
 
 private:
-	void createCommandPool();
+	void createCommandPool(VkCommandPoolCreateFlags flags);
 
 	VkCommandPool pool;
 	Queue queueFamily;

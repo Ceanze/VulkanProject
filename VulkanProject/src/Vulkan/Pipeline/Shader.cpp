@@ -118,7 +118,6 @@ VkPipelineShaderStageCreateInfo Shader::createShaderStageCreateInfo(Type type, V
 
 VkShaderStageFlagBits Shader::typeToStageFlag(Type type)
 {
-	VkShaderStageFlagBits stage;
 	switch (type)
 	{
 	case Type::VERTEX: return VK_SHADER_STAGE_VERTEX_BIT; break;

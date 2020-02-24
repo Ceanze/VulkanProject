@@ -29,7 +29,7 @@ void DescriptorManager::init(uint32_t numCopies)
 	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 	poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
 	poolInfo.pPoolSizes = poolSizes.data();
-	poolInfo.maxSets = numCopies * this->setLayouts.size();
+	poolInfo.maxSets = static_cast<uint32_t>(numCopies * this->setLayouts.size());
 
 	VkResult result = vkCreateDescriptorPool(Instance::get().getDevice(), &poolInfo, nullptr, &this->pool);
 	JAS_ASSERT(result == VK_SUCCESS, "Failed to create descriptor pool!");
@@ -86,45 +86,50 @@ void DescriptorManager::updateImageDesc(SetIndex index, uint32_t binding, VkImag
 	group.infos.push_back(imageInfo);
 }
 
-void DescriptorManager::updateSets(uint32_t copyIndex)
+void DescriptorManager::updateSets(std::vector<SetIndex> sets, uint32_t copyIndex)
 {
 	std::vector<VkWriteDescriptorSet> descriptorWrites = {};
 
-	for (auto& bufferSet : this->bufferGroups)
+	for (SetIndex index : sets)
 	{
-		for (auto& group : bufferSet.second)
+		auto bufferSet = this->bufferGroups.find(index);
+		if (bufferSet != this->bufferGroups.end())
 		{
-			BufferGroup& bufferGroup = group.second;
-			VkWriteDescriptorSet desc = {};
-			desc.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			desc.dstSet = this->descriptorSets[bufferSet.first][copyIndex];
-			desc.dstArrayElement = 0;
-			desc.descriptorType = bufferGroup.type;
-			desc.pImageInfo = nullptr;
-			desc.dstBinding = bufferGroup.binding;
-			desc.descriptorCount = static_cast<uint32_t>(bufferGroup.infos.size());
-			desc.pBufferInfo = bufferGroup.infos.data();
-			desc.pTexelBufferView = nullptr;
-			descriptorWrites.push_back(desc);
+			for (auto& group : bufferSet->second)
+			{
+				BufferGroup& bufferGroup = group.second;
+				VkWriteDescriptorSet desc = {};
+				desc.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+				desc.dstSet = this->descriptorSets[index][copyIndex];
+				desc.dstArrayElement = 0;
+				desc.descriptorType = bufferGroup.type;
+				desc.pImageInfo = nullptr;
+				desc.dstBinding = bufferGroup.binding;
+				desc.descriptorCount = static_cast<uint32_t>(bufferGroup.infos.size());
+				desc.pBufferInfo = bufferGroup.infos.data();
+				desc.pTexelBufferView = nullptr;
+				descriptorWrites.push_back(desc);
+			}
 		}
-	}
 
-	for (auto& imageSet : this->imageGroups)
-	{
-		for (auto& group : imageSet.second)
+		auto imageSet = this->imageGroups.find(index);
+		if (imageSet != this->imageGroups.end())
 		{
-			ImageGroup& imageGroup = group.second;
-			VkWriteDescriptorSet desc = {};
-			desc.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			desc.dstSet = this->descriptorSets[imageSet.first][copyIndex];
-			desc.dstArrayElement = 0;
-			desc.descriptorType = imageGroup.type;
-			desc.pImageInfo = imageGroup.infos.data();
-			desc.dstBinding = imageGroup.binding;
-			desc.descriptorCount = static_cast<uint32_t>(imageGroup.infos.size());
-			desc.pBufferInfo = nullptr;
-			desc.pTexelBufferView = nullptr;
-			descriptorWrites.push_back(desc);
+			for (auto& group : imageSet->second)
+			{
+				ImageGroup& imageGroup = group.second;
+				VkWriteDescriptorSet desc = {};
+				desc.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+				desc.dstSet = this->descriptorSets[index][copyIndex];
+				desc.dstArrayElement = 0;
+				desc.descriptorType = imageGroup.type;
+				desc.pImageInfo = imageGroup.infos.data();
+				desc.dstBinding = imageGroup.binding;
+				desc.descriptorCount = static_cast<uint32_t>(imageGroup.infos.size());
+				desc.pBufferInfo = nullptr;
+				desc.pTexelBufferView = nullptr;
+				descriptorWrites.push_back(desc);
+			}
 		}
 	}
 

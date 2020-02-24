@@ -34,6 +34,7 @@ void Instance::init(Window* window)
 {
 	deviceFeatures.samplerAnisotropy = VK_TRUE;
 	deviceFeatures.fillModeNonSolid = VK_TRUE;
+	deviceFeatures.logicOp = VK_TRUE;
 
 	this->createInstance();
 	this->setupDebugMessenger();
@@ -236,7 +237,7 @@ void Instance::createLogicalDevice()
 
 	VkDeviceCreateInfo createInfo = {};
 	createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-	createInfo.queueCreateInfoCount = queueCreateInfos.size();
+	createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
 	createInfo.pQueueCreateInfos = queueCreateInfos.data();
 
 	createInfo.pEnabledFeatures = &this->deviceFeatures;
