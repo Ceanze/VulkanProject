@@ -142,6 +142,7 @@
     <ClInclude Include="src\Sandbox\Tests\ComputeTest\ComputeTest.h">
       <Filter>ComputeTest</Filter>
     </ClInclude>
+    <ClInclude Include="src\Core\Heightmap\Heightmap.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Core\Camera.cpp">
@@ -245,5 +246,6 @@
     <ClCompile Include="src\Sandbox\Tests\ComputeTest\ComputeTest.cpp">
       <Filter>ComputeTest</Filter>
     </ClCompile>
+    <ClCompile Include="src\Core\Heightmap\Heightmap.cpp" />
   </ItemGroup>
 </Project>
