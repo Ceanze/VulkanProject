@@ -28,8 +28,11 @@ void VulkanProfiler::cleanup()
 	if (this->timestampQueryPool != VK_NULL_HANDLE)
 		vkDestroyQueryPool(Instance::get().getDevice(), this->timestampQueryPool, nullptr);
 
-	if (this->pipelineStatPool != VK_NULL_HANDLE)
-		vkDestroyQueryPool(Instance::get().getDevice(), this->pipelineStatPool, nullptr);
+	if (this->graphicsPipelineStatPool != VK_NULL_HANDLE)
+		vkDestroyQueryPool(Instance::get().getDevice(), this->graphicsPipelineStatPool, nullptr);
+
+	if (this->computePipelineStatPool != VK_NULL_HANDLE)
+		vkDestroyQueryPool(Instance::get().getDevice(), this->computePipelineStatPool, nullptr);
 }
 
 void VulkanProfiler::render(float dt)
@@ -66,13 +69,19 @@ void VulkanProfiler::render(float dt)
 		}
 	}
 
-	// Render pipeline statistics
-	if (this->pipelineStatPool != VK_NULL_HANDLE && ImGui::CollapsingHeader("Pipeline Statistics"))
+	// Render graphics pipeline statistics
+	if (this->graphicsPipelineStatPool != VK_NULL_HANDLE && ImGui::CollapsingHeader("Graphics Pipeline Statistics"))
 	{
-		for (size_t i = 0; i < this->pipelineStat.size(); i++) {
-			std::string caption = this->pipelineStatNames[i] + ": %d";
-			ImGui::BulletText(caption.c_str(), this->pipelineStat[i]);
+		for (size_t i = 0; i < this->graphicsPipelineStat.size(); i++) {
+			std::string caption = this->graphicsPipelineStatNames[i] + ": %d";
+			ImGui::BulletText(caption.c_str(), this->graphicsPipelineStat[i]);
 		}
+	}
+
+	// Render compute pipeline statistics
+	if (this->computePipelineStatPool != VK_NULL_HANDLE && ImGui::CollapsingHeader("Compute Pipeline Statistics"))
+	{
+		ImGui::BulletText("Compute shader invocations:		: %d", this->computePipelineStat[0]);
 	}
 
 	ImGui::End();
@@ -98,7 +107,7 @@ void VulkanProfiler::createTimestamps(uint32_t timestampCount)
 	this->freeIndex = 0;
 }
 
-void VulkanProfiler::createPipelineStats()
+void VulkanProfiler::createGraphicsPipelineStats()
 {
 	VkQueryPoolCreateInfo createInfo = {};
 	createInfo.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
@@ -119,10 +128,10 @@ void VulkanProfiler::createPipelineStats()
 
 	// VK_QUERY_PIPELINE_STATISTIC_TESSELATION_CONTROL_SHADER_PATCHES_BIT and *_EVALUATION_SHADER_INVOCATIONS_BIT is also available
 
-	ERROR_CHECK(vkCreateQueryPool(Instance::get().getDevice(), &createInfo, nullptr, &this->pipelineStatPool), "Failed to create query pool!");
+	ERROR_CHECK(vkCreateQueryPool(Instance::get().getDevice(), &createInfo, nullptr, &this->graphicsPipelineStatPool), "Failed to create graphics query pool!");
 
-	this->pipelineStat.resize(6);
-	this->pipelineStatNames = {
+	this->graphicsPipelineStat.resize(createInfo.queryCount);
+	this->graphicsPipelineStatNames = {
 			"Input assembly vertex count        ",
 			"Input assembly primitives count    ",
 			"Vertex shader invocations          ",
@@ -130,6 +139,23 @@ void VulkanProfiler::createPipelineStats()
 			"Clipping stage primtives output    ",
 			"Fragment shader invocations        "
 	};
+}
+
+void VulkanProfiler::createComputePipelineStats()
+{
+	VkQueryPoolCreateInfo createInfo = {};
+	createInfo.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
+	createInfo.queryType = VK_QUERY_TYPE_PIPELINE_STATISTICS;
+	createInfo.flags = 0;
+	createInfo.pNext = nullptr;
+
+	// Hard coded because why not
+	createInfo.pipelineStatistics = VK_QUERY_PIPELINE_STATISTIC_COMPUTE_SHADER_INVOCATIONS_BIT;
+	createInfo.queryCount = 1; // Reflects how many pipeline statistics we have
+
+	ERROR_CHECK(vkCreateQueryPool(Instance::get().getDevice(), &createInfo, nullptr, &this->computePipelineStatPool), "Failed to create compute query pool!");
+
+	this->computePipelineStat.resize(createInfo.queryCount);
 }
 
 void VulkanProfiler::addTimestamp(std::string name)
@@ -147,9 +173,14 @@ void VulkanProfiler::startTimestamp(std::string name, CommandBuffer* commandBuff
 	commandBuffer->cmdWriteTimestamp(pipelineStage, this->timestampQueryPool, this->timestamps[name].first);
 }
 
-void VulkanProfiler::startPipelineStat(CommandBuffer* commandBuffer)
+void VulkanProfiler::startComputePipelineStat(CommandBuffer* commandBuffer)
 {
-	commandBuffer->cmdBeginQuery(this->pipelineStatPool, 0, 0);
+	commandBuffer->cmdBeginQuery(this->computePipelineStatPool, 0, 0);
+}
+
+void VulkanProfiler::startGraphicsPipelineStat(CommandBuffer* commandBuffer)
+{
+	commandBuffer->cmdBeginQuery(this->graphicsPipelineStatPool, 0, 0);
 }
 
 void VulkanProfiler::endTimestamp(std::string name, CommandBuffer* commandBuffer, VkPipelineStageFlagBits pipelineStage)
@@ -157,9 +188,14 @@ void VulkanProfiler::endTimestamp(std::string name, CommandBuffer* commandBuffer
 	commandBuffer->cmdWriteTimestamp(pipelineStage, this->timestampQueryPool, this->timestamps[name].second);
 }
 
-void VulkanProfiler::endPipelineStat(CommandBuffer* commandBuffer)
+void VulkanProfiler::endComputePipelineStat(CommandBuffer* commandBuffer)
 {
-	commandBuffer->cmdEndQuery(this->pipelineStatPool, 0);
+	commandBuffer->cmdEndQuery(this->computePipelineStatPool, 0);
+}
+
+void VulkanProfiler::endGraphicsPipelineStat(CommandBuffer* commandBuffer)
+{
+	commandBuffer->cmdEndQuery(this->graphicsPipelineStatPool, 0);
 }
 
 void VulkanProfiler::getTimestamps()
@@ -188,20 +224,23 @@ void VulkanProfiler::getTimestamps()
 	}
 }
 
-void VulkanProfiler::getPipelineStat()
+void VulkanProfiler::getPipelineStats()
 {
-	if (this->pipelineStatPool == VK_NULL_HANDLE)
-		return;
+	if (this->graphicsPipelineStatPool != VK_NULL_HANDLE)
+		vkGetQueryPoolResults(Instance::get().getDevice(), this->graphicsPipelineStatPool, 0, 1,
+			this->graphicsPipelineStat.size() * sizeof(uint64_t), this->graphicsPipelineStat.data(),
+			sizeof(uint64_t), VK_QUERY_RESULT_64_BIT);
 
-	vkGetQueryPoolResults(Instance::get().getDevice(), this->pipelineStatPool, 0, 1,
-		this->pipelineStat.size() * sizeof(uint64_t), this->pipelineStat.data(),
-		sizeof(uint64_t), VK_QUERY_RESULT_64_BIT);
+	if (this->computePipelineStatPool != VK_NULL_HANDLE)
+		vkGetQueryPoolResults(Instance::get().getDevice(), this->computePipelineStatPool, 0, 1,
+			this->computePipelineStat.size() * sizeof(uint64_t), this->computePipelineStat.data(),
+			sizeof(uint64_t), VK_QUERY_RESULT_64_BIT);
 }
 
 void VulkanProfiler::getAllQueries()
 {
 	getTimestamps();
-	getPipelineStat();
+	getPipelineStats();
 }
 
 void VulkanProfiler::resetTimestampInterval(CommandBuffer* commandBuffer, uint32_t firstQuery, uint32_t queryCount)
@@ -222,21 +261,25 @@ void VulkanProfiler::resetAllTimestamps(CommandBuffer* commandBuffer)
 		commandBuffer->cmdResetQueryPool(this->timestampQueryPool, 0, this->timestamps.size() * 2);
 }
 
-void VulkanProfiler::resetPipelineStat(CommandBuffer* commandBuffer)
+void VulkanProfiler::resetPipelineStats(CommandBuffer* commandBuffer)
 {
-	if (this->pipelineStatPool != VK_NULL_HANDLE)
-		commandBuffer->cmdResetQueryPool(this->pipelineStatPool, 0, 1);
+	if (this->graphicsPipelineStatPool != VK_NULL_HANDLE)
+		commandBuffer->cmdResetQueryPool(this->graphicsPipelineStatPool, 0, 1);
+
+	if (this->computePipelineStatPool != VK_NULL_HANDLE)
+		commandBuffer->cmdResetQueryPool(this->computePipelineStatPool, 0, 1);
 }
 
 void VulkanProfiler::resetAll(CommandBuffer* commandBuffer)
 {
 	resetAllTimestamps(commandBuffer);
-	resetPipelineStat(commandBuffer);
+	resetPipelineStats(commandBuffer);
 }
 
 VulkanProfiler::VulkanProfiler()
 	: freeIndex(0), timestampQueryPool(VK_NULL_HANDLE), timestampCount(0),
-	plotDataCount(0), timeSinceUpdate(0.0f), updateFreq(0), pipelineStatPool(VK_NULL_HANDLE)
+	plotDataCount(0), timeSinceUpdate(0.0f), updateFreq(0), graphicsPipelineStatPool(VK_NULL_HANDLE),
+	computePipelineStatPool(VK_NULL_HANDLE), timeUnit(TimeUnit::MILLI)
 {
 }
 
