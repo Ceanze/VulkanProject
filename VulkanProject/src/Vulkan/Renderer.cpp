@@ -10,6 +10,10 @@
 #include <stb/stb_image.h>
 #pragma warning(pop)
 
+#include <imgui.h>
+
+#include "VulkanProfiler.h"
+
 Renderer::Renderer()
 	: camera(nullptr)
 {
@@ -96,6 +100,7 @@ void Renderer::run()
 		VkClearValue value;
 		value.color = { 0.0f, 0.0f, 0.0f, 1.0f };
 		clearValues.push_back(value);
+
 		cmdBuffs[i]->cmdBeginRenderPass(&this->renderPass, this->framebuffers[i].getFramebuffer(), this->swapChain.getExtent(), clearValues, VK_SUBPASS_CONTENTS_INLINE);
 		cmdBuffs[i]->cmdBindPipeline(&this->pipeline);
 		std::vector<VkDescriptorSet> sets = { this->descManager.getSet(i, 0) };
@@ -104,7 +109,9 @@ void Renderer::run()
 		const glm::vec4 tintData(0.3f, 0.4f, 0.4f, 1.0f);
 		this->pushConstants[0].setDataPtr(&tintData[0]);
 		cmdBuffs[i]->cmdPushConstants(&this->pipeline, &this->pushConstants[0]);
+
 		cmdBuffs[i]->cmdDraw(3, 1, 0, 0);
+
 		cmdBuffs[i]->cmdEndRenderPass();
 		cmdBuffs[i]->end();
 	}
@@ -121,7 +128,7 @@ void Renderer::run()
 
 		this->memory.directTransfer(&this->camBuffer, (void*)&this->camera->getMatrix()[0], sizeof(glm::mat4), 0);
 
-		this->frame.beginFrame();
+		this->frame.beginFrame(dt);
 
 		ImGui::Begin("Hello world!");
 		ImGui::Text("Cool text");
@@ -143,6 +150,7 @@ void Renderer::run()
 			frames = 0;
 		}
 	}
+	
 }
 
 void Renderer::shutdown()
@@ -167,6 +175,7 @@ void Renderer::shutdown()
 	this->renderPass.cleanup();
 	this->shader.cleanup();
 	this->swapChain.cleanup();
+	VulkanProfiler::get().cleanup(); // TEMPU
 	Instance::get().cleanup();
 	this->window.cleanup();
 

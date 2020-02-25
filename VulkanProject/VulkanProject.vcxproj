@@ -102,14 +102,15 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="src\Sandbox\Tests\ComputeTest\ComputeTest.h" />
     <ClInclude Include="src\Core\Camera.h" />
+    <ClInclude Include="src\Core\CPUProfiler.h" />
     <ClInclude Include="src\Core\Input.h" />
     <ClInclude Include="src\Core\Logger.h" />
     <ClInclude Include="src\Core\Window.h" />
     <ClInclude Include="src\Models\GLTFLoader.h" />
     <ClInclude Include="src\Models\Model\Model.h" />
     <ClInclude Include="src\Sandbox\SandboxManager.h" />
+    <ClInclude Include="src\Sandbox\Tests\ComputeTest\ComputeTest.h" />
     <ClInclude Include="src\Sandbox\Tests\GLTFTest.h" />
     <ClInclude Include="src\Sandbox\Tests\RenderTest.h" />
     <ClInclude Include="src\Sandbox\Tests\ThreadingTest.h" />
@@ -139,17 +140,19 @@
     <ClInclude Include="src\Vulkan\Texture.h" />
     <ClInclude Include="src\Vulkan\VKImgui.h" />
     <ClInclude Include="src\Vulkan\VulkanCommon.h" />
+    <ClInclude Include="src\Vulkan\VulkanProfiler.h" />
     <ClInclude Include="src\jaspch.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\Sandbox\Tests\ComputeTest\ComputeTest.cpp" />
     <ClCompile Include="src\Core\Camera.cpp" />
+    <ClCompile Include="src\Core\CPUProfiler.cpp" />
     <ClCompile Include="src\Core\Input.cpp" />
     <ClCompile Include="src\Core\Logger.cpp" />
     <ClCompile Include="src\Core\Window.cpp" />
     <ClCompile Include="src\Models\GLTFLoader.cpp" />
     <ClCompile Include="src\Models\Model\Model.cpp" />
     <ClCompile Include="src\Sandbox\SandboxManager.cpp" />
+    <ClCompile Include="src\Sandbox\Tests\ComputeTest\ComputeTest.cpp" />
     <ClCompile Include="src\Sandbox\Tests\GLTFTest.cpp" />
     <ClCompile Include="src\Sandbox\Tests\RenderTest.cpp" />
     <ClCompile Include="src\Sandbox\Tests\ThreadingTest.cpp" />
@@ -176,6 +179,7 @@
     <ClCompile Include="src\Vulkan\SwapChain.cpp" />
     <ClCompile Include="src\Vulkan\Texture.cpp" />
     <ClCompile Include="src\Vulkan\VKImgui.cpp" />
+    <ClCompile Include="src\Vulkan\VulkanProfiler.cpp" />
     <ClCompile Include="src\jaspch.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>

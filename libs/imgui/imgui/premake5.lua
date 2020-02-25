@@ -3,8 +3,8 @@ project "ImGui"
     language "C++"
     cppdialect "C++17"
 
-	targetdir ("bin/" .. OUTPUT_DIR .. "/%{prj.name}")
-	objdir ("bin-int/" .. OUTPUT_DIR .. "/%{prj.name}")
+    targetdir ("bin/" .. OUTPUT_DIR .. "/%{prj.name}")
+    objdir ("bin-int/" .. OUTPUT_DIR .. "/%{prj.name}")
 
     files
     {
@@ -33,3 +33,11 @@ project "ImGui"
     filter "system:windows"
         systemversion "latest"
         staticruntime "On"
+
+    filter "configurations:Debug"
+        runtime "Debug"
+        symbols "on"
+
+    filter "configurations:Release"
+        runtime "Release"
+        optimize "on"
