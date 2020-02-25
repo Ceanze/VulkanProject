@@ -13,6 +13,7 @@ public:
 	glm::vec2 getCursorDelta();
 	bool isKeyDown(int key);
 	bool isKeyToggled(int key);
+	bool isKeyClicked(int key);
 
 	void updateCursor(double deltaX, double deltaY);
 	void setKeyPressed(int key);
@@ -23,6 +24,6 @@ private:
 
 	double deltaX, deltaY;
 
-	std::unordered_map<int, bool> keys;
+	std::unordered_map<int, uint32_t> keys;
 	std::unordered_map<int, bool> toggledKeys;
 };

@@ -18,7 +18,8 @@ public:
 	void cleanup();
 
 private:
-	VKSandboxBase* sandbox;
+	std::vector<VKSandboxBase*> sandboxes;
+	uint32_t currentSandbox;
 	bool running;
 
 	Window window;

@@ -5,7 +5,7 @@
 #include "Vulkan/Instance.h"
 #include <GLFW/glfw3.h>
 
-SandboxManager::SandboxManager() : running(true), sandbox(nullptr)
+SandboxManager::SandboxManager() : running(true), currentSandbox(0)
 {
 }
 
@@ -15,7 +15,7 @@ SandboxManager::~SandboxManager()
 
 void SandboxManager::set(VKSandboxBase* sandbox)
 {
-	this->sandbox = sandbox;
+	this->sandboxes.push_back(sandbox);
 }
 
 void SandboxManager::init()
@@ -28,10 +28,11 @@ void SandboxManager::init()
 	this->swapChain.init(this->window.getWidth(), this->window.getHeight());
 	this->frame.init(&this->window, &this->swapChain);
 
-	this->sandbox->setWindow(&this->window);
-	this->sandbox->setSwapChain(&this->swapChain);
-	this->sandbox->setFrame(&this->frame);
-	this->sandbox->selfInit();
+
+	this->sandboxes[this->currentSandbox]->setWindow(&this->window);
+	this->sandboxes[this->currentSandbox]->setSwapChain(&this->swapChain);
+	this->sandboxes[this->currentSandbox]->setFrame(&this->frame);
+	this->sandboxes[this->currentSandbox]->selfInit();
 }
 
 void SandboxManager::run()
@@ -49,7 +50,18 @@ void SandboxManager::run()
 		if (glfwGetKey(this->window.getNativeWindow(), GLFW_KEY_ESCAPE) == GLFW_PRESS)
 			this->running = false;
 
-		this->sandbox->selfLoop(dt);
+		this->sandboxes[this->currentSandbox]->selfLoop(dt);
+
+		{
+			// Check if you swap sandbox.
+			if (glfwGetKey(this->window.getNativeWindow(), GLFW_KEY_PAGE_UP) == GLFW_PRESS)
+			{
+			}
+			else if (glfwGetKey(this->window.getNativeWindow(), GLFW_KEY_PAGE_DOWN) == GLFW_PRESS)
+			{
+
+			}
+		}
 
 		currentTime = std::chrono::high_resolution_clock::now();
 		dt = std::chrono::duration<float>(currentTime - prevTime).count();
@@ -67,9 +79,11 @@ void SandboxManager::run()
 
 void SandboxManager::cleanup()
 {
-	this->sandbox->selfCleanup();
-	delete this->sandbox;
-	this->sandbox = nullptr;
+	this->sandboxes[this->currentSandbox]->selfCleanup();
+	for(auto sandbox : this->sandboxes)
+		delete sandbox;
+	this->sandboxes.clear();
+
 	this->frame.cleanup();
 	this->swapChain.cleanup();
 	Instance::get().cleanup();

@@ -28,7 +28,17 @@ void Input::updateCursor(double deltaX, double deltaY)
 
 void Input::setKeyPressed(int key)
 {
-	this->keys[key] = true;
+	this->keys[key] = 1;
+	//auto& it2 = this->keys.find(key);
+	//if (it2 == this->keys.end())
+	//	it2->second = 1;
+	//else
+	//{
+	//	if (it2->second >= 0)
+	//		it2->second++;
+	//	else
+	//		it2->second = 1;
+	//}
 
 	auto& it = this->toggledKeys.find(key);
 	if (it == this->toggledKeys.end())
@@ -39,17 +49,23 @@ void Input::setKeyPressed(int key)
 
 void Input::setKeyReleased(int key)
 {
-	this->keys[key] = false;
+	this->keys[key] = 0;
 }
 
 bool Input::isKeyDown(int key)
 {
-	return this->keys[key];
+	return this->keys[key] > 0;
 }
 
 bool Input::isKeyToggled(int key)
 {
 	return this->toggledKeys[key];
+}
+
+bool Input::isKeyClicked(int key)
+{
+	//if()
+	return false;
 }
 
 Input::Input() 
