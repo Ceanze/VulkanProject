@@ -38,7 +38,8 @@ void ComputeTest::init()
 	initFramebuffers(&this->renderPass, VK_NULL_HANDLE);
 
 	VulkanProfiler::get().init(60, 60, VulkanProfiler::TimeUnit::MILLI);
-	VulkanProfiler::get().createPipelineStats();
+	VulkanProfiler::get().createGraphicsPipelineStats();
+	VulkanProfiler::get().createComputePipelineStats();
 	VulkanProfiler::get().createTimestamps(4);
 	VulkanProfiler::get().addTimestamp("Dispatch");
 	VulkanProfiler::get().addTimestamp("Draw");
@@ -70,10 +71,12 @@ void ComputeTest::init()
 		std::vector<uint32_t> offsets;
 		cmdBuffs[i]->cmdBindDescriptorSets(&getPipeline((unsigned)PO::COMPUTE), 0, sets, offsets);
 
+		if (i == 0) { VulkanProfiler::get().startComputePipelineStat(cmdBuffs[0]); }
 		const size_t NUM_PARTICLES_PER_WORKGROUP = 16;
 		if (i == 0) { VulkanProfiler::get().startTimestamp("Dispatch", cmdBuffs[0], VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT); }
 		cmdBuffs[i]->cmdDispatch(std::ceilf((float)this->particles.size() / NUM_PARTICLES_PER_WORKGROUP), 1, 1);
 		if (i == 0) { VulkanProfiler::get().endTimestamp("Dispatch", cmdBuffs[0], VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT); }
+		if (i == 0) { VulkanProfiler::get().endComputePipelineStat(cmdBuffs[0]); }
 
 
 		// Wait for compute shader to finish writing to the memory before vertex shader can read from it
@@ -83,7 +86,7 @@ void ComputeTest::init()
 		cmdBuffs[i]->cmdMemoryBarrier(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, 0, memoryBarriers);
 
 		// Graphics 
-		if (i == 0) { VulkanProfiler::get().startPipelineStat(cmdBuffs[0]); }
+		if (i == 0) { VulkanProfiler::get().startGraphicsPipelineStat(cmdBuffs[0]); }
 		cmdBuffs[i]->cmdBeginRenderPass(&this->renderPass, getFramebuffers()[i].getFramebuffer(), getSwapChain()->getExtent(), clearValues, VK_SUBPASS_CONTENTS_INLINE);
 		cmdBuffs[i]->cmdBindPipeline(&getPipeline((unsigned)PO::PARTICLE));
 		sets[0] = { this->descManager.getSet(i, 0) };
@@ -96,7 +99,7 @@ void ComputeTest::init()
 		cmdBuffs[i]->cmdDraw(NUM_PARTICLES, 1, 0, 0);
 		if (i == 0) { VulkanProfiler::get().endTimestamp("Draw", cmdBuffs[0], VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT); }
 		cmdBuffs[i]->cmdEndRenderPass();
-		if (i == 0) { VulkanProfiler::get().endPipelineStat(cmdBuffs[0]); }
+		if (i == 0) { VulkanProfiler::get().endGraphicsPipelineStat(cmdBuffs[0]); }
 		cmdBuffs[i]->end();
 	}
 }
@@ -185,7 +188,7 @@ void ComputeTest::generateParticleData()
 	for (unsigned i = 0; i < NUM_PARTICLES; i++)
 	{
 		this->particles[i].position = glm::vec3(0.2f * uniform(engine), 0.2f * uniform(engine), 0.2f * uniform(engine));
-		float velocity = 0.0008f + 0.0003f * uniform(engine);
+		float velocity = 0.00008f + 0.00003f * uniform(engine);
 		float angle = 100.0f * uniform(engine);
 		this->particles[i].velocity = (velocity * glm::vec3(glm::cos(angle), glm::sin(angle), glm::sin(angle)));
 	}
