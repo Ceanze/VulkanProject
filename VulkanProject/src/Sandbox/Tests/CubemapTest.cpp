@@ -1,5 +1,5 @@
 #include "jaspch.h"
-#include "GLTFTest.h"
+#include "CubemapTest.h"
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/rotate_vector.hpp>
@@ -7,7 +7,12 @@
 
 #include "Models/GLTFLoader.h"
 
-void GLTFTest::init()
+#pragma warning(push)
+#pragma warning(disable : 4996)
+#include <stb/stb_image.h>
+#pragma warning(pop)
+
+void CubemapTest::init()
 {
 	this->graphicsCommandPool.init(CommandPool::Queue::GRAPHICS, 0);
 	this->camera = new Camera(getWindow()->getAspectRatio(), 45.f, { 0.f, 0.f, 5.f }, { 0.f, 0.f, 0.f }, 0.8f);
@@ -79,7 +84,7 @@ void GLTFTest::init()
 	setupPost();
 }
 
-void GLTFTest::loop(float dt)
+void CubemapTest::loop(float dt)
 {
 	// Update view matrix
 	this->memory.directTransfer(&this->bufferUniform, (void*)& this->camera->getMatrix()[0], sizeof(glm::mat4), (Offset)offsetof(UboData, vp));
@@ -91,8 +96,13 @@ void GLTFTest::loop(float dt)
 	this->camera->update(dt);
 }
 
-void GLTFTest::cleanup()
+void CubemapTest::cleanup()
 {
+	this->cubemapStagineBuffer.cleanup();
+	this->cubemapStagingMemory.cleanup();
+	this->cubemapTexture.cleanup();
+	this->cubemapMemory.cleanup();
+
 	this->graphicsCommandPool.cleanup();
 	this->depthTexture.cleanup();
 	this->imageMemory.cleanup();
@@ -106,7 +116,7 @@ void GLTFTest::cleanup()
 	delete this->camera;
 }
 
-void GLTFTest::setupPre()
+void CubemapTest::setupPre()
 {
 	this->descLayout.add(new SSBO(VK_SHADER_STAGE_VERTEX_BIT, 1, nullptr)); // Vertices
 	this->descLayout.add(new UBO(VK_SHADER_STAGE_VERTEX_BIT, 1, nullptr)); // Uniforms
@@ -119,7 +129,7 @@ void GLTFTest::setupPre()
 	GLTFLoader::load(filePath, &this->model);
 }
 
-void GLTFTest::setupPost()
+void CubemapTest::setupPost()
 {
 	// Set uniform data.
 	UboData uboData;
@@ -136,6 +146,8 @@ void GLTFTest::setupPost()
 
 	// Transfer the data to the buffer.
 	this->memory.directTransfer(&this->bufferUniform, (void*)& uboData, unsiformBufferSize, 0);
+
+	setupCubemap();
 
 	// Update descriptor
 	for (uint32_t i = 0; i < static_cast<uint32_t>(getSwapChain()->getNumImages()); i++)
@@ -166,4 +178,66 @@ void GLTFTest::setupPost()
 		this->cmdBuffs[i]->cmdEndRenderPass();
 		this->cmdBuffs[i]->end();
 	}
+}
+
+void CubemapTest::setupCubemap()
+{
+	std::vector<std::string> faces = {
+		"right.jpg",
+		"left.jpg",
+		"top.jpg",
+		"bottom.jpg",
+		"front.jpg",
+		"back.jpg"
+	};
+
+	// Fetch each face of the cubemap.
+	VkFormat format = VK_FORMAT_R8G8B8A8_UNORM;
+	int32_t width = 0, height = 0;
+	std::vector<stbi_uc*> data;
+	for (std::string& face : faces)
+	{
+		std::string finalFilePath = "..\\assets\\Textures\\skybox\\";
+		finalFilePath += face;
+
+		int channels;
+		stbi_uc* img = stbi_load(finalFilePath.c_str(), &width, &height, &channels, 4);
+		data.push_back(img);
+	}
+
+	// Create staging buffer.
+	uint32_t numFaces = (uint32_t)data.size();
+	uint32_t size = (uint32_t)(width * height * 4);
+	std::vector<uint32_t> queueIndices = { findQueueIndex(VK_QUEUE_GRAPHICS_BIT, Instance::get().getPhysicalDevice())};
+	this->cubemapStagineBuffer.init(size* numFaces, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, queueIndices);
+	this->cubemapStagingMemory.bindBuffer(&this->cubemapStagineBuffer);
+	this->cubemapStagingMemory.init(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+	// Transfer the data to the buffer.
+	for (uint32_t f = 0; f < numFaces; f++)
+	{
+		stbi_uc* img = data[f];
+		this->cubemapStagingMemory.directTransfer(&this->cubemapStagineBuffer, (void*)img, size, (Offset)f*size);
+		delete img;
+	}
+
+	// Create texture.
+	this->cubemapTexture.init((uint32_t)width, (uint32_t)height, format, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, queueIndices, VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT, numFaces);
+	this->cubemapMemory.bindTexture(&this->cubemapTexture);
+	this->cubemapMemory.init(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	this->cubemapTexture.getImageView().init(this->cubemapTexture.getVkImage(), VK_IMAGE_VIEW_TYPE_CUBE, format, VK_IMAGE_ASPECT_COLOR_BIT, numFaces);
+
+	// Transistion image
+	/*Image::TransistionDesc desc;
+	desc.format = format;
+	desc.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	desc.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+	desc.pool = &this->graphicsCommandPool;
+	Image& image = this->texture.getImage();
+	image.transistionLayout(desc);
+	image.copyBufferToImage(&this->stagingBuffer, &this->transferCommandPool);
+	desc.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+	desc.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	image.transistionLayout(desc);
+	*/
 }

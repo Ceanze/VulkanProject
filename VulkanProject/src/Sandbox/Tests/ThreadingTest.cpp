@@ -41,14 +41,14 @@ void ThreadingTest::init()
 	VkFormat depthFormat = findDepthFormat(Instance::get().getPhysicalDevice());
 	std::vector<uint32_t> queueIndices = { findQueueIndex(VK_QUEUE_GRAPHICS_BIT, Instance::get().getPhysicalDevice()) };
 	this->depthTexture.init(getSwapChain()->getExtent().width, getSwapChain()->getExtent().height,
-		depthFormat, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, queueIndices);
+		depthFormat, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, queueIndices, 0, 1);
 
 	// Bind image to memory.
 	this->imageMemory.bindTexture(&this->depthTexture);
 	this->imageMemory.init(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
 	// Create image view for the depth texture.
-	this->depthTexture.getImageView().init(this->depthTexture.getVkImage(), VK_IMAGE_VIEW_TYPE_2D, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
+	this->depthTexture.getImageView().init(this->depthTexture.getVkImage(), VK_IMAGE_VIEW_TYPE_2D, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
 
 	// Transistion image
 	Image::TransistionDesc desc;

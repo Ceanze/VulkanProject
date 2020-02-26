@@ -13,7 +13,7 @@ Image::~Image()
 {
 }
 
-void Image::init(uint32_t width, uint32_t height, VkFormat format, VkImageUsageFlags usage, const std::vector<uint32_t>& queueFamilyIndices)
+void Image::init(uint32_t width, uint32_t height, VkFormat format, VkImageUsageFlags usage, const std::vector<uint32_t>& queueFamilyIndices, VkImageCreateFlags flags, uint32_t arrayLayers)
 {
 	this->width = width;
 	this->height = height;
@@ -25,7 +25,7 @@ void Image::init(uint32_t width, uint32_t height, VkFormat format, VkImageUsageF
 	imageInfo.extent.height = height;
 	imageInfo.extent.depth = 1;
 	imageInfo.mipLevels = 1;
-	imageInfo.arrayLayers = 1;
+	imageInfo.arrayLayers = arrayLayers;
 	imageInfo.format = format;
 	//If you want to be able to directly access texels in the memory of the image, then you must use VK_IMAGE_TILING_LINEAR
 	imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
@@ -40,6 +40,7 @@ void Image::init(uint32_t width, uint32_t height, VkFormat format, VkImageUsageF
 
 	imageInfo.queueFamilyIndexCount = static_cast<uint32_t>(queueFamilyIndices.size());
 	imageInfo.pQueueFamilyIndices = queueFamilyIndices.data();
+	imageInfo.flags = flags;
 
 
 	ERROR_CHECK(vkCreateImage(Instance::get().getDevice(), &imageInfo, nullptr, &this->image), "Failed to create image!");

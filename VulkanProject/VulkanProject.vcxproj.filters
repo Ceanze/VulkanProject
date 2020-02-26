@@ -149,6 +149,7 @@
     </ClInclude>
     <ClInclude Include="src\jaspch.h" />
     <ClInclude Include="src\Core\CPUProfiler.h" />
+    <ClInclude Include="src\Sandbox\Tests\CubemapTest.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Core\Camera.cpp">
@@ -259,5 +260,6 @@
     <ClCompile Include="src\jaspch.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\Core\CPUProfiler.cpp" />
+    <ClCompile Include="src\Sandbox\Tests\CubemapTest.cpp" />
   </ItemGroup>
 </Project>
