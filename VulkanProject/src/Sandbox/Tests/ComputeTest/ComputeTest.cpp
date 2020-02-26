@@ -44,7 +44,7 @@ void ComputeTest::init()
 	VulkanProfiler::get().addTimestamp("Dispatch");
 	VulkanProfiler::get().addTimestamp("Draw");
 
-	for (int i = 0; i < getSwapChain()->getNumImages(); i++) {
+	for (int i = 0; i < (int)getSwapChain()->getNumImages(); i++) {
 		cmdBuffs[i] = this->commandPool.createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 		cmdBuffs[i]->begin(0, nullptr);
 
@@ -74,7 +74,7 @@ void ComputeTest::init()
 		if (i == 0) { VulkanProfiler::get().startComputePipelineStat(cmdBuffs[0]); }
 		const size_t NUM_PARTICLES_PER_WORKGROUP = 16;
 		if (i == 0) { VulkanProfiler::get().startTimestamp("Dispatch", cmdBuffs[0], VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT); }
-		cmdBuffs[i]->cmdDispatch(std::ceilf((float)this->particles.size() / NUM_PARTICLES_PER_WORKGROUP), 1, 1);
+		cmdBuffs[i]->cmdDispatch((uint32_t)std::ceilf((float)this->particles.size() / NUM_PARTICLES_PER_WORKGROUP), 1, 1);
 		if (i == 0) { VulkanProfiler::get().endTimestamp("Dispatch", cmdBuffs[0], VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT); }
 		if (i == 0) { VulkanProfiler::get().endComputePipelineStat(cmdBuffs[0]); }
 
@@ -175,7 +175,7 @@ void ComputeTest::updateBufferDescs()
 	{
 		this->descManager.updateBufferDesc(0, 0, this->particleBuffer.getBuffer(), 0, sizeof(Particle) * this->particles.size());
 		this->descManager.updateBufferDesc(0, 1, this->camBuffer.getBuffer(), 0, sizeof(glm::mat4));
-		this->descManager.updateSets({ 0 }, i);
+		this->descManager.updateSets({ 0 }, (uint32_t)i);
 	}
 }
 
@@ -196,7 +196,7 @@ void ComputeTest::generateParticleData()
 	std::vector<uint32_t> queueIndices = { findQueueIndex(VK_QUEUE_COMPUTE_BIT, Instance::get().getPhysicalDevice()) };
 
 	// Create buffer
-	uint32_t size = sizeof(Particle) * this->particles.size();
+	uint32_t size = (uint32_t)(sizeof(Particle) * this->particles.size());
 	this->particleBuffer.init(size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, queueIndices);
 
 	// Create memory
@@ -210,7 +210,7 @@ void ComputeTest::generateParticleData()
 	for (size_t i = 0; i < getSwapChain()->getNumImages(); i++)
 	{
 		this->descManager.updateBufferDesc(1, 0, this->particleBuffer.getBuffer(), 0, size);
-		this->descManager.updateSets({1}, i);
+		this->descManager.updateSets({1}, (uint32_t)i);
 	}
 }
 
