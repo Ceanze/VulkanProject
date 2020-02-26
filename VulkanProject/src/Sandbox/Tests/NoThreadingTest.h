@@ -10,9 +10,8 @@
 #include "Vulkan/Sampler.h"
 #include "Vulkan/Pipeline/PushConstants.h"
 #include "Models/Model/Model.h"
-#include "Threading/ThreadManager.h"
 
-class ThreadingTest : public VKSandboxBase
+class NoThreadingTest : public VKSandboxBase
 {
 public:
 	void init() override;
@@ -34,18 +33,8 @@ private:
 		glm::vec4 tint;
 	};
 
-	// Data per thread.
-	struct ThreadData
-	{
-		CommandPool cmdPool;
-		std::vector<std::vector<CommandBuffer*>> cmdBuffs;
-		std::vector<uint32_t> activeBuffers;
-		std::vector<ObjectData> objects;
-		std::vector<PushConstants> pushConstants;
-	};
-
 	void prepareBuffers();
-	void recordThread(uint32_t threadId, uint32_t frameIndex, VkCommandBufferInheritanceInfo inheritanceInfo);
+	void recordThread(uint32_t frameIndex);
 	void updateBuffers(uint32_t frameIndex, float dt);
 
 	void setupPre();
@@ -72,8 +61,6 @@ private:
 	Texture depthTexture;
 	Memory imageMemory; // Holds depth texture
 
-	uint32_t numThreads;
-	ThreadManager threadManager;
 	std::vector<PushConstants> pushConstants;
-	std::vector<ThreadData> threadData;
+	std::vector<ObjectData> objects;
 };

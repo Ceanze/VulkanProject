@@ -1,5 +1,5 @@
 #include "jaspch.h"
-#include "ThreadingTest.h"
+#include "NoThreadingTest.h"
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/rotate_vector.hpp>
@@ -10,12 +10,11 @@
 
 #include "Models/GLTFLoader.h"
 
-void ThreadingTest::init()
+void NoThreadingTest::init()
 {
 	VulkanProfiler::get().init(60, 60, VulkanProfiler::TimeUnit::MICRO);
-	VulkanProfiler::get().createTimestamps(14);
-	for(uint32_t t = 0; t < 7; t++)
-		VulkanProfiler::get().addTimestamp("RecordThread_" + std::to_string(t));
+	VulkanProfiler::get().createTimestamps(2);
+	VulkanProfiler::get().addTimestamp("Main thread");
 
 	this->graphicsCommandPool.init(CommandPool::Queue::GRAPHICS, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
 	this->transferCommandPool.init(CommandPool::Queue::TRANSFER, 0);
@@ -33,7 +32,7 @@ void ThreadingTest::init()
 	subpassInfo.colorAttachmentIndices = { 0 }; // One color attachment
 	subpassInfo.depthStencilAttachmentIndex = 1; // Depth attachment
 	this->renderPass.addSubpass(subpassInfo);
-	
+
 	VkSubpassDependency subpassDependency = {};
 	subpassDependency.srcSubpass = VK_SUBPASS_EXTERNAL;
 	subpassDependency.dstSubpass = 0;
@@ -89,7 +88,7 @@ void ThreadingTest::init()
 	setupPost();
 }
 
-void ThreadingTest::loop(float dt)
+void NoThreadingTest::loop(float dt)
 {
 	JAS_PROFILER_SAMPLE_FUNCTION();
 	static uint32_t frameCount = 0;
@@ -110,7 +109,7 @@ void ThreadingTest::loop(float dt)
 			Instrumentation::g_runProfilingSample = false;
 		}
 	}
-	
+
 	getFrame()->beginFrame(dt);
 	updateBuffers(getFrame()->getCurrentImageIndex(), dt);
 
@@ -120,7 +119,7 @@ void ThreadingTest::loop(float dt)
 	this->camera->update(dt);
 }
 
-void ThreadingTest::cleanup()
+void NoThreadingTest::cleanup()
 {
 	VulkanProfiler::get().cleanup();
 	this->stagingBuffer.cleanup();
@@ -128,8 +127,6 @@ void ThreadingTest::cleanup()
 	this->transferCommandPool.cleanup();
 
 	delete this->camera;
-	for (ThreadData& tData : this->threadData)
-		tData.cmdPool.cleanup();
 	this->graphicsCommandPool.cleanup();
 	this->depthTexture.cleanup();
 	this->imageMemory.cleanup();
@@ -140,11 +137,8 @@ void ThreadingTest::cleanup()
 	this->shader.cleanup();
 }
 
-void ThreadingTest::prepareBuffers()
+void NoThreadingTest::prepareBuffers()
 {
-	this->numThreads = this->threadManager.getMaxNumConcurrentThreads()-1;
-	this->threadManager.init(this->numThreads);
-
 	// Utils function for random numbers.
 	std::srand((unsigned int)std::time(NULL));
 	auto rnd11 = [](int precision = 10000) { return (float)(std::rand() % precision) / (float)precision; };
@@ -152,80 +146,61 @@ void ThreadingTest::prepareBuffers()
 	static float RAD_PER_DEG = glm::pi<float>() / 180.f;
 
 	static float RANGE = 15.f;
-	static uint32_t NUM_OBJECTS = 1000;
+	static uint32_t NUM_OBJECTS = 155;
 
 	// Create primary command buffers, one per swap chain image.
 	this->primaryBuffers = this->graphicsCommandPool.createCommandBuffers(getSwapChain()->getNumImages(), VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 
-	this->threadData.resize(this->numThreads);
-	for (uint32_t t = 0; t < this->numThreads; t++)
+	// Set the objects which the thread will render.
+	glm::vec4 threadColor(rnd11(), rnd11(), rnd11(), 1.0f);
+	for (uint32_t i = 0; i < NUM_OBJECTS; i++)
 	{
-		// Create secondary buffers.
-		ThreadData& tData = this->threadData[t];
-		tData.cmdPool.init(CommandPool::Queue::GRAPHICS, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
-		tData.cmdBuffs.resize(getSwapChain()->getNumImages());
-		for (uint32_t f = 0; f < getSwapChain()->getNumImages(); f++)
-			tData.cmdBuffs[f] = tData.cmdPool.createCommandBuffers(2, VK_COMMAND_BUFFER_LEVEL_SECONDARY);
-		tData.activeBuffers.resize(getSwapChain()->getNumImages(), 0);
-
-		// Set the objects which the thread will render.
-		glm::vec4 threadColor(rnd11(), rnd11(), rnd11(), 1.0f);
-		uint32_t numObjsPerThread = (uint32_t)ceil((float)NUM_OBJECTS / (float)this->numThreads);
-		for (uint32_t i = 0; i < numObjsPerThread; i++)
-		{
-			ObjectData obj;
-			obj.model = glm::translate(glm::mat4(1.0f), { rnd(-RANGE, RANGE), rnd(-RANGE, RANGE), rnd(-RANGE, RANGE) });
-			obj.model = glm::rotate(obj.model, RAD_PER_DEG * rnd(0.0f, 90.f), glm::normalize(glm::vec3(1, 0.0f, 0.0f)));
-			obj.model = glm::rotate(obj.model, RAD_PER_DEG * rnd(0.0f, 90.f), glm::normalize(glm::vec3(0, 1.0f, 0.0f)));
-			obj.model = glm::rotate(obj.model, RAD_PER_DEG * rnd(0.0f, 90.f), glm::normalize(glm::vec3(0, 0.0f, 1.0f)));
-			obj.model = glm::scale(obj.model, glm::vec3(rnd(0.1f, 1.0f), rnd(0.1f, 1.0f), rnd(0.1f, 1.0f)));
-			obj.tint = threadColor;
-			tData.objects.push_back(obj);
-		}
-
-		// Create push constants
-		PushConstants pushConsts;
-		pushConsts.setLayout(VK_SHADER_STAGE_VERTEX_BIT, sizeof(PushConstantData), 0);
-		tData.pushConstants.push_back(pushConsts);
+		ObjectData obj;
+		obj.model = glm::translate(glm::mat4(1.0f), { rnd(-RANGE, RANGE), rnd(-RANGE, RANGE), rnd(-RANGE, RANGE) });
+		obj.model = glm::rotate(obj.model, RAD_PER_DEG * rnd(0.0f, 90.f), glm::normalize(glm::vec3(1, 0.0f, 0.0f)));
+		obj.model = glm::rotate(obj.model, RAD_PER_DEG * rnd(0.0f, 90.f), glm::normalize(glm::vec3(0, 1.0f, 0.0f)));
+		obj.model = glm::rotate(obj.model, RAD_PER_DEG * rnd(0.0f, 90.f), glm::normalize(glm::vec3(0, 0.0f, 1.0f)));
+		obj.model = glm::scale(obj.model, glm::vec3(rnd(0.1f, 1.0f), rnd(0.1f, 1.0f), rnd(0.1f, 1.0f)));
+		obj.tint = threadColor;
+		this->objects.push_back(obj);
 	}
+
+	// Create push constants
+	PushConstants pushConsts;
+	pushConsts.setLayout(VK_SHADER_STAGE_VERTEX_BIT, sizeof(PushConstantData), 0);
+	this->pushConstants.push_back(pushConsts);
 }
 
-void ThreadingTest::recordThread(uint32_t threadId, uint32_t frameIndex, VkCommandBufferInheritanceInfo inheritanceInfo)
+void NoThreadingTest::recordThread(uint32_t frameIndex)
 {
 	JAS_PROFILER_SAMPLE_FUNCTION();
-	ThreadData& tData = this->threadData[threadId];
-	uint32_t currentBuffers = tData.activeBuffers[frameIndex] ^ 1;
-	CommandBuffer* cmdBuff = tData.cmdBuffs[frameIndex][currentBuffers];
 
 	// Does not need to begin render pass because it inherits it form its primary command buffer.
-	cmdBuff->begin(VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, &inheritanceInfo);
-	VulkanProfiler::get().startTimestamp("RecordThread_" + std::to_string(threadId), cmdBuff, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
-	cmdBuff->cmdBindPipeline(&this->pipeline); // Think I need to do this, don't think this is inherited.
+	VulkanProfiler::get().startTimestamp("Main thread", this->primaryBuffers[frameIndex], VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
+	this->primaryBuffers[frameIndex]->cmdBindPipeline(&this->pipeline); // Think I need to do this, don't think this is inherited.
 
-	const uint32_t numObjs = static_cast<uint32_t>(tData.objects.size());
-	for (uint32_t i = 0; i < numObjs; i++)
+	for (uint32_t i = 0; i < 155; i++)
 	{
 		JAS_PROFILER_SAMPLE_SCOPE("Obj_" + std::to_string(i));
-		ObjectData& objData = tData.objects[i];
+		ObjectData & objData = this->objects[i];
 
 		// Apply push constants
 		PushConstantData pData;
 		pData.vp = this->camera->getMatrix();
 		pData.tint = objData.tint;
 		pData.mw = objData.world * objData.model;
-		tData.pushConstants[0].setDataPtr(&pData);
-		cmdBuff->cmdPushConstants(&this->pipeline, &tData.pushConstants[0]);
+		this->pushConstants[0].setDataPtr(&pData);
+		this->primaryBuffers[frameIndex]->cmdPushConstants(&this->pipeline, &this->pushConstants[0]);
 
 		// Draw model
 		std::vector<VkDescriptorSet> sets = { this->descManager.getSet(frameIndex, 0) };
 		std::vector<uint32_t> offsets;
-		GLTFLoader::recordDraw(&this->model, cmdBuff, &this->pipeline, sets, offsets); // Might need a model for each thread.
+		GLTFLoader::recordDraw(&this->model, this->primaryBuffers[frameIndex], &this->pipeline, sets, offsets); // Might need a model for each thread.
 	}
-	VulkanProfiler::get().endTimestamp("RecordThread_" + std::to_string(threadId), cmdBuff, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
-	cmdBuff->end();
+	VulkanProfiler::get().endTimestamp("Main thread", this->primaryBuffers[frameIndex], VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
 }
 
-void ThreadingTest::updateBuffers(uint32_t frameIndex, float dt)
+void NoThreadingTest::updateBuffers(uint32_t frameIndex, float dt)
 {
 	JAS_PROFILER_SAMPLE_FUNCTION();
 
@@ -238,42 +213,16 @@ void ThreadingTest::updateBuffers(uint32_t frameIndex, float dt)
 	clearValues.push_back(value);
 	value.depthStencil = { 1.0f, 0 };
 	clearValues.push_back(value);
-	this->primaryBuffers[frameIndex]->cmdBeginRenderPass(&this->renderPass, getFramebuffers()[frameIndex].getFramebuffer(), getSwapChain()->getExtent(), clearValues, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+	this->primaryBuffers[frameIndex]->cmdBeginRenderPass(&this->renderPass, getFramebuffers()[frameIndex].getFramebuffer(), 
+		getSwapChain()->getExtent(), clearValues, VK_SUBPASS_CONTENTS_INLINE);
 
-	VkCommandBufferInheritanceInfo inheritanceInfo = {};
-	inheritanceInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
-	inheritanceInfo.renderPass = this->renderPass.getRenderPass();
-	inheritanceInfo.framebuffer = getFramebuffers()[frameIndex].getFramebuffer();
-	inheritanceInfo.subpass = 0;
-
-
-
-	
-	if (this->threadManager.isDone())
-	{
-		for (uint32_t t = 0; t < this->numThreads; t++)
-		{
-			// Add work to a specific thread, the thread has a queue which it will go through.
-			this->threadManager.addWork(t, [=] { recordThread(t, frameIndex, inheritanceInfo); });
-		}
-	}
-
-	//{
-	//	JAS_PROFILER_SAMPLE_SCOPE("Thread wait");
-	//	this->threadManager.wait();
-	//}
-
-	std::vector<VkCommandBuffer> commandBuffers;
-	for (ThreadData& tData : this->threadData)
-		commandBuffers.push_back(tData.cmdBuffs[frameIndex][tData.activeBuffers[frameIndex]]->getCommandBuffer());
-
-	this->primaryBuffers[frameIndex]->cmdExecuteCommands(static_cast<uint32_t>(commandBuffers.size()), commandBuffers.data());
+	recordThread(frameIndex);
 
 	this->primaryBuffers[frameIndex]->cmdEndRenderPass();
 	this->primaryBuffers[frameIndex]->end();
 }
 
-void ThreadingTest::setupPre()
+void NoThreadingTest::setupPre()
 {
 	this->descLayout.add(new SSBO(VK_SHADER_STAGE_VERTEX_BIT, 1, nullptr)); // Vertices
 	this->descLayout.init();
@@ -290,7 +239,7 @@ void ThreadingTest::setupPre()
 	this->pushConstants.push_back(pushConsts);
 }
 
-void ThreadingTest::setupPost()
+void NoThreadingTest::setupPost()
 {
 	// Update descriptor
 	for (uint32_t i = 0; i < getSwapChain()->getNumImages(); i++)

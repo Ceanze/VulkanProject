@@ -3,6 +3,7 @@
 #include <chrono>
 #include <string>
 #include <fstream>
+#include <mutex>
 
 #ifdef JAS_DEBUG
 	#define JAS_PROFILER_BEGIN_SESSION(name, fileName) Instrumentation::get().beginSession(name, fileName)
@@ -49,6 +50,7 @@ public:
 	{
 		std::string name;
 		long long start, end;
+		size_t tid = 0;
 	};
 	Instrumentation();
 	~Instrumentation();
@@ -65,6 +67,7 @@ public:
 	static bool g_runProfilingSample;
 
 private:
+	std::mutex mutex;
 	std::ofstream file;
 	unsigned long long counter;
 };

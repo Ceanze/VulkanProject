@@ -112,6 +112,7 @@
     <ClInclude Include="src\Sandbox\SandboxManager.h" />
     <ClInclude Include="src\Sandbox\Tests\ComputeTest\ComputeTest.h" />
     <ClInclude Include="src\Sandbox\Tests\GLTFTest.h" />
+    <ClInclude Include="src\Sandbox\Tests\NoThreadingTest.h" />
     <ClInclude Include="src\Sandbox\Tests\RenderTest.h" />
     <ClInclude Include="src\Sandbox\Tests\ThreadingTest.h" />
     <ClInclude Include="src\Sandbox\Tests\TransferTest.h" />
@@ -154,6 +155,7 @@
     <ClCompile Include="src\Sandbox\SandboxManager.cpp" />
     <ClCompile Include="src\Sandbox\Tests\ComputeTest\ComputeTest.cpp" />
     <ClCompile Include="src\Sandbox\Tests\GLTFTest.cpp" />
+    <ClCompile Include="src\Sandbox\Tests\NoThreadingTest.cpp" />
     <ClCompile Include="src\Sandbox\Tests\RenderTest.cpp" />
     <ClCompile Include="src\Sandbox\Tests\ThreadingTest.cpp" />
     <ClCompile Include="src\Sandbox\Tests\TransferTest.cpp" />

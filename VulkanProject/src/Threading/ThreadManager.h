@@ -30,6 +30,8 @@ public:
 	// Wait for all threads to have no work left.
 	void wait();
 
+	bool isDone();
+
 private:
 	struct Thread
 	{
@@ -41,6 +43,7 @@ private:
 		// Wait for the thread to be done with the queue.
 		void wait();
 
+		bool isDone();
 	private:
 		void threadLoop();
 

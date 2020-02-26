@@ -38,6 +38,15 @@ void ThreadManager::wait()
 		thread->wait();
 }
 
+bool ThreadManager::isDone()
+{
+	bool ret = true;
+	for (Thread* thread : this->threads)
+		if (thread->isDone() == false) 
+			ret = false;
+	return ret;
+}
+
 ThreadManager::Thread::Thread()
 {
 	this->worker = std::thread(&ThreadManager::Thread::threadLoop, this);
@@ -70,6 +79,12 @@ void ThreadManager::Thread::wait()
 {
 	std::unique_lock<std::mutex> lock(this->mutex);
 	this->condition.wait(lock, [this]() { return this->queue.empty(); });
+}
+
+bool ThreadManager::Thread::isDone()
+{
+	std::lock_guard<std::mutex> lock(this->mutex);
+	return this->queue.empty();
 }
 
 void ThreadManager::Thread::threadLoop()
