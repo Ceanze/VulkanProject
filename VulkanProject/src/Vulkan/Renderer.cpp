@@ -27,7 +27,7 @@ void Renderer::init()
 {
 	Logger::init();
 
-	this->window.init(1280, 720, "Vulkan Project");
+	this->window.init(1280, 720, "Vulkan Project", false);
 
 	this->camera = new Camera(this->window.getAspectRatio(), 45.f, { 0.f, 0.f, 1.f }, { 0.f, 0.f, 0.f }, 0.8f);
 

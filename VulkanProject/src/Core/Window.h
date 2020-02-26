@@ -11,7 +11,7 @@ public:
 	Window(const Window&) = delete;
 	Window& operator=(const Window&) = delete;
 
-	void init(unsigned width, unsigned height, const std::string& title);
+	void init(unsigned width, unsigned height, const std::string& title, bool fullscreen);
 	void cleanup();
 
 	void setTitle(const std::string& title);
