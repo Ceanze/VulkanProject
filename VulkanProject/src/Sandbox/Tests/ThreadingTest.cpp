@@ -13,9 +13,9 @@
 void ThreadingTest::init()
 {
 	VulkanProfiler::get().init(60, 60, VulkanProfiler::TimeUnit::MICRO);
-	VulkanProfiler::get().createTimestamps(14);
-	for(uint32_t t = 0; t < 7; t++)
-		VulkanProfiler::get().addTimestamp("RecordThread_" + std::to_string(t));
+	//VulkanProfiler::get().createTimestamps(14);
+	//for(uint32_t t = 0; t < 7; t++)
+	//	VulkanProfiler::get().addTimestamp("RecordThread_" + std::to_string(t));
 
 	this->graphicsCommandPool.init(CommandPool::Queue::GRAPHICS, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
 	this->transferCommandPool.init(CommandPool::Queue::TRANSFER, 0);
@@ -129,7 +129,10 @@ void ThreadingTest::cleanup()
 
 	delete this->camera;
 	for (ThreadData& tData : this->threadData)
+	{
+		delete tData.mutex;
 		tData.cmdPool.cleanup();
+	}
 	this->graphicsCommandPool.cleanup();
 	this->depthTexture.cleanup();
 	this->imageMemory.cleanup();
@@ -143,7 +146,7 @@ void ThreadingTest::cleanup()
 void ThreadingTest::prepareBuffers()
 {
 	this->numThreads = this->threadManager.getMaxNumConcurrentThreads()-1;
-	this->threadManager.init(this->numThreads);
+	this->threadManager.init(this->numThreads, getSwapChain()->getNumImages());
 
 	// Utils function for random numbers.
 	std::srand((unsigned int)std::time(NULL));
@@ -167,6 +170,7 @@ void ThreadingTest::prepareBuffers()
 		for (uint32_t f = 0; f < getSwapChain()->getNumImages(); f++)
 			tData.cmdBuffs[f] = tData.cmdPool.createCommandBuffers(2, VK_COMMAND_BUFFER_LEVEL_SECONDARY);
 		tData.activeBuffers.resize(getSwapChain()->getNumImages(), 0);
+		tData.mutex = new std::mutex();
 
 		// Set the objects which the thread will render.
 		glm::vec4 threadColor(rnd11(), rnd11(), rnd11(), 1.0f);
@@ -194,12 +198,16 @@ void ThreadingTest::recordThread(uint32_t threadId, uint32_t frameIndex, VkComma
 {
 	JAS_PROFILER_SAMPLE_FUNCTION();
 	ThreadData& tData = this->threadData[threadId];
-	uint32_t currentBuffers = tData.activeBuffers[frameIndex] ^ 1;
-	CommandBuffer* cmdBuff = tData.cmdBuffs[frameIndex][currentBuffers];
+	CommandBuffer* cmdBuff = nullptr;
+	{
+		std::lock_guard<std::mutex> lock(*tData.mutex);
+		cmdBuff = tData.cmdBuffs[frameIndex][tData.activeBuffers[frameIndex]];
+		tData.activeBuffers[frameIndex] ^= 1;
+	}
 
 	// Does not need to begin render pass because it inherits it form its primary command buffer.
 	cmdBuff->begin(VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, &inheritanceInfo);
-	VulkanProfiler::get().startTimestamp("RecordThread_" + std::to_string(threadId), cmdBuff, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
+	//VulkanProfiler::get().startTimestamp("RecordThread_" + std::to_string(threadId), cmdBuff, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
 	cmdBuff->cmdBindPipeline(&this->pipeline); // Think I need to do this, don't think this is inherited.
 
 	const uint32_t numObjs = static_cast<uint32_t>(tData.objects.size());
@@ -221,7 +229,7 @@ void ThreadingTest::recordThread(uint32_t threadId, uint32_t frameIndex, VkComma
 		std::vector<uint32_t> offsets;
 		GLTFLoader::recordDraw(&this->model, cmdBuff, &this->pipeline, sets, offsets); // Might need a model for each thread.
 	}
-	VulkanProfiler::get().endTimestamp("RecordThread_" + std::to_string(threadId), cmdBuff, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
+	//VulkanProfiler::get().endTimestamp("RecordThread_" + std::to_string(threadId), cmdBuff, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
 	cmdBuff->end();
 }
 
@@ -231,7 +239,7 @@ void ThreadingTest::updateBuffers(uint32_t frameIndex, float dt)
 
 	// Record command buffers
 	this->primaryBuffers[frameIndex]->begin(0, nullptr);
-	VulkanProfiler::get().resetAllTimestamps(this->primaryBuffers[frameIndex]);
+	//VulkanProfiler::get().resetAllTimestamps(this->primaryBuffers[frameIndex]);
 	std::vector<VkClearValue> clearValues = {};
 	VkClearValue value;
 	value.color = { 0.0f, 0.0f, 0.0f, 1.0f };
@@ -245,16 +253,13 @@ void ThreadingTest::updateBuffers(uint32_t frameIndex, float dt)
 	inheritanceInfo.renderPass = this->renderPass.getRenderPass();
 	inheritanceInfo.framebuffer = getFramebuffers()[frameIndex].getFramebuffer();
 	inheritanceInfo.subpass = 0;
-
-
-
 	
-	if (this->threadManager.isDone())
+	if (this->threadManager.isDone(frameIndex))
 	{
 		for (uint32_t t = 0; t < this->numThreads; t++)
 		{
 			// Add work to a specific thread, the thread has a queue which it will go through.
-			this->threadManager.addWork(t, [=] { recordThread(t, frameIndex, inheritanceInfo); });
+			this->threadManager.addWork(t, frameIndex, [=] { recordThread(t, frameIndex, inheritanceInfo); });
 		}
 	}
 
@@ -265,7 +270,10 @@ void ThreadingTest::updateBuffers(uint32_t frameIndex, float dt)
 
 	std::vector<VkCommandBuffer> commandBuffers;
 	for (ThreadData& tData : this->threadData)
+	{
+		std::lock_guard<std::mutex> lock(*tData.mutex);
 		commandBuffers.push_back(tData.cmdBuffs[frameIndex][tData.activeBuffers[frameIndex]]->getCommandBuffer());
+	}
 
 	this->primaryBuffers[frameIndex]->cmdExecuteCommands(static_cast<uint32_t>(commandBuffers.size()), commandBuffers.data());
 

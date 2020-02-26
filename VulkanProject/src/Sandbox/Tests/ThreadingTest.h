@@ -11,6 +11,7 @@
 #include "Vulkan/Pipeline/PushConstants.h"
 #include "Models/Model/Model.h"
 #include "Threading/ThreadManager.h"
+#include <mutex>
 
 class ThreadingTest : public VKSandboxBase
 {
@@ -40,6 +41,7 @@ private:
 		CommandPool cmdPool;
 		std::vector<std::vector<CommandBuffer*>> cmdBuffs;
 		std::vector<uint32_t> activeBuffers;
+		std::mutex* mutex;
 		std::vector<ObjectData> objects;
 		std::vector<PushConstants> pushConstants;
 	};
