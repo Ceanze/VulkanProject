@@ -5,6 +5,8 @@
 void HeightmapTest::init()
 {
 	this->camera = new Camera(getWindow()->getAspectRatio(), 45.f, { 0.f, 0.f, 1.f }, { 0.f, 0.f, 0.f }, 0.8f);
+	
+	this->commandPool.init(CommandPool::Queue::GRAPHICS, 0);
 
 	setupDescriptors();
 
@@ -14,7 +16,6 @@ void HeightmapTest::init()
 	initGraphicsPipeline();
 	JAS_INFO("Created Graphics Pipeline!");
 
-	this->commandPool.init(CommandPool::Queue::GRAPHICS, 0);
 
 	// Depth texture
 	VkFormat depthFormat = findDepthFormat(Instance::get().getPhysicalDevice());
@@ -65,6 +66,9 @@ void HeightmapTest::init()
 void HeightmapTest::loop(float dt)
 {
 	this->memory.directTransfer(&this->camBuffer, (void*)&this->camera->getMatrix()[0], sizeof(glm::mat4), 0);
+	static float time = 0.0f;
+	time += dt;
+	this->memory.directTransfer(&this->camBuffer, (void*)&time, sizeof(float), sizeof(glm::mat4));
 
 	getFrame()->beginFrame();
 
@@ -83,10 +87,13 @@ void HeightmapTest::cleanup()
 
 	this->depthTexture.cleanup();
 	// Compute
+	this->stagingBuffer.cleanup();
+	this->stagingBuffer2.cleanup();
 	this->indexBuffer.cleanup();
 	this->heightBuffer.cleanup();
 	this->camBuffer.cleanup();
 	this->memory.cleanup();
+	this->deviceMemory.cleanup();
 	this->imageMemory.cleanup();
 	this->commandPool.cleanup();
 
@@ -111,7 +118,7 @@ void HeightmapTest::setupDescriptors()
 	this->descManager.addLayout(this->descLayout);
 
 	this->descManager.init(getSwapChain()->getNumImages());
-
+	
 	generateHeightmapData();
 	updateBufferDescs();
 }
@@ -125,24 +132,42 @@ void HeightmapTest::updateBufferDescs()
 
 	VkDeviceSize sizeHM = hmData.verticies.size() * sizeof(glm::vec4);
 	VkDeviceSize sizeIndex = hmData.indicies.size() * sizeof(unsigned int);
-	this->indexBuffer.init(sizeIndex, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, queueIndices);
-	this->heightBuffer.init(sizeHM, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, queueIndices);
-	this->camBuffer.init(sizeof(glm::mat4), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, queueIndices);
+	this->stagingBuffer.init(sizeHM, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, queueIndices);
+	this->heightBuffer.init(sizeHM, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, queueIndices);
+	this->stagingBuffer2.init(sizeIndex, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, queueIndices);
+	this->indexBuffer.init(sizeIndex, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, queueIndices);
+	this->camBuffer.init(sizeof(glm::mat4) + sizeof(float), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, queueIndices);
 
-	this->memory.bindBuffer(&this->indexBuffer);
-	this->memory.bindBuffer(&this->heightBuffer);
+	this->memory.bindBuffer(&this->stagingBuffer);
+	this->memory.bindBuffer(&this->stagingBuffer2);
 	this->memory.bindBuffer(&this->camBuffer);
 	this->memory.init(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
-	this->memory.directTransfer(&this->indexBuffer, (void*)hmData.indicies.data(), sizeIndex, 0);
-	this->memory.directTransfer(&this->heightBuffer, (void*)hmData.verticies.data(), sizeHM, 0);
+	this->deviceMemory.bindBuffer(&this->indexBuffer);
+	this->deviceMemory.bindBuffer(&this->heightBuffer);
+	this->deviceMemory.init(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+	this->memory.directTransfer(&this->stagingBuffer, (void*)hmData.verticies.data(), sizeHM, 0);
+	this->memory.directTransfer(&this->stagingBuffer2, (void*)hmData.indicies.data(), sizeIndex, 0);
 	this->memory.directTransfer(&this->camBuffer, (void*)&this->camera->getMatrix()[0], sizeof(glm::mat4), 0);
+
+	// Copy heigh map to device local memory
+	CommandBuffer* commandBuffer = this->commandPool.beginSingleTimeCommand();
+	VkBufferCopy regions = {};
+	regions.srcOffset = 0;
+	regions.dstOffset = 0;
+	regions.size = sizeHM;
+	commandBuffer->cmdCopyBuffer(this->stagingBuffer.getBuffer(), this->heightBuffer.getBuffer(), 1, &regions);
+	regions.size = sizeIndex;
+	commandBuffer->cmdCopyBuffer(this->stagingBuffer2.getBuffer(), this->indexBuffer.getBuffer(), 1, &regions);
+
+	this->commandPool.endSingleTimeCommand(commandBuffer);
 
 	// Update descriptor
 	for (uint32_t i = 0; i < getSwapChain()->getNumImages(); i++)
 	{
 		this->descManager.updateBufferDesc(0, 0, this->heightBuffer.getBuffer(), 0, sizeHM);
-		this->descManager.updateBufferDesc(0, 1, this->camBuffer.getBuffer(), 0, sizeof(glm::mat4));
+		this->descManager.updateBufferDesc(0, 1, this->camBuffer.getBuffer(), 0, sizeof(glm::mat4) + sizeof(float));
 		this->descManager.updateSets({ 0, 1 }, i);
 	}
 }

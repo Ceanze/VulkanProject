@@ -41,10 +41,13 @@ private:
 
 	Heightmap heightmap;
 	Buffer indexBuffer;
+	Buffer stagingBuffer;
+	Buffer stagingBuffer2;
 	Buffer heightBuffer;
 	Camera* camera;
 	Buffer camBuffer;
 	Memory memory;
+	Memory deviceMemory;
 
 	Texture depthTexture;
 	Memory imageMemory;
