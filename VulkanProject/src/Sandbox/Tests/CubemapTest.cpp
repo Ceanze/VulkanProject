@@ -67,21 +67,10 @@ void CubemapTest::init()
 	desc.pool = &this->graphicsCommandPool;
 	this->depthTexture.getImage().transistionLayout(desc);
 
+	// Create pipeline
 	getPipeline(MAIN_PIPELINE).setDescriptorLayouts(this->descManager.getLayouts());
 	getPipeline(MAIN_PIPELINE).setGraphicsPipelineInfo(getSwapChain()->getExtent(), &this->renderPass);
-	PipelineInfo pipInfo;
-	// Vertex input info
-	pipInfo.vertexInputInfo = {};
-	pipInfo.vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-	//auto bindingDescription = Vertex::getBindingDescriptions();
-	//auto attributeDescriptions = Vertex::getAttributeDescriptions();
-	pipInfo.vertexInputInfo.vertexBindingDescriptionCount = 0;
-	pipInfo.vertexInputInfo.pVertexBindingDescriptions = nullptr;// &bindingDescription;
-	pipInfo.vertexInputInfo.vertexAttributeDescriptionCount = 0;// static_cast<uint32_t>(attributeDescriptions.size());
-	pipInfo.vertexInputInfo.pVertexAttributeDescriptions = nullptr;// attributeDescriptions.data();
-	getPipeline(MAIN_PIPELINE).setPipelineInfo(PipelineInfoFlag::VERTEX_INPUT, pipInfo);
 	getPipeline(MAIN_PIPELINE).init(Pipeline::Type::GRAPHICS, &getShader(MAIN_SHADER));
-	JAS_INFO("Created Renderer!");
 
 	initFramebuffers(&this->renderPass, this->depthTexture.getVkImageView());
 
@@ -277,4 +266,5 @@ void CubemapTest::setupCubemap()
 	// Staging buffer and memory are not used anymore, can be destroyed.
 	this->cubemapStagineBuffer.cleanup();
 	this->cubemapStagingMemory.cleanup();
+
 }
