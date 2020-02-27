@@ -200,7 +200,7 @@ void GLTFLoader::loadNode(Model& model, Model::Node* node, tinygltf::Model& gltf
 	// Set translation
 	if (!gltfNode.translation.empty())
 		node->translation = glm::vec3((float)gltfNode.translation[0], (float)gltfNode.translation[1], (float)gltfNode.translation[2]);
-	else node->translation = glm::vec3(1.0f);
+	else node->translation = glm::vec3(0.0f);
 
 	// Set rotation
 	if (!gltfNode.rotation.empty())
