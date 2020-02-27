@@ -158,7 +158,7 @@ void ThreadingTest::prepareBuffers()
 	static float RAD_PER_DEG = glm::pi<float>() / 180.f;
 
 	static float RANGE = 15.f;
-	static uint32_t NUM_OBJECTS = 1000;
+	static uint32_t NUM_OBJECTS = 10;
 
 	// Create primary command buffers, one per swap chain image.
 	this->primaryBuffers = this->graphicsCommandPool.createCommandBuffers(getSwapChain()->getNumImages(), VK_COMMAND_BUFFER_LEVEL_PRIMARY);
@@ -222,7 +222,8 @@ void ThreadingTest::recordThread(uint32_t threadId, uint32_t frameIndex, VkComma
 	CommandBuffer* cmdBuff = nullptr;
 	{
 		std::lock_guard<std::mutex> lck(*tData.mutex);
-		cmdBuff = tData.cmdBuffs[frameIndex][tData.activeBuffers[frameIndex]];
+		uint32_t activeBuffer = tData.activeBuffers[frameIndex] ^ 1;
+		cmdBuff = tData.cmdBuffs[frameIndex][activeBuffer];
 	}
 
 	// Does not need to begin render pass because it inherits it form its primary command buffer.
@@ -250,6 +251,12 @@ void ThreadingTest::recordThread(uint32_t threadId, uint32_t frameIndex, VkComma
 	}
 	//VulkanProfiler::get().endTimestamp("RecordThread_" + std::to_string(threadId), cmdBuff, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
 	cmdBuff->end();
+
+	// Done recording tell main thread to use this buffer.
+	{
+		std::lock_guard<std::mutex> lck(*tData.mutex);
+		tData.activeBuffers[frameIndex] ^= 1;
+	}
 }
 
 void ThreadingTest::updateBuffers(uint32_t frameIndex, float dt)
@@ -272,11 +279,7 @@ void ThreadingTest::updateBuffers(uint32_t frameIndex, float dt)
 	this->primaryBuffers[frameIndex]->cmdBeginRenderPass(&this->renderPass, getFramebuffers()[frameIndex].getFramebuffer(), getSwapChain()->getExtent(), clearValues, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 
 	uint32_t nextFrame = (frameIndex + 1) % this->getSwapChain()->getNumImages();
-	VkCommandBufferInheritanceInfo inheritanceInfo = {};
-	inheritanceInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
-	inheritanceInfo.renderPass = this->renderPass.getRenderPass();
-	inheritanceInfo.framebuffer = getFramebuffers()[nextFrame].getFramebuffer();
-	inheritanceInfo.subpass = 0;
+	
 
 	/*while (!this->threadManager.isDone(frameIndex)) {}
 
@@ -285,10 +288,67 @@ void ThreadingTest::updateBuffers(uint32_t frameIndex, float dt)
 	{
 		this->threadManager.addWork(t, nextFrame, [=] { recordThread(t, nextFrame, inheritanceInfo); });
 	}*/
+	static uint32_t objCount = 0;
+
+
+	static uint32_t frameCount = 0;
+	static bool keyWasPressed = false;
+	if (Input::get().isKeyDown(GLFW_KEY_G))
+		keyWasPressed = true;
+	else if (keyWasPressed)
+	{
+		keyWasPressed = false;
+
+		VkCommandBufferInheritanceInfo inheritanceInfo = {};
+		inheritanceInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
+		inheritanceInfo.renderPass = this->renderPass.getRenderPass();
+		inheritanceInfo.subpass = 0;
+
+		// Utils function for random numbers.
+		std::srand((unsigned int)std::time(NULL));
+		auto rnd11 = [](int precision = 10000) { return (float)(std::rand() % precision) / (float)precision; };
+		auto rnd = [rnd11](float min, float max) { return min + rnd11(RAND_MAX) * glm::abs(max - min); };
+		static float RAD_PER_DEG = glm::pi<float>() / 180.f;
+		static float RANGE = 15.f;
+		objCount = 0;
+		for (uint32_t t = 0; t < this->numThreads; t++)
+		{
+			uint32_t numObjsPerThread = this->threadData[t].objects.size();
+			glm::vec4 tint = this->threadData[t].objects.front().tint;
+			for (uint32_t i = 0; i < numObjsPerThread; i++)
+			{
+				ObjectData obj;
+				obj.model = glm::translate(glm::mat4(1.0f), { rnd(-RANGE, RANGE), rnd(-RANGE, RANGE), rnd(-RANGE, RANGE) });
+				obj.model = glm::rotate(obj.model, RAD_PER_DEG * rnd(0.0f, 90.f), glm::normalize(glm::vec3(1, 0.0f, 0.0f)));
+				obj.model = glm::rotate(obj.model, RAD_PER_DEG * rnd(0.0f, 90.f), glm::normalize(glm::vec3(0, 1.0f, 0.0f)));
+				obj.model = glm::rotate(obj.model, RAD_PER_DEG * rnd(0.0f, 90.f), glm::normalize(glm::vec3(0, 0.0f, 1.0f)));
+				obj.model = glm::scale(obj.model, glm::vec3(rnd(0.1f, 1.0f), rnd(0.1f, 1.0f), rnd(0.1f, 1.0f)));
+				obj.tint = tint;
+				this->threadData[t].objects.push_back(obj);
+			}
+
+			objCount += this->threadData[t].objects.size();
+
+			inheritanceInfo.framebuffer = getFramebuffers()[0].getFramebuffer();
+			this->threadManager.addWork(t, 0, [=] { recordThread(t, 0, inheritanceInfo); });
+
+			inheritanceInfo.framebuffer = getFramebuffers()[1].getFramebuffer();
+			this->threadManager.addWork(t, 1, [=] { recordThread(t, 1, inheritanceInfo); });
+
+			inheritanceInfo.framebuffer = getFramebuffers()[2].getFramebuffer();
+			this->threadManager.addWork(t, 2, [=] { recordThread(t, 2, inheritanceInfo); });
+		}
+	}
+
+	ImGui::Begin("Number objects");
+	ImGui::Text("Number of opbjects :%d", objCount);
+	ImGui::End();
+
 
 	std::vector<VkCommandBuffer> commandBuffers;
 	for (ThreadData& tData : this->threadData)
 	{
+		std::lock_guard<std::mutex> lck(*tData.mutex);
 		commandBuffers.push_back(tData.cmdBuffs[frameIndex][tData.activeBuffers[frameIndex]]->getCommandBuffer());
 	}
 	
