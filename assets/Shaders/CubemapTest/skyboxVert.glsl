@@ -13,14 +13,20 @@ layout(set=0, binding = 0) readonly buffer VertexData
     Vertex vertices[];
 };
 
-layout(set=0, binding = 1) uniform UboData
+layout(set=0, binding = 1) uniform Camera
 {
-    mat4 world;
-    mat4 vp;
+    mat4 proj;
+    mat4 view;
 };
 
+layout(push_constant) uniform ObjectData
+{
+    mat4 transform;
+};
+
+layout(location = 0) out vec3 fragUV;
+
 void main() {
-    gl_Position = vp * world * vec4(vertices[gl_VertexIndex].inPosition.xyz, 1.0);
-    fragNormal = normalize((world * vec4(vertices[gl_VertexIndex].inNormal.xyz, 0.0)).xyz);
-    fragUv = vertices[gl_VertexIndex].inUv.xy;
+    gl_Position = proj * view * transform * vec4(vertices[gl_VertexIndex].inPosition.xyz, 1.0);
+    fragUV = vertices[gl_VertexIndex].inPosition.xyz;
 }

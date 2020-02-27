@@ -30,6 +30,12 @@ private:
 		glm::mat4 vp;
 	};
 
+	struct CubemapUboData
+	{
+		glm::mat4 proj;
+		glm::mat4 view;
+	};
+
 	void setupPre();
 	void setupPost();
 	void setupCubemap();
@@ -46,6 +52,7 @@ private:
 
 	// For loading model
 	Model model;
+	Model cube;
 
 	Buffer bufferUniform;
 	Texture depthTexture;
@@ -58,4 +65,6 @@ private:
 	Memory cubemapStagingMemory;
 	Buffer cubemapStagineBuffer;
 	Sampler cubemapSampler;
+	DescriptorManager cubemapDescManager;
+	Buffer cubemapUniformBuffer;
 };

@@ -14,6 +14,9 @@ public:
 	void setSpeed(float speed);
 
 	glm::mat4 getMatrix() const;
+	glm::mat4 getProjection() const;
+	glm::mat4 getView() const;
+
 private:
 	float speed, speedFactor;
 	float fov;

@@ -6,6 +6,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "Models/GLTFLoader.h"
+#include "Models/ModelRenderer.h"
 
 #pragma warning(push)
 #pragma warning(disable : 4996)
@@ -18,8 +19,8 @@ void CubemapTest::init()
 	this->camera = new Camera(getWindow()->getAspectRatio(), 45.f, { 0.f, 0.f, 5.f }, { 0.f, 0.f, 0.f }, 0.8f);
 
 	// TODO: Set this to 2!!
-	getShaders().resize(1);
-	getPipelines().resize(1);
+	getShaders().resize(2);
+	getPipelines().resize(2);
 
 	getShader(MAIN_SHADER).addStage(Shader::Type::VERTEX, "gltfTestVert.spv");
 	getShader(MAIN_SHADER).addStage(Shader::Type::FRAGMENT, "gltfTestFrag.spv");
@@ -82,6 +83,15 @@ void CubemapTest::loop(float dt)
 	// Update view matrix
 	this->memory.directTransfer(&this->bufferUniform, (void*)& this->camera->getMatrix()[0], sizeof(glm::mat4), (Offset)offsetof(UboData, vp));
 
+	CubemapUboData cubemapUboData;
+	cubemapUboData.proj = this->camera->getProjection();
+	cubemapUboData.view = this->camera->getView();
+	// Disable translation
+	cubemapUboData.view[3][0] = 0.0f;
+	cubemapUboData.view[3][1] = 0.0f;
+	cubemapUboData.view[3][2] = 0.0f;
+	this->memory.directTransfer(&this->cubemapUniformBuffer, (void*)& cubemapUboData, sizeof(cubemapUboData), 0);
+
 	// Render
 	getFrame()->beginFrame(dt);
 	getFrame()->submit(Instance::get().getGraphicsQueue().queue, this->cmdBuffs);
@@ -95,6 +105,9 @@ void CubemapTest::cleanup()
 	this->cubemapSampler.cleanup();
 	this->cubemapTexture.cleanup();
 	this->cubemapMemory.cleanup();
+	this->cubemapDescManager.cleanup();
+	this->cube.cleanup();
+	this->cubemapUniformBuffer.cleanup();
 
 	// Other
 	this->graphicsCommandPool.cleanup();
@@ -123,6 +136,9 @@ void CubemapTest::setupPre()
 
 	const std::string filePath = "..\\assets\\Models\\Cube\\Cube.gltf";
 	GLTFLoader::load(filePath, &this->model);
+
+	const std::string cubeFilePath = "..\\assets\\Models\\Cube\\Cube.gltf";
+	GLTFLoader::load(cubeFilePath, &this->cube);
 }
 
 void CubemapTest::setupPost()
@@ -134,14 +150,23 @@ void CubemapTest::setupPost()
 	uboData.world[3][3] = 1.0f;
 	uint32_t unsiformBufferSize = sizeof(UboData);
 
+	// Set cubemap uniform data. (I do it here to get it into the same memory as the other uniform buffer)
+	CubemapUboData cubemapUboData;
+	cubemapUboData.proj = this->camera->getProjection();
+	cubemapUboData.view = this->camera->getView();
+	uint32_t cubemapUboDataSize = sizeof(CubemapUboData);
+
 	// Create the buffer and memory
 	std::vector<uint32_t> queueIndices = { findQueueIndex(VK_QUEUE_GRAPHICS_BIT, Instance::get().getPhysicalDevice()) };
 	this->bufferUniform.init(unsiformBufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, queueIndices);
+	this->cubemapUniformBuffer.init(cubemapUboDataSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, queueIndices);
 	this->memory.bindBuffer(&this->bufferUniform);
+	this->memory.bindBuffer(&this->cubemapUniformBuffer);
 	this->memory.init(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
 	// Transfer the data to the buffer.
 	this->memory.directTransfer(&this->bufferUniform, (void*)& uboData, unsiformBufferSize, 0);
+	this->memory.directTransfer(&this->cubemapUniformBuffer, (void*)& cubemapUboData, cubemapUboDataSize, 0);
 
 	setupCubemap();
 
@@ -166,14 +191,24 @@ void CubemapTest::setupPost()
 		clearValues.push_back(value);
 		this->cmdBuffs[i]->cmdBeginRenderPass(&this->renderPass, getFramebuffers()[i].getFramebuffer(), getSwapChain()->getExtent(), clearValues, VK_SUBPASS_CONTENTS_INLINE);
 
-		std::vector<VkDescriptorSet> sets = { this->descManager.getSet(i, 0) };
+		// Render skybox
+		std::vector<VkDescriptorSet> sets = { this->cubemapDescManager.getSet(i, 0), this->cubemapDescManager.getSet(i, 1) };
 		std::vector<uint32_t> offsets;
+		glm::mat4 transform = glm::scale(glm::vec3(50.0f));
+		transform = glm::rotate(transform, glm::pi<float>(), {1.0f, 0.0f, 0.0f}); // Texture was upside down.
+		this->cmdBuffs[i]->cmdBindPipeline(&getPipeline(CUBEMAP_PIPELINE));
+		ModelRenderer::get().record(&this->cube, transform, this->cmdBuffs[i], &getPipeline(CUBEMAP_PIPELINE), sets, offsets);
+
+		// Render Object
+		std::vector<VkDescriptorSet> sets2 = { this->descManager.getSet(i, 0) };
+		std::vector<uint32_t> offsets2;
 		this->cmdBuffs[i]->cmdBindPipeline(&getPipeline(MAIN_PIPELINE));
-		GLTFLoader::recordDraw(&this->model, this->cmdBuffs[i], &getPipeline(MAIN_PIPELINE), sets, offsets);
+		GLTFLoader::recordDraw(&this->model, this->cmdBuffs[i], &getPipeline(MAIN_PIPELINE), sets2, offsets2);
 
 		this->cmdBuffs[i]->cmdEndRenderPass();
 		this->cmdBuffs[i]->end();
 	}
+
 }
 
 void CubemapTest::setupCubemap()
@@ -267,4 +302,45 @@ void CubemapTest::setupCubemap()
 	this->cubemapStagineBuffer.cleanup();
 	this->cubemapStagingMemory.cleanup();
 
+	// Initialize the descriptor manager.
+	DescriptorLayout descLayoutCubemap;
+	descLayoutCubemap.add(new SSBO(VK_SHADER_STAGE_VERTEX_BIT, 1, nullptr));	// Vertices
+	descLayoutCubemap.add(new UBO(VK_SHADER_STAGE_VERTEX_BIT, 1, nullptr));		// Uniforms (Only vp)
+	descLayoutCubemap.init();
+	DescriptorLayout descLayoutCubemap2;
+	descLayoutCubemap2.add(new IMG(VK_SHADER_STAGE_FRAGMENT_BIT, 1, nullptr));	// The cubemap texture and sampler
+	descLayoutCubemap2.init();
+	this->cubemapDescManager.addLayout(descLayoutCubemap);	// Set 0
+	this->cubemapDescManager.addLayout(descLayoutCubemap2); // Set 1
+	this->cubemapDescManager.init(getSwapChain()->getNumImages());
+
+	// Set data for the descriptor manager.
+	for (uint32_t i = 0; i < static_cast<uint32_t>(getSwapChain()->getNumImages()); i++)
+	{
+		VkDeviceSize vertexBufferSize = this->cube.vertices.size() * sizeof(Vertex);
+		this->cubemapDescManager.updateBufferDesc(0, 0, this->cube.vertexBuffer.getBuffer(), 0, vertexBufferSize);
+		this->cubemapDescManager.updateBufferDesc(0, 1, this->cubemapUniformBuffer.getBuffer(), 0, sizeof(CubemapUboData));
+		this->cubemapDescManager.updateImageDesc(1, 0, this->cubemapTexture.getImage().getLayout(), this->cubemapTexture.getVkImageView(), this->cubemapSampler.getSampler());
+		this->cubemapDescManager.updateSets({ 0, 1 }, i);
+	}
+
+	// Initialize the cubemap shader.
+	getShader(CUBEMAP_SAHDER).addStage(Shader::Type::VERTEX, "CubemapTest\\skyboxVert.spv");
+	getShader(CUBEMAP_SAHDER).addStage(Shader::Type::FRAGMENT, "CubemapTest\\skyboxFrag.spv");
+	getShader(CUBEMAP_SAHDER).init();
+
+	// Initialize the cubemap pipeline.
+	PipelineInfo pipelineInfo;
+	pipelineInfo.rasterizer = {};
+	pipelineInfo.rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+	pipelineInfo.rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
+	pipelineInfo.rasterizer.lineWidth = 1.0f;
+	pipelineInfo.rasterizer.cullMode = VK_CULL_MODE_FRONT_BIT;
+	pipelineInfo.rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+	getPipeline(CUBEMAP_PIPELINE).setPipelineInfo(PipelineInfoFlag::RASTERIZATION, pipelineInfo);
+	std::vector<PushConstants> pushConstants = ModelRenderer::get().getPushConstants();
+	getPipeline(CUBEMAP_PIPELINE).setPushConstants(pushConstants);
+	getPipeline(CUBEMAP_PIPELINE).setDescriptorLayouts(this->cubemapDescManager.getLayouts());
+	getPipeline(CUBEMAP_PIPELINE).setGraphicsPipelineInfo(getSwapChain()->getExtent(), &this->renderPass);
+	getPipeline(CUBEMAP_PIPELINE).init(Pipeline::Type::GRAPHICS, &getShader(CUBEMAP_SAHDER));
 }
