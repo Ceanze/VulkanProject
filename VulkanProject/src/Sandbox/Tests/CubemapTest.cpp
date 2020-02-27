@@ -227,7 +227,68 @@ void CubemapTest::setupCubemap()
 	this->cubemapMemory.init(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 	this->cubemapTexture.getImageView().init(this->cubemapTexture.getVkImage(), VK_IMAGE_VIEW_TYPE_CUBE, format, VK_IMAGE_ASPECT_COLOR_BIT, numFaces);
 
-	// Transistion image
+	// Transistion image and copy data.
+
+	// Setup buffer copy regions for each face including all of its miplevels
+	std::vector<VkBufferImageCopy> bufferCopyRegions;
+	uint32_t offset = 0;
+
+	for (uint32_t face = 0; face < 6; face++)
+	{
+		for (uint32_t level = 0; level < 1; level++)
+		{
+			// Calculate offset into staging buffer for the current mip level and face
+			offset = face * size;
+			VkBufferImageCopy bufferCopyRegion = {};
+			bufferCopyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			bufferCopyRegion.imageSubresource.mipLevel = level;
+			bufferCopyRegion.imageSubresource.baseArrayLayer = face;
+			bufferCopyRegion.imageSubresource.layerCount = 1;
+			bufferCopyRegion.imageExtent.width = width >> level;
+			bufferCopyRegion.imageExtent.height = height >> level;
+			bufferCopyRegion.imageExtent.depth = 1;
+			bufferCopyRegion.bufferOffset = offset;
+			bufferCopyRegions.push_back(bufferCopyRegion);
+		}
+	}
+
+	// Image barrier for optimal image (target)
+	// Set initial layout for all array layers (faces) of the optimal (target) tiled texture
+	VkImageSubresourceRange subresourceRange = {};
+	subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	subresourceRange.baseMipLevel = 0;
+	subresourceRange.levelCount = 1;
+	subresourceRange.layerCount = 6;
+	/*
+	vks::tools::setImageLayout(
+		copyCmd,
+		cubeMap.image,
+		VK_IMAGE_LAYOUT_UNDEFINED,
+		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+		subresourceRange);
+
+	// Copy the cube map faces from the staging buffer to the optimal tiled image
+	vkCmdCopyBufferToImage(
+		copyCmd,
+		stagingBuffer,
+		cubeMap.image,
+		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+		static_cast<uint32_t>(bufferCopyRegions.size()),
+		bufferCopyRegions.data()
+	);
+
+	// Change texture image layout to shader read after all faces have been copied
+	cubeMap.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	vks::tools::setImageLayout(
+		copyCmd,
+		cubeMap.image,
+		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+		cubeMap.imageLayout,
+		subresourceRange);
+
+	VulkanExampleBase::flushCommandBuffer(copyCmd, queue, true);
+	*/
+
 	/*Image::TransistionDesc desc;
 	desc.format = format;
 	desc.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
