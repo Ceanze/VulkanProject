@@ -2,6 +2,8 @@
 #include "HeightmapTest.h"
 #include <vulkan/vulkan.h>
 
+#include "stb/stb_image.h"
+
 void HeightmapTest::init()
 {
 	this->camera = new Camera(getWindow()->getAspectRatio(), 45.f, { 0.f, 0.f, 1.f }, { 0.f, 0.f, 0.f }, 0.8f);
@@ -177,7 +179,17 @@ void HeightmapTest::generateHeightmapData()
 	this->heightmap.setVertexDist(0.01f);
 	this->heightmap.setMaxZ(10.f);
 	this->heightmap.setMinZ(0.f);
-	this->heightmap.loadImage("../assets/Textures/australia.jpg");
+
+	int width, height;
+	int channels;
+	std::string path = "../assets/Textures/australia.jpg";
+	unsigned char* data = static_cast<unsigned char*>(stbi_load(path.c_str(), &width, &height, &channels, 1));
+	if (data == nullptr) 
+		JAS_ERROR("Failed to load heightmap, couldn't find file!");
+	else {
+		JAS_INFO("Loaded heightmap: {} successfully!", path);
+		this->heightmap.addHeightmap(width, height, data);
+	}
 }
 
 void HeightmapTest::initGraphicsPipeline()

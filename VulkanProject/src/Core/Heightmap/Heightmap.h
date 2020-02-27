@@ -6,13 +6,13 @@ class Heightmap
 {
 public:
 	struct HeightmapRawData {
-		int width, height;
+		int dimX, dimY;
 		size_t size;
 		unsigned char* data;
 	};
 
 	struct HeightmapVertexData {
-		int width, height;
+		int dimX, dimY;
 		std::vector<unsigned> indicies;
 		std::vector<glm::vec4> verticies;
 	};
@@ -27,7 +27,7 @@ public:
 
 	HeightmapVertexData getVertexData(unsigned index);
 	HeightmapRawData getData(unsigned index);
-	void loadImage(const std::string& path);
+	void addHeightmap(int dimX, int dimY, unsigned char* data);
 
 	void cleanup();
 

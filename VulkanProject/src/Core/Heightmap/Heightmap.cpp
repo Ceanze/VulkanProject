@@ -1,7 +1,6 @@
 #include "jaspch.h"
 #include "Heightmap.h"
 
-#include "stb/stb_image.h"
 
 Heightmap::Heightmap()
 	: minZ(0), maxZ(1), vertDist(0.5)
@@ -37,49 +36,43 @@ Heightmap::HeightmapRawData Heightmap::getData(unsigned index)
 	return this->rawData[index];
 }
 
-void Heightmap::loadImage(const std::string& path)
+void Heightmap::addHeightmap(int dimX, int dimY, unsigned char* data)
 {
-	int width, height;
-	int channels;
-	unsigned char* img = static_cast<unsigned char*>(stbi_load(path.c_str(), &width, &height, &channels, 1));
-	ERROR_CHECK(img == nullptr, "Failed to load heightmap, could find file!");
-	JAS_INFO("Loaded heightmap: {path} successfully!");
-	
 	HeightmapVertexData newVertexData = {};
-	newVertexData.width = width;
-	newVertexData.height = height;
+	newVertexData.dimX = dimX;
+	newVertexData.dimY = dimY;
 
 	const unsigned maxValue = 255;
 
-	for (int i = 0; i < height; i++)
+	for (int i = 0; i < dimY; i++)
 	{
-		for (int j = 0; j < width; j++)
+		for (int j = 0; j < dimX; j++)
 		{
-			float val = this->minZ + ((float)img[i * width + j] / maxValue) * (this->maxZ - this->minZ);
+			float val = this->minZ + ((float)data[i * dimX + j] / maxValue) * (this->maxZ - this->minZ);
 			float height = -std::min(this->maxZ, val * this->vertDist + this->minZ);
 			newVertexData.verticies.push_back(glm::vec4(j * this->vertDist, height, i * this->vertDist, 1.0));
 		}
 	}
 
-	for (int i = 0; i < height - 1; i++)
+	for (int i = 0; i < dimY - 1; i++)
 	{
-		for (int j = 0; j < width - 1; j++)
+		for (int j = 0; j < dimX - 1; j++)
 		{
 			// First triangle
-			newVertexData.indicies.push_back(i * width + j);
-			newVertexData.indicies.push_back((i + 1) * width + j);
-			newVertexData.indicies.push_back((i + 1) * width + j + 1);
+			newVertexData.indicies.push_back(i * dimX + j);
+			newVertexData.indicies.push_back((i + 1) * dimX + j);
+			newVertexData.indicies.push_back((i + 1) * dimX + j + 1);
 			// Second triangle
-			newVertexData.indicies.push_back(i * width + j);
-			newVertexData.indicies.push_back((i + 1) * width + j + 1);
-			newVertexData.indicies.push_back(i * width + j + 1);
+			newVertexData.indicies.push_back(i * dimX + j);
+			newVertexData.indicies.push_back((i + 1) * dimX + j + 1);
+			newVertexData.indicies.push_back(i * dimX + j + 1);
 		}
 	}
 
 	this->vertexData.push_back(newVertexData);
 
-	size_t size = width * height * sizeof(unsigned char);
-	HeightmapRawData newRawData = { width, height, size, img };
+	size_t size = dimX * dimY * sizeof(unsigned char);
+	HeightmapRawData newRawData = { dimX, dimY, size, data };
 	this->rawData.push_back(newRawData);
 }
 
