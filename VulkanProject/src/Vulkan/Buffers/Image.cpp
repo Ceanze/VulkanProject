@@ -76,7 +76,7 @@ void Image::transistionLayout(TransistionDesc& desc)
 	barrier.subresourceRange.baseMipLevel = 0;
 	barrier.subresourceRange.levelCount = 1;
 	barrier.subresourceRange.baseArrayLayer = 0;
-	barrier.subresourceRange.layerCount = 1;
+	barrier.subresourceRange.layerCount = desc.layerCount;
 
 	barrier.srcAccessMask = 0;
 	barrier.dstAccessMask = 0;
@@ -116,23 +116,24 @@ void Image::transistionLayout(TransistionDesc& desc)
 
 void Image::copyBufferToImage(Buffer* buffer, CommandPool* pool)
 {
-	CommandBuffer* commandBuffer = pool->beginSingleTimeCommand();
-
 	VkBufferImageCopy region = {};
 	region.bufferOffset = 0;
 	region.bufferRowLength = 0;
 	region.bufferImageHeight = 0;
-
 	region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 	region.imageSubresource.mipLevel = 0;
 	region.imageSubresource.baseArrayLayer = 0;
 	region.imageSubresource.layerCount = 1;
-
 	region.imageOffset = { 0, 0, 0 };
 	region.imageExtent = { this->width, this->height, 1 };
+	std::vector<VkBufferImageCopy> regions = { region };
+	copyBufferToImage(buffer, pool, regions);
+}
 
-	commandBuffer->cmdCopyBufferToImage(buffer->getBuffer(), this->image, this->layout, 1, &region);
-
+void Image::copyBufferToImage(Buffer* buffer, CommandPool* pool, std::vector<VkBufferImageCopy> regions)
+{
+	CommandBuffer* commandBuffer = pool->beginSingleTimeCommand();
+	commandBuffer->cmdCopyBufferToImage(buffer->getBuffer(), this->image, this->layout, (uint32_t)regions.size(), regions.data());
 	pool->endSingleTimeCommand(commandBuffer);
 }
 

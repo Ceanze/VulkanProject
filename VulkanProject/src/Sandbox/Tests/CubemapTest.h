@@ -19,6 +19,11 @@ public:
 	void cleanup() override;
 
 private:
+	static const uint32_t MAIN_PIPELINE = 0;
+	static const uint32_t MAIN_SHADER = 0;
+	static const uint32_t CUBEMAP_PIPELINE = 1;
+	static const uint32_t CUBEMAP_SAHDER = 1;
+
 	struct UboData
 	{
 		glm::mat4 world;
@@ -34,8 +39,6 @@ private:
 	CommandBuffer* cmdBuffs[3];
 	CommandPool graphicsCommandPool;
 
-	Shader shader;
-	Pipeline pipeline;
 	RenderPass renderPass;
 
 	DescriptorLayout descLayout;
@@ -54,4 +57,5 @@ private:
 	Texture cubemapTexture;
 	Memory cubemapStagingMemory;
 	Buffer cubemapStagineBuffer;
+	Sampler cubemapSampler;
 };

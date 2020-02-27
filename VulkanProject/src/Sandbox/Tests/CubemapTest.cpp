@@ -17,9 +17,13 @@ void CubemapTest::init()
 	this->graphicsCommandPool.init(CommandPool::Queue::GRAPHICS, 0);
 	this->camera = new Camera(getWindow()->getAspectRatio(), 45.f, { 0.f, 0.f, 5.f }, { 0.f, 0.f, 0.f }, 0.8f);
 
-	this->shader.addStage(Shader::Type::VERTEX, "gltfTestVert.spv");
-	this->shader.addStage(Shader::Type::FRAGMENT, "gltfTestFrag.spv");
-	this->shader.init();
+	// TODO: Set this to 2!!
+	getShaders().resize(1);
+	getPipelines().resize(1);
+
+	getShader(MAIN_SHADER).addStage(Shader::Type::VERTEX, "gltfTestVert.spv");
+	getShader(MAIN_SHADER).addStage(Shader::Type::FRAGMENT, "gltfTestFrag.spv");
+	getShader(MAIN_SHADER).init();
 
 	// Add attachments
 	this->renderPass.addDefaultColorAttachment(getSwapChain()->getImageFormat());
@@ -63,8 +67,8 @@ void CubemapTest::init()
 	desc.pool = &this->graphicsCommandPool;
 	this->depthTexture.getImage().transistionLayout(desc);
 
-	this->pipeline.setDescriptorLayouts(this->descManager.getLayouts());
-	this->pipeline.setGraphicsPipelineInfo(getSwapChain()->getExtent(), &this->renderPass);
+	getPipeline(MAIN_PIPELINE).setDescriptorLayouts(this->descManager.getLayouts());
+	getPipeline(MAIN_PIPELINE).setGraphicsPipelineInfo(getSwapChain()->getExtent(), &this->renderPass);
 	PipelineInfo pipInfo;
 	// Vertex input info
 	pipInfo.vertexInputInfo = {};
@@ -75,8 +79,8 @@ void CubemapTest::init()
 	pipInfo.vertexInputInfo.pVertexBindingDescriptions = nullptr;// &bindingDescription;
 	pipInfo.vertexInputInfo.vertexAttributeDescriptionCount = 0;// static_cast<uint32_t>(attributeDescriptions.size());
 	pipInfo.vertexInputInfo.pVertexAttributeDescriptions = nullptr;// attributeDescriptions.data();
-	this->pipeline.setPipelineInfo(PipelineInfoFlag::VERTEX_INPUT, pipInfo);
-	this->pipeline.init(Pipeline::Type::GRAPHICS, &this->shader);
+	getPipeline(MAIN_PIPELINE).setPipelineInfo(PipelineInfoFlag::VERTEX_INPUT, pipInfo);
+	getPipeline(MAIN_PIPELINE).init(Pipeline::Type::GRAPHICS, &getShader(MAIN_SHADER));
 	JAS_INFO("Created Renderer!");
 
 	initFramebuffers(&this->renderPass, this->depthTexture.getVkImageView());
@@ -98,11 +102,12 @@ void CubemapTest::loop(float dt)
 
 void CubemapTest::cleanup()
 {
-	this->cubemapStagineBuffer.cleanup();
-	this->cubemapStagingMemory.cleanup();
+	// Cubemap
+	this->cubemapSampler.cleanup();
 	this->cubemapTexture.cleanup();
 	this->cubemapMemory.cleanup();
 
+	// Other
 	this->graphicsCommandPool.cleanup();
 	this->depthTexture.cleanup();
 	this->imageMemory.cleanup();
@@ -110,9 +115,11 @@ void CubemapTest::cleanup()
 	this->memory.cleanup();
 	this->model.cleanup();
 	this->descManager.cleanup();
-	this->pipeline.cleanup();
+	for (auto& pipeline : getPipelines())
+		pipeline.cleanup();
 	this->renderPass.cleanup();
-	this->shader.cleanup();
+	for(auto& shader : getShaders())
+		shader.cleanup();
 	delete this->camera;
 }
 
@@ -172,8 +179,8 @@ void CubemapTest::setupPost()
 
 		std::vector<VkDescriptorSet> sets = { this->descManager.getSet(i, 0) };
 		std::vector<uint32_t> offsets;
-		this->cmdBuffs[i]->cmdBindPipeline(&this->pipeline);
-		GLTFLoader::recordDraw(&this->model, this->cmdBuffs[i], &this->pipeline, sets, offsets);
+		this->cmdBuffs[i]->cmdBindPipeline(&getPipeline(MAIN_PIPELINE));
+		GLTFLoader::recordDraw(&this->model, this->cmdBuffs[i], &getPipeline(MAIN_PIPELINE), sets, offsets);
 
 		this->cmdBuffs[i]->cmdEndRenderPass();
 		this->cmdBuffs[i]->end();
@@ -195,14 +202,17 @@ void CubemapTest::setupCubemap()
 	VkFormat format = VK_FORMAT_R8G8B8A8_UNORM;
 	int32_t width = 0, height = 0;
 	std::vector<stbi_uc*> data;
+	std::string pathToCubemap = "..\\assets\\Textures\\skybox\\";
+	JAS_INFO("Loading cubemap: {0}", pathToCubemap.c_str());
 	for (std::string& face : faces)
 	{
-		std::string finalFilePath = "..\\assets\\Textures\\skybox\\";
+		std::string finalFilePath = pathToCubemap;
 		finalFilePath += face;
 
 		int channels;
 		stbi_uc* img = stbi_load(finalFilePath.c_str(), &width, &height, &channels, 4);
 		data.push_back(img);
+		JAS_INFO(" ->Loaded face: {0}", face.c_str());
 	}
 
 	// Create staging buffer.
@@ -227,18 +237,12 @@ void CubemapTest::setupCubemap()
 	this->cubemapMemory.init(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 	this->cubemapTexture.getImageView().init(this->cubemapTexture.getVkImage(), VK_IMAGE_VIEW_TYPE_CUBE, format, VK_IMAGE_ASPECT_COLOR_BIT, numFaces);
 
-	// Transistion image and copy data.
-
-	// Setup buffer copy regions for each face including all of its miplevels
+	// Setup buffer copy regions for each face including all of its miplevels. In this case only 1 miplevel is used.
 	std::vector<VkBufferImageCopy> bufferCopyRegions;
-	uint32_t offset = 0;
-
-	for (uint32_t face = 0; face < 6; face++)
+	for (uint32_t face = 0; face < numFaces; face++)
 	{
 		for (uint32_t level = 0; level < 1; level++)
 		{
-			// Calculate offset into staging buffer for the current mip level and face
-			offset = face * size;
 			VkBufferImageCopy bufferCopyRegion = {};
 			bufferCopyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 			bufferCopyRegion.imageSubresource.mipLevel = level;
@@ -247,58 +251,30 @@ void CubemapTest::setupCubemap()
 			bufferCopyRegion.imageExtent.width = width >> level;
 			bufferCopyRegion.imageExtent.height = height >> level;
 			bufferCopyRegion.imageExtent.depth = 1;
-			bufferCopyRegion.bufferOffset = offset;
+			bufferCopyRegion.bufferOffset = (VkDeviceSize)(face * size);
 			bufferCopyRegions.push_back(bufferCopyRegion);
 		}
 	}
 
 	// Image barrier for optimal image (target)
-	// Set initial layout for all array layers (faces) of the optimal (target) tiled texture
-	VkImageSubresourceRange subresourceRange = {};
-	subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	subresourceRange.baseMipLevel = 0;
-	subresourceRange.levelCount = 1;
-	subresourceRange.layerCount = 6;
-	/*
-	vks::tools::setImageLayout(
-		copyCmd,
-		cubeMap.image,
-		VK_IMAGE_LAYOUT_UNDEFINED,
-		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-		subresourceRange);
-
-	// Copy the cube map faces from the staging buffer to the optimal tiled image
-	vkCmdCopyBufferToImage(
-		copyCmd,
-		stagingBuffer,
-		cubeMap.image,
-		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-		static_cast<uint32_t>(bufferCopyRegions.size()),
-		bufferCopyRegions.data()
-	);
-
-	// Change texture image layout to shader read after all faces have been copied
-	cubeMap.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-	vks::tools::setImageLayout(
-		copyCmd,
-		cubeMap.image,
-		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-		cubeMap.imageLayout,
-		subresourceRange);
-
-	VulkanExampleBase::flushCommandBuffer(copyCmd, queue, true);
-	*/
-
-	/*Image::TransistionDesc desc;
+	Image::TransistionDesc desc;
 	desc.format = format;
 	desc.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	desc.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 	desc.pool = &this->graphicsCommandPool;
-	Image& image = this->texture.getImage();
+	desc.layerCount = numFaces;
+	Image& image = this->cubemapTexture.getImage();
 	image.transistionLayout(desc);
-	image.copyBufferToImage(&this->stagingBuffer, &this->transferCommandPool);
+	image.copyBufferToImage(&this->cubemapStagineBuffer, &this->graphicsCommandPool, bufferCopyRegions);
 	desc.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 	desc.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 	image.transistionLayout(desc);
-	*/
+
+	// Create sampler
+	// TODO: This needs more control, should be compareOp=VK_COMPARE_OP_NEVER!
+	this->cubemapSampler.init(VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
+	
+	// Staging buffer and memory are not used anymore, can be destroyed.
+	this->cubemapStagineBuffer.cleanup();
+	this->cubemapStagingMemory.cleanup();
 }

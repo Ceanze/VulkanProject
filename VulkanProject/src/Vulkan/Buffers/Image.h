@@ -14,6 +14,7 @@ public:
 		VkImageLayout oldLayout;
 		VkImageLayout newLayout;
 		CommandPool* pool;
+		uint32_t layerCount = 1;
 	};
 
 public:
@@ -24,6 +25,7 @@ public:
 
 	void transistionLayout(TransistionDesc& desc);
 	void copyBufferToImage(Buffer* buffer, CommandPool* pool);
+	void copyBufferToImage(Buffer* buffer, CommandPool* pool, std::vector<VkBufferImageCopy> regions);
 
 	VkImage getImage() const;
 	VkImageLayout getLayout() const { return this->layout; }
