@@ -24,7 +24,6 @@ private:
 	struct PushConstantData
 	{
 		glm::mat4 mw;
-		glm::mat4 vp;
 		glm::vec4 tint;
 	};
 
@@ -65,6 +64,9 @@ private:
 
 	DescriptorLayout descLayout;
 	DescriptorManager descManager;
+
+	Buffer cameraBuffer;
+	Memory memory;
 
 	Model model;
 	Buffer stagingBuffer;

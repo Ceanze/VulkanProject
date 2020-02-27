@@ -86,7 +86,7 @@ void ThreadingTest::init()
 
 	initFramebuffers(&this->renderPass, this->depthTexture.getVkImageView());
 
-	setupPost();
+	setupPost();	
 }
 
 void ThreadingTest::loop(float dt)
@@ -122,9 +122,12 @@ void ThreadingTest::loop(float dt)
 
 void ThreadingTest::cleanup()
 {
+	this->threadManager.wait();
 	VulkanProfiler::get().cleanup();
 	this->stagingBuffer.cleanup();
 	this->stagingMemory.cleanup();
+	this->cameraBuffer.cleanup();
+	this->memory.cleanup();
 	this->transferCommandPool.cleanup();
 
 	delete this->camera;
@@ -145,7 +148,7 @@ void ThreadingTest::cleanup()
 
 void ThreadingTest::prepareBuffers()
 {
-	this->numThreads = this->threadManager.getMaxNumConcurrentThreads()-1;
+	this->numThreads = this->threadManager.getMaxNumConcurrentThreads() - 1;
 	this->threadManager.init(this->numThreads, getSwapChain()->getNumImages());
 
 	// Utils function for random numbers.
@@ -192,6 +195,24 @@ void ThreadingTest::prepareBuffers()
 		pushConsts.setLayout(VK_SHADER_STAGE_VERTEX_BIT, sizeof(PushConstantData), 0);
 		tData.pushConstants.push_back(pushConsts);
 	}
+
+	// Record initial secondary buffers
+	for (size_t f = 0; f < this->getSwapChain()->getNumImages(); f++)
+	{
+		VkCommandBufferInheritanceInfo inheritanceInfo = {};
+		inheritanceInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
+		inheritanceInfo.renderPass = this->renderPass.getRenderPass();
+		inheritanceInfo.framebuffer = getFramebuffers()[f].getFramebuffer();
+		inheritanceInfo.subpass = 0;
+
+		for (uint32_t t = 0; t < this->numThreads; t++)
+		{
+			// Add work to a specific thread, the thread has a queue which it will go through.
+			this->threadManager.addWork(t, f, [=] { recordThread(t, f, inheritanceInfo); });
+		}
+	}
+
+	this->threadManager.wait();
 }
 
 void ThreadingTest::recordThread(uint32_t threadId, uint32_t frameIndex, VkCommandBufferInheritanceInfo inheritanceInfo)
@@ -200,9 +221,8 @@ void ThreadingTest::recordThread(uint32_t threadId, uint32_t frameIndex, VkComma
 	ThreadData& tData = this->threadData[threadId];
 	CommandBuffer* cmdBuff = nullptr;
 	{
-		std::lock_guard<std::mutex> lock(*tData.mutex);
+		std::lock_guard<std::mutex> lck(*tData.mutex);
 		cmdBuff = tData.cmdBuffs[frameIndex][tData.activeBuffers[frameIndex]];
-		tData.activeBuffers[frameIndex] ^= 1;
 	}
 
 	// Does not need to begin render pass because it inherits it form its primary command buffer.
@@ -218,7 +238,6 @@ void ThreadingTest::recordThread(uint32_t threadId, uint32_t frameIndex, VkComma
 
 		// Apply push constants
 		PushConstantData pData;
-		pData.vp = this->camera->getMatrix();
 		pData.tint = objData.tint;
 		pData.mw = objData.world * objData.model;
 		tData.pushConstants[0].setDataPtr(&pData);
@@ -237,6 +256,10 @@ void ThreadingTest::updateBuffers(uint32_t frameIndex, float dt)
 {
 	JAS_PROFILER_SAMPLE_FUNCTION();
 
+	// Update camera
+	glm::mat4 camMat = this->camera->getMatrix();
+	this->memory.directTransfer(&this->cameraBuffer, (void*)&camMat, sizeof(glm::mat4), 0);
+
 	// Record command buffers
 	this->primaryBuffers[frameIndex]->begin(0, nullptr);
 	//VulkanProfiler::get().resetAllTimestamps(this->primaryBuffers[frameIndex]);
@@ -248,33 +271,27 @@ void ThreadingTest::updateBuffers(uint32_t frameIndex, float dt)
 	clearValues.push_back(value);
 	this->primaryBuffers[frameIndex]->cmdBeginRenderPass(&this->renderPass, getFramebuffers()[frameIndex].getFramebuffer(), getSwapChain()->getExtent(), clearValues, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 
+	uint32_t nextFrame = (frameIndex + 1) % this->getSwapChain()->getNumImages();
 	VkCommandBufferInheritanceInfo inheritanceInfo = {};
 	inheritanceInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
 	inheritanceInfo.renderPass = this->renderPass.getRenderPass();
-	inheritanceInfo.framebuffer = getFramebuffers()[frameIndex].getFramebuffer();
+	inheritanceInfo.framebuffer = getFramebuffers()[nextFrame].getFramebuffer();
 	inheritanceInfo.subpass = 0;
-	
-	if (this->threadManager.isDone(frameIndex))
-	{
-		for (uint32_t t = 0; t < this->numThreads; t++)
-		{
-			// Add work to a specific thread, the thread has a queue which it will go through.
-			this->threadManager.addWork(t, frameIndex, [=] { recordThread(t, frameIndex, inheritanceInfo); });
-		}
-	}
 
-	//{
-	//	JAS_PROFILER_SAMPLE_SCOPE("Thread wait");
-	//	this->threadManager.wait();
-	//}
+	/*while (!this->threadManager.isDone(frameIndex)) {}
+
+	glm::mat4 camMatrix = this->camera->getMatrix();
+	for (uint32_t t = 0; t < this->numThreads; t++)
+	{
+		this->threadManager.addWork(t, nextFrame, [=] { recordThread(t, nextFrame, inheritanceInfo); });
+	}*/
 
 	std::vector<VkCommandBuffer> commandBuffers;
 	for (ThreadData& tData : this->threadData)
 	{
-		std::lock_guard<std::mutex> lock(*tData.mutex);
 		commandBuffers.push_back(tData.cmdBuffs[frameIndex][tData.activeBuffers[frameIndex]]->getCommandBuffer());
 	}
-
+	
 	this->primaryBuffers[frameIndex]->cmdExecuteCommands(static_cast<uint32_t>(commandBuffers.size()), commandBuffers.data());
 
 	this->primaryBuffers[frameIndex]->cmdEndRenderPass();
@@ -284,6 +301,7 @@ void ThreadingTest::updateBuffers(uint32_t frameIndex, float dt)
 void ThreadingTest::setupPre()
 {
 	this->descLayout.add(new SSBO(VK_SHADER_STAGE_VERTEX_BIT, 1, nullptr)); // Vertices
+	this->descLayout.add(new UBO(VK_SHADER_STAGE_VERTEX_BIT, 1, nullptr)); // Vertices
 	this->descLayout.init();
 
 	this->descManager.addLayout(this->descLayout);
@@ -293,18 +311,27 @@ void ThreadingTest::setupPre()
 	GLTFLoader::loadToStagingBuffer(filePath, &this->model, &this->stagingBuffer, &this->stagingMemory);
 	GLTFLoader::transferToModel(&this->transferCommandPool, &this->model, &this->stagingBuffer, &this->stagingMemory);
 
-	PushConstants pushConsts;
-	pushConsts.setLayout(VK_SHADER_STAGE_VERTEX_BIT, sizeof(PushConstantData), 0);
-	this->pushConstants.push_back(pushConsts);
+	PushConstants push;
+	push.setLayout(VK_SHADER_STAGE_VERTEX_BIT, sizeof(PushConstantData), 0);
+	this->pushConstants.push_back(push);
 }
 
 void ThreadingTest::setupPost()
 {
+	// Prepare camera buffer
+	std::vector<uint32_t> queueIndices = { findQueueIndex(VK_QUEUE_GRAPHICS_BIT, Instance::get().getPhysicalDevice()) };
+	this->cameraBuffer.init(sizeof(glm::mat4), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, queueIndices);
+
+	this->memory.bindBuffer(&this->cameraBuffer);
+	this->memory.init(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+
 	// Update descriptor
 	for (uint32_t i = 0; i < getSwapChain()->getNumImages(); i++)
 	{
 		VkDeviceSize vertexBufferSize = this->model.vertices.size() * sizeof(Vertex);
 		this->descManager.updateBufferDesc(0, 0, this->model.vertexBuffer.getBuffer(), 0, vertexBufferSize);
+		this->descManager.updateBufferDesc(0, 1, this->cameraBuffer.getBuffer(), 0, sizeof(glm::mat4));
 		this->descManager.updateSets({ 0 }, i);
 	}
 

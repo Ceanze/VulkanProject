@@ -13,10 +13,11 @@ layout(set=0, binding = 0) readonly buffer VertexData
     Vertex vertices[];
 };
 
+layout(set=0, binding = 1) uniform Camera { mat4 vp; };
+
 layout(push_constant) uniform TintColor
 {
     mat4 mw;
-    mat4 vp;
     vec4 tint; // Could be in a push_constant in the fragment shader.
 };
 

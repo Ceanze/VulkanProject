@@ -146,7 +146,7 @@ void NoThreadingTest::prepareBuffers()
 	static float RAD_PER_DEG = glm::pi<float>() / 180.f;
 
 	static float RANGE = 15.f;
-	static uint32_t NUM_OBJECTS = 155;
+	static uint32_t NUM_OBJECTS = 1000;
 
 	// Create primary command buffers, one per swap chain image.
 	this->primaryBuffers = this->graphicsCommandPool.createCommandBuffers(getSwapChain()->getNumImages(), VK_COMMAND_BUFFER_LEVEL_PRIMARY);
@@ -179,7 +179,7 @@ void NoThreadingTest::recordThread(uint32_t frameIndex)
 	VulkanProfiler::get().startTimestamp("Main thread", this->primaryBuffers[frameIndex], VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
 	this->primaryBuffers[frameIndex]->cmdBindPipeline(&this->pipeline); // Think I need to do this, don't think this is inherited.
 
-	for (uint32_t i = 0; i < 155; i++)
+	for (uint32_t i = 0; i < 1000; i++)
 	{
 		JAS_PROFILER_SAMPLE_SCOPE("Obj_" + std::to_string(i));
 		ObjectData & objData = this->objects[i];
