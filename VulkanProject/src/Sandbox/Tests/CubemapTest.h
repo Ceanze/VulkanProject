@@ -28,6 +28,7 @@ private:
 	{
 		glm::mat4 world;
 		glm::mat4 vp;
+		alignas(16) glm::vec3 camPos;
 	};
 
 	struct CubemapUboData

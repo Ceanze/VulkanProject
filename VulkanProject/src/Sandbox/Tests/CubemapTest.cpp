@@ -22,8 +22,8 @@ void CubemapTest::init()
 	getShaders().resize(2);
 	getPipelines().resize(2);
 
-	getShader(MAIN_SHADER).addStage(Shader::Type::VERTEX, "gltfTestVert.spv");
-	getShader(MAIN_SHADER).addStage(Shader::Type::FRAGMENT, "gltfTestFrag.spv");
+	getShader(MAIN_SHADER).addStage(Shader::Type::VERTEX, "CubemapTest\\reflectVert.spv");
+	getShader(MAIN_SHADER).addStage(Shader::Type::FRAGMENT, "CubemapTest\\reflectFrag.spv");
 	getShader(MAIN_SHADER).init();
 
 	// Add attachments
@@ -68,7 +68,10 @@ void CubemapTest::init()
 	desc.pool = &this->graphicsCommandPool;
 	this->depthTexture.getImage().transistionLayout(desc);
 
+	
 	// Create pipeline
+	std::vector<PushConstants> pushConstants = ModelRenderer::get().getPushConstants();
+	getPipeline(MAIN_PIPELINE).setPushConstants(pushConstants);
 	getPipeline(MAIN_PIPELINE).setDescriptorLayouts(this->descManager.getLayouts());
 	getPipeline(MAIN_PIPELINE).setGraphicsPipelineInfo(getSwapChain()->getExtent(), &this->renderPass);
 	getPipeline(MAIN_PIPELINE).init(Pipeline::Type::GRAPHICS, &getShader(MAIN_SHADER));
@@ -82,6 +85,7 @@ void CubemapTest::loop(float dt)
 {
 	// Update view matrix
 	this->memory.directTransfer(&this->bufferUniform, (void*)& this->camera->getMatrix()[0], sizeof(glm::mat4), (Offset)offsetof(UboData, vp));
+	this->memory.directTransfer(&this->bufferUniform, (void*)& this->camera->getPosition(), sizeof(glm::vec3), (Offset)offsetof(UboData, camPos));
 
 	CubemapUboData cubemapUboData;
 	cubemapUboData.proj = this->camera->getProjection();
@@ -130,8 +134,11 @@ void CubemapTest::setupPre()
 	this->descLayout.add(new SSBO(VK_SHADER_STAGE_VERTEX_BIT, 1, nullptr)); // Vertices
 	this->descLayout.add(new UBO(VK_SHADER_STAGE_VERTEX_BIT, 1, nullptr)); // Uniforms
 	this->descLayout.init();
-
 	this->descManager.addLayout(this->descLayout);
+	DescriptorLayout descLayoutCubemap2;
+	descLayoutCubemap2.add(new IMG(VK_SHADER_STAGE_FRAGMENT_BIT, 1, nullptr));	// The skybox texture and sampler
+	descLayoutCubemap2.init();
+	this->descManager.addLayout(descLayoutCubemap2);
 	this->descManager.init(getSwapChain()->getNumImages());
 
 	const std::string filePath = "..\\assets\\Models\\Cube\\Cube.gltf";
@@ -148,6 +155,7 @@ void CubemapTest::setupPost()
 	uboData.vp = this->camera->getMatrix();
 	uboData.world = glm::mat4(1.0f);
 	uboData.world[3][3] = 1.0f;
+	uboData.camPos = this->camera->getPosition();
 	uint32_t unsiformBufferSize = sizeof(UboData);
 
 	// Set cubemap uniform data. (I do it here to get it into the same memory as the other uniform buffer)
@@ -200,15 +208,15 @@ void CubemapTest::setupPost()
 		ModelRenderer::get().record(&this->cube, transform, this->cmdBuffs[i], &getPipeline(CUBEMAP_PIPELINE), sets, offsets);
 
 		// Render Object
-		std::vector<VkDescriptorSet> sets2 = { this->descManager.getSet(i, 0) };
+		std::vector<VkDescriptorSet> sets2 = { this->descManager.getSet(i, 0), this->descManager.getSet(i, 1) };
 		std::vector<uint32_t> offsets2;
 		this->cmdBuffs[i]->cmdBindPipeline(&getPipeline(MAIN_PIPELINE));
-		GLTFLoader::recordDraw(&this->model, this->cmdBuffs[i], &getPipeline(MAIN_PIPELINE), sets2, offsets2);
+		transform = glm::mat4(1.0f);
+		ModelRenderer::get().record(&this->model, transform, this->cmdBuffs[i], &getPipeline(MAIN_PIPELINE), sets2, offsets2);
 
 		this->cmdBuffs[i]->cmdEndRenderPass();
 		this->cmdBuffs[i]->end();
 	}
-
 }
 
 void CubemapTest::setupCubemap()
@@ -343,4 +351,11 @@ void CubemapTest::setupCubemap()
 	getPipeline(CUBEMAP_PIPELINE).setDescriptorLayouts(this->cubemapDescManager.getLayouts());
 	getPipeline(CUBEMAP_PIPELINE).setGraphicsPipelineInfo(getSwapChain()->getExtent(), &this->renderPass);
 	getPipeline(CUBEMAP_PIPELINE).init(Pipeline::Type::GRAPHICS, &getShader(CUBEMAP_SAHDER));
+
+	// Model data (Not used for the cubemap but for the model to get the texture for reflection)
+	for (uint32_t i = 0; i < static_cast<uint32_t>(getSwapChain()->getNumImages()); i++)
+	{
+		this->descManager.updateImageDesc(1, 0, this->cubemapTexture.getImage().getLayout(), this->cubemapTexture.getVkImageView(), this->cubemapSampler.getSampler());
+		this->descManager.updateSets({ 1 }, i);
+	}
 }

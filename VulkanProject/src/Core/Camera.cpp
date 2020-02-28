@@ -94,3 +94,8 @@ glm::mat4 Camera::getView() const
 {
 	return glm::lookAt(this->position, this->target, this->up);
 }
+
+glm::vec3 Camera::getPosition() const
+{
+	return this->position;
+}
