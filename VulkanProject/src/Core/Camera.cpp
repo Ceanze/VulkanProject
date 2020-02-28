@@ -37,12 +37,12 @@ void Camera::update(float dt)
 		this->position -= this->forward * this->speed * dt* this->speedFactor;
 
 	if (input.isKeyDown(GLFW_KEY_SPACE))
-		this->position += this->up * this->speed * dt * this->speedFactor;
+		this->position += this->globalUp * this->speed * dt * this->speedFactor;
 	if (input.isKeyDown(GLFW_KEY_LEFT_CONTROL))
-		this->position -= this->up * this->speed * dt * this->speedFactor;
+		this->position -= this->globalUp * this->speed * dt * this->speedFactor;
 
 	if (input.isKeyDown(GLFW_KEY_LEFT_SHIFT))
-		this->speedFactor = 5.f;
+		this->speedFactor = 10.f;
 	else
 		this->speedFactor = 1.f;
 
