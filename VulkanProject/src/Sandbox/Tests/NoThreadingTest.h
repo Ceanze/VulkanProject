@@ -61,6 +61,6 @@ private:
 	Texture depthTexture;
 	Memory imageMemory; // Holds depth texture
 
-	std::vector<PushConstants> pushConstants;
+	PushConstants pushConstants;
 	std::vector<ObjectData> objects;
 };

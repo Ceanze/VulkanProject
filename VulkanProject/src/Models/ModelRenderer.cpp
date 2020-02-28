@@ -25,6 +25,21 @@ void ModelRenderer::record(Model* model, glm::mat4 transform, CommandBuffer* com
 		drawNode(commandBuffer, pipeline, node, transform);
 }
 
+void ModelRenderer::init()
+{
+	this->pushConstants.init();
+}
+
+void ModelRenderer::addPushconstant(VkShaderStageFlags stageFlags, uint32_t size, uint32_t offset)
+{
+	this->pushConstants.addLayout(stageFlags, size, offset);
+}
+
+void ModelRenderer::setPushconstantData(void* data, uint32_t size, uint32_t offset)
+{
+	this->pushConstants.setDataPtr(size, offset, data);
+}
+
 std::vector<PushConstants> ModelRenderer::getPushConstants() const
 {
 	return { this->pushConstants };
@@ -32,7 +47,7 @@ std::vector<PushConstants> ModelRenderer::getPushConstants() const
 
 ModelRenderer::ModelRenderer()
 {
-	this->pushConstants.setLayout(VK_SHADER_STAGE_VERTEX_BIT, sizeof(PushConstantData), 0);
+	this->pushConstants.addLayout(VK_SHADER_STAGE_VERTEX_BIT, sizeof(PushConstantData), 0);
 }
 
 void ModelRenderer::drawNode(CommandBuffer* commandBuffer, Pipeline* pipeline, Model::Node& node, glm::mat4 transform)
@@ -42,7 +57,7 @@ void ModelRenderer::drawNode(CommandBuffer* commandBuffer, Pipeline* pipeline, M
 		// Set transformation matrix
 		PushConstantData pushConstantData;
 		pushConstantData.matrix = node.parent != nullptr ? (node.parent->matrix * node.matrix * transform) : (node.matrix * transform);
-		this->pushConstants.setDataPtr(&pushConstantData);
+		this->pushConstants.setDataPtr(sizeof(PushConstantData), pushConstants.getSize() - sizeof(PushConstantData), &pushConstantData.matrix);
 		commandBuffer->cmdPushConstants(pipeline, &this->pushConstants);
 
 		Mesh& mesh = node.mesh;

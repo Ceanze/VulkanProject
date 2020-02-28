@@ -9,6 +9,7 @@
 #include "Core/Input.h"
 
 #include "Models/GLTFLoader.h"
+#include "Models/ModelRenderer.h"
 
 void ThreadingTest::init()
 {
@@ -248,16 +249,17 @@ void ThreadingTest::recordThread(uint32_t threadId, uint32_t frameIndex, VkComma
 		ObjectData& objData = tData.objects[i];
 
 		// Apply push constants
-		PushConstantData pData;
-		pData.tint = objData.tint;
-		pData.mw = objData.world * objData.model;
-		tData.pushConstants[0].setDataPtr(&pData);
-		cmdBuff->cmdPushConstants(&this->pipeline, &tData.pushConstants[0]);
+		//PushConstantData pData;
+		//pData.tint = objData.tint;
+		//pData.mw = objData.world * objData.model;
+		//tData.pushConstants[0].setDataPtr(&pData);
+		//cmdBuff->cmdPushConstants(&this->pipeline, &tData.pushConstants[0]);
 
 		// Draw model
 		std::vector<VkDescriptorSet> sets = { this->descManager.getSet(frameIndex, 0) };
 		std::vector<uint32_t> offsets;
-		GLTFLoader::recordDraw(model, cmdBuff, &this->pipeline, sets, offsets); // Might need a model for each thread.
+		//GLTFLoader::recordDraw(model, cmdBuff, &this->pipeline, sets, offsets); // Might need a model for each thread.
+		ModelRenderer::get().record(model, objData.world * objData.model,cmdBuff, &this->pipeline, sets, offsets)
 	}
 	//VulkanProfiler::get().endTimestamp("RecordThread_" + std::to_string(threadId), cmdBuff, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
 	cmdBuff->end();

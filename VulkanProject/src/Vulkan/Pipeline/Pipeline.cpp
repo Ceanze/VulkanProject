@@ -42,10 +42,9 @@ void Pipeline::setDescriptorLayouts(const std::vector<DescriptorLayout>& descrip
 		this->layouts.push_back(layout.getLayout());
 }
 
-void Pipeline::setPushConstants(const std::vector<PushConstants>& pushConstants)
+void Pipeline::setPushConstants(const PushConstants& pushConstants)
 {
-	for (auto& pushConstant : pushConstants)
-		this->pushConstantRanges.push_back(pushConstant.getRange());
+	this->pushConstantRanges = pushConstants.getRanges();
 }
 
 void Pipeline::setWireframe(bool enable)

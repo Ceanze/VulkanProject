@@ -3,38 +3,48 @@
 
 PushConstants::PushConstants() : data(nullptr), offset(0), size(0)
 {
-	this->range = {};
+
 }
 
 PushConstants::~PushConstants()
 {
+	if(this->data) delete this->data;
 }
 
-void PushConstants::setLayout(VkShaderStageFlags stageFlags, uint32_t size, uint32_t offset)
+void PushConstants::init()
 {
-	this->range.stageFlags = stageFlags;
-	this->range.size = size;
-	this->range.offset = offset;
+	this->data = (void*)new char[this->size];
+}
+
+void PushConstants::addLayout(VkShaderStageFlags stageFlags, uint32_t size, uint32_t offset)
+{
+	VkPushConstantRange range;
+	range.stageFlags = stageFlags;
+	range.size = size;
+	range.offset = offset;
+
+	uint32_t newSize = range.size + range.offset;
+	if (newSize > this->size) {
+		this->size = newSize;
+	}
+
+	this->ranges.push_back(range);
 }
 
 void PushConstants::setDataPtr(uint32_t size, uint32_t offset, const void* data)
 {
-	JAS_ASSERT(size+offset <= this->range.offset + this->range.size, "Too much data was passed to the push constant!");
-	this->data = data;
-	this->size = size;
-	this->offset = offset;
+	JAS_ASSERT(size+offset > this->size, "Too much data was passed to the push constant!");
+	memcpy(this->data, (char*)data + offset, size);
 }
 
 void PushConstants::setDataPtr(const void* data)
 {
-	this->data = data;
-	this->size = this->range.size;
-	this->offset = this->range.offset;
+	memcpy(this->data, data, this->size);
 }
 
-VkPushConstantRange PushConstants::getRange() const
+std::vector<VkPushConstantRange> PushConstants::getRanges() const
 {
-	return this->range;
+	return this->ranges;
 }
 
 const void* PushConstants::getData() const
@@ -47,7 +57,3 @@ uint32_t PushConstants::getSize() const
 	return this->size;
 }
 
-uint32_t PushConstants::getOffset() const
-{
-	return this->offset;
-}

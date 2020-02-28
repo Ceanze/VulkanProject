@@ -1,4 +1,3 @@
-#pragma once
 
 #include "Models/Model/Model.h"
 #include "Vulkan/Pipeline/PushConstants.h"
@@ -13,6 +12,11 @@ public:
 	static ModelRenderer& get();
 	
 	void record(Model* model, glm::mat4 transform, CommandBuffer* commandBuffer, Pipeline* pipeline, const std::vector<VkDescriptorSet>& sets, const std::vector<uint32_t>& offsets);
+
+	void init();
+
+	void addPushconstant(VkShaderStageFlags stageFlags, uint32_t size, uint32_t offset);
+	void setPushconstantData(void* data, uint32_t size, uint32_t offset);
 
 	std::vector<PushConstants> getPushConstants() const;
 
