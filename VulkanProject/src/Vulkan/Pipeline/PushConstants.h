@@ -20,11 +20,12 @@ public:
 	void setDataPtr(const void* data);
 
 	std::vector<VkPushConstantRange> getRanges() const;
+	const std::unordered_map<VkShaderStageFlags, std::vector<VkPushConstantRange>>& getRangeMap() const;
 	const void* getData() const;
 	uint32_t getSize() const;
 
 private:
-	std::vector<VkPushConstantRange> ranges;
+	std::unordered_map<VkShaderStageFlags, std::vector<VkPushConstantRange>> ranges;
 	void* data{nullptr};
 	uint32_t size{0};
 	uint32_t offset{ 0 };

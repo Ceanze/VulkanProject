@@ -83,9 +83,19 @@ void CommandBuffer::cmdBindIndexBuffer(VkBuffer buffer, VkDeviceSize offset, VkI
 
 void CommandBuffer::cmdPushConstants(Pipeline* pipeline, const PushConstants* pushConstant)
 {
-	for (auto& range : pushConstant->getRanges())
+	for (auto& rangeVec : pushConstant->getRangeMap())
 	{
-		vkCmdPushConstants(this->buffer, pipeline->getPipelineLayout(), range.stageFlags, range.offset, range.size, pushConstant->getData());
+		uint32_t minOffset = UINT32_MAX;
+		uint32_t maxSize = 0;
+		void* data = nullptr;
+
+		for (auto& range : rangeVec.second)
+		{
+			minOffset = (minOffset > range.offset) ? range.offset : minOffset;
+			maxSize = (maxSize < range.offset + range.size) ? range.offset + range.size : maxSize;
+		}
+
+		vkCmdPushConstants(this->buffer, pipeline->getPipelineLayout(), rangeVec.first, minOffset, maxSize - minOffset, (void*)((char*)pushConstant->getData() + minOffset));
 	}
 }
 

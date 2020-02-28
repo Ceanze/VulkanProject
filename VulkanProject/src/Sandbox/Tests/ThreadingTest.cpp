@@ -259,7 +259,7 @@ void ThreadingTest::recordThread(uint32_t threadId, uint32_t frameIndex, VkComma
 		std::vector<VkDescriptorSet> sets = { this->descManager.getSet(frameIndex, 0) };
 		std::vector<uint32_t> offsets;
 		//GLTFLoader::recordDraw(model, cmdBuff, &this->pipeline, sets, offsets); // Might need a model for each thread.
-		ModelRenderer::get().record(model, objData.world * objData.model,cmdBuff, &this->pipeline, sets, offsets)
+		ModelRenderer::get().record(model, objData.world * objData.model, cmdBuff, &this->pipeline, sets, offsets);
 	}
 	//VulkanProfiler::get().endTimestamp("RecordThread_" + std::to_string(threadId), cmdBuff, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
 	cmdBuff->end();

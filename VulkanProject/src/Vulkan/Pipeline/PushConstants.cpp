@@ -28,7 +28,7 @@ void PushConstants::addLayout(VkShaderStageFlags stageFlags, uint32_t size, uint
 		this->size = newSize;
 	}
 
-	this->ranges.push_back(range);
+	this->ranges[stageFlags].push_back(range);
 }
 
 void PushConstants::setDataPtr(uint32_t size, uint32_t offset, const void* data)
@@ -43,6 +43,21 @@ void PushConstants::setDataPtr(const void* data)
 }
 
 std::vector<VkPushConstantRange> PushConstants::getRanges() const
+{
+	std::vector<VkPushConstantRange> allRanges;
+
+	for (auto& rangeVec : this->ranges)
+	{
+		for (auto range : rangeVec.second)
+		{
+			allRanges.push_back(range);
+		}
+	}
+
+	return allRanges;
+}
+
+const std::unordered_map<VkShaderStageFlags, std::vector<VkPushConstantRange>>& PushConstants::getRangeMap() const
 {
 	return this->ranges;
 }
