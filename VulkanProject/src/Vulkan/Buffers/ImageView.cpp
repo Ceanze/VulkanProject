@@ -12,7 +12,7 @@ ImageView::~ImageView()
 {
 }
 
-void ImageView::init(VkImage image, VkImageViewType type, VkFormat format, VkImageAspectFlags aspectMask)
+void ImageView::init(VkImage image, VkImageViewType type, VkFormat format, VkImageAspectFlags aspectMask, uint32_t layerCount)
 {
 	VkImageViewCreateInfo createInfo = {};
 	createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -30,7 +30,7 @@ void ImageView::init(VkImage image, VkImageViewType type, VkFormat format, VkIma
 	createInfo.subresourceRange.baseMipLevel = 0;
 	createInfo.subresourceRange.levelCount = 1;
 	createInfo.subresourceRange.baseArrayLayer = 0;
-	createInfo.subresourceRange.layerCount = 1;
+	createInfo.subresourceRange.layerCount = layerCount;
 
 	ERROR_CHECK(vkCreateImageView(Instance::get().getDevice(), &createInfo, nullptr, &this->imageView), "Failed to create image view!");
 }

@@ -15,7 +15,10 @@
 
 #include "Vulkan/Instance.h"
 
-#include <glm/gtc/type_ptr.hpp>
+#include <glm/gtc/matrix_transform.hpp> // translate() and scale()
+#include <glm/gtx/quaternion.hpp>		// toMat4()
+#include <glm/gtx/rotate_vector.hpp>
+#include <glm/gtc/type_ptr.hpp>			// make_vec3(), make_mat4()
 
 Model GLTFLoader::model = Model();
 tinygltf::TinyGLTF GLTFLoader::loader = tinygltf::TinyGLTF();
@@ -91,7 +94,7 @@ void GLTFLoader::recordDraw(Model* model, CommandBuffer* commandBuffer, Pipeline
 
 	commandBuffer->cmdBindDescriptorSets(pipeline, 0, sets, offsets);
 	for (Model::Node& node : model->nodes)
-		drawNode(commandBuffer, node);
+		drawNode(pipeline, commandBuffer, node);
 }
 
 void GLTFLoader::loadModel(Model& model, const std::string& filePath)
@@ -195,25 +198,30 @@ void GLTFLoader::loadNode(Model& model, Model::Node* node, tinygltf::Model& gltf
 {
 	//JAS_INFO("{0}->Node [{1}]", indents.c_str(), gltfNode.name.c_str());
 
+	// Set scale
 	if (!gltfNode.scale.empty())
-	{
-		//JAS_INFO("{0} ->Has scale: ({1}, {2}, {3})", indents.c_str(), gltfNode.scale[0], gltfNode.scale[1], gltfNode.scale[2]);
 		node->scale = glm::vec3((float)gltfNode.scale[0], (float)gltfNode.scale[1], (float)gltfNode.scale[2]);
-	}
+	else node->scale = glm::vec3(1.0f);
+
+	// Set translation
 	if (!gltfNode.translation.empty())
-	{
-		//JAS_INFO("{0} ->Has translation: ({1}, {2}, {3})", indents.c_str(), gltfNode.translation[0], gltfNode.translation[1], gltfNode.translation[2]);
 		node->translation = glm::vec3((float)gltfNode.translation[0], (float)gltfNode.translation[1], (float)gltfNode.translation[2]);
-	}
+	else node->translation = glm::vec3(0.0f);
+
+	// Set rotation
 	if (!gltfNode.rotation.empty())
-	{
-		//JAS_INFO("{0} ->Has rotation: ({1}, {2}, {3}, {4})", indents.c_str(), gltfNode.rotation[0], gltfNode.rotation[1], gltfNode.rotation[2], gltfNode.rotation[3]);
 		node->rotation = glm::quat((float)gltfNode.rotation[0], (float)gltfNode.rotation[1], (float)gltfNode.rotation[2], (float)gltfNode.rotation[3]);
-	}
+	else node->rotation = glm::quat(0.0f, 0.0f, 0.0f, 1.0f);
+
+	// Compute the matrix
 	if (!gltfNode.matrix.empty())
+		node->matrix = glm::make_mat4(gltfNode.matrix.data());
+	else 
 	{
-		//JAS_INFO("{0} ->Has matrix!", indents.c_str());
-		//JAS_WARN("{0} ->Matrix NOT implemented!", indents.c_str());
+		glm::mat4 t = glm::translate(node->translation);
+		glm::mat4 s = glm::scale(node->scale);
+		glm::mat4 r = glm::toMat4(node->rotation);
+		node->matrix = t * r * s;
 	}
 
 	//if (!gltfNode.children.empty())
@@ -221,6 +229,9 @@ void GLTFLoader::loadNode(Model& model, Model::Node* node, tinygltf::Model& gltf
 	node->children.resize(gltfNode.children.size());
 	for (size_t childIndex = 0; childIndex < gltfNode.children.size(); childIndex++)
 	{
+		// Set parent
+		node->children[childIndex].parent = node;
+		// Load child node
 		tinygltf::Node& child = gltfModel.nodes[gltfNode.children[childIndex]];
 		loadNode(model, &node->children[childIndex], gltfModel, child, indents + "  ");
 	}
@@ -335,7 +346,7 @@ void GLTFLoader::loadNode(Model& model, Model::Node* node, tinygltf::Model& gltf
 	}
 }
 
-void GLTFLoader::drawNode(CommandBuffer* commandBuffer, Model::Node& node)
+void GLTFLoader::drawNode(Pipeline* pipeline, CommandBuffer* commandBuffer, Model::Node& node)
 {
 	if (node.hasMesh)
 	{
@@ -351,7 +362,7 @@ void GLTFLoader::drawNode(CommandBuffer* commandBuffer, Model::Node& node)
 		}
 	}
 	for (Model::Node& child : node.children)
-		drawNode(commandBuffer, child);
+		drawNode(pipeline, commandBuffer, child);
 }
 
 void GLTFLoader::loadModel(Model& model, const std::string& filePath, Buffer* stagingBuff, Memory* stagingMemory)

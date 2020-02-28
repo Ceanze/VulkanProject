@@ -80,8 +80,22 @@ void Camera::setSpeed(float speed)
 
 glm::mat4 Camera::getMatrix() const
 {
-	glm::mat4 view = glm::lookAt(this->position, this->target, this->up);
+	return getProjection()* getView();
+}
+
+glm::mat4 Camera::getProjection() const
+{
 	glm::mat4 proj = glm::perspective(this->fov, this->aspect, this->nearPlane, this->farPlane);
 	proj[1][1] *= -1;
-	return proj * view;
+	return proj;
+}
+
+glm::mat4 Camera::getView() const
+{
+	return glm::lookAt(this->position, this->target, this->up);
+}
+
+glm::vec3 Camera::getPosition() const
+{
+	return this->position;
 }

@@ -10,6 +10,7 @@
 #include "Sandbox/Tests/ThreadingTest.h"
 #include "Sandbox/Tests/NoThreadingTest.h"
 #include "Sandbox/Tests/TransferTest.h"
+#include "Sandbox/Tests/CubemapTest.h"
 
 #include "Core/CPUProfiler.h"
 

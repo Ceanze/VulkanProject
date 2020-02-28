@@ -10,4 +10,9 @@ C:/VulkanSDK/1.1.130.0/Bin32/glslc.exe -fshader-stage=vertex gltfTestVert.glsl -
 
 C:/VulkanSDK/1.1.130.0/Bin32/glslc.exe -fshader-stage=frag ThreadingTest/threadingFrag.glsl -o ThreadingTest/threadingFrag.spv
 C:/VulkanSDK/1.1.130.0/Bin32/glslc.exe -fshader-stage=vertex ThreadingTest/threadingVert.glsl -o ThreadingTest/threadingVert.spv
+
+C:/VulkanSDK/1.1.130.0/Bin32/glslc.exe -fshader-stage=frag CubemapTest/skyboxFrag.glsl -o CubemapTest/skyboxFrag.spv
+C:/VulkanSDK/1.1.130.0/Bin32/glslc.exe -fshader-stage=vertex CubemapTest/skyboxVert.glsl -o CubemapTest/skyboxVert.spv
+C:/VulkanSDK/1.1.130.0/Bin32/glslc.exe -fshader-stage=frag CubemapTest/reflectFrag.glsl -o CubemapTest/reflectFrag.spv
+C:/VulkanSDK/1.1.130.0/Bin32/glslc.exe -fshader-stage=vertex CubemapTest/reflectVert.glsl -o CubemapTest/reflectVert.spv
 pause

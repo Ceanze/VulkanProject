@@ -109,7 +109,7 @@ void CommandBuffer::cmdMemoryBarrier(VkPipelineStageFlags srcStageMask, VkPipeli
 		srcStageMask,
 		dstStageMask,
 		dependencyFlag,
-		barriers.size(), barriers.data(),
+		(uint32_t)barriers.size(), barriers.data(),
 		0, nullptr,
 		0, nullptr);
 }
@@ -121,7 +121,7 @@ void CommandBuffer::cmdBufferMemoryBarrier(VkPipelineStageFlags srcStageMask, Vk
 		dstStageMask,
 		dependencyFlag,
 		0, nullptr,
-		barriers.size(), barriers.data(),
+		(uint32_t)barriers.size(), barriers.data(),
 		0, nullptr);
 }
 
@@ -133,7 +133,7 @@ void CommandBuffer::cmdImageMemoryBarrier(VkPipelineStageFlags srcStageMask, VkP
 		dependencyFlag,
 		0, nullptr,
 		0, nullptr,
-		barriers.size(), barriers.data());
+		(uint32_t)barriers.size(), barriers.data());
 }
 
 void CommandBuffer::cmdDispatch(uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ)

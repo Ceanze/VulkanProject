@@ -22,8 +22,8 @@ void Sampler::init(VkFilter minFilter, VkFilter magFilter, VkSamplerAddressMode 
 	samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT; // Used for 3D-textures
 
 	samplerInfo.anisotropyEnable = VK_TRUE;
-	samplerInfo.maxAnisotropy = 16;
-	samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK; // Color if sampling outside of memory
+	samplerInfo.maxAnisotropy = 16; // TODO: Should check the device properties limit for this value.
+	samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_WHITE; // Color if sampling outside of memory
 	samplerInfo.unnormalizedCoordinates = VK_FALSE;
 	samplerInfo.compareEnable = VK_FALSE;
 	samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;

@@ -27,7 +27,7 @@ void Renderer::init()
 {
 	Logger::init();
 
-	this->window.init(1280, 720, "Vulkan Project");
+	this->window.init(1280, 720, "Vulkan Project", false);
 
 	this->camera = new Camera(this->window.getAspectRatio(), 45.f, { 0.f, 0.f, 1.f }, { 0.f, 0.f, 0.f }, 0.8f);
 
@@ -211,7 +211,7 @@ void Renderer::setupPostTEMP()
 		findQueueIndex(VK_QUEUE_TRANSFER_BIT, Instance::get().getPhysicalDevice()) };
 
 	// Create texture and sampler
-	this->texture.init(width, height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, queueIndices);
+	this->texture.init(width, height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, queueIndices, 0, 1);
 	this->sampler.init(VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT);
 
 	// Create buffer
@@ -228,7 +228,7 @@ void Renderer::setupPostTEMP()
 	this->memoryTexture.bindTexture(&this->texture);
 	this->memoryTexture.init(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-	this->texture.getImageView().init(this->texture.getVkImage(), VK_IMAGE_VIEW_TYPE_2D, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT);
+	this->texture.getImageView().init(this->texture.getVkImage(), VK_IMAGE_VIEW_TYPE_2D, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT, 1);
 
 	// Update buffer
 	this->memory.directTransfer(&this->buffer, (void*)&uvs[0], size, 0);

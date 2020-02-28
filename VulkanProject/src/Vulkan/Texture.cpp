@@ -10,9 +10,9 @@ Texture::~Texture()
 {
 }
 
-void Texture::init(uint32_t width, uint32_t height, VkFormat format, VkImageUsageFlags usage, const std::vector<uint32_t>& queueFamilyIndices)
+void Texture::init(uint32_t width, uint32_t height, VkFormat format, VkImageUsageFlags usage, const std::vector<uint32_t>& queueFamilyIndices, VkImageCreateFlags flags, uint32_t arrayLayers)
 {
-	this->image.init(width, height, format, usage, queueFamilyIndices);
+	this->image.init(width, height, format, usage, queueFamilyIndices, flags, arrayLayers);
 	//this->imageView.init(getVkImage(), VK_IMAGE_VIEW_TYPE_2D, format);
 }
 

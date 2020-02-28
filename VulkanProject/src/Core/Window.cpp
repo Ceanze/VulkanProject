@@ -15,7 +15,7 @@ Window::~Window()
 {
 }
 
-void Window::init(unsigned width, unsigned height, const std::string& title)
+void Window::init(unsigned width, unsigned height, const std::string& title, bool fullscreen)
 {
 	// Set values
 	this->width = width;
@@ -32,7 +32,21 @@ void Window::init(unsigned width, unsigned height, const std::string& title)
 	// Disable window resize until vulkan renderer can handle it
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
-	this->window = glfwCreateWindow((int)this->width, (int)this->height, this->title.c_str(), nullptr, nullptr);
+	GLFWmonitor* monitor = nullptr;
+	if (fullscreen)
+	{
+		monitor = glfwGetPrimaryMonitor();
+
+		const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+		glfwWindowHint(GLFW_RED_BITS, mode->redBits);
+		glfwWindowHint(GLFW_GREEN_BITS, mode->greenBits);
+		glfwWindowHint(GLFW_BLUE_BITS, mode->blueBits);
+		glfwWindowHint(GLFW_REFRESH_RATE, mode->refreshRate);
+		this->width = mode->width;
+		this->height = mode->height;
+	}
+
+	this->window = glfwCreateWindow((int)this->width, (int)this->height, this->title.c_str(), monitor, nullptr);
 	if (!this->window) {
 		glfwTerminate();
 		JAS_FATAL("Could not create a GLFW window!");

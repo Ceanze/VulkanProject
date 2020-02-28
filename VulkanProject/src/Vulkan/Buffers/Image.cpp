@@ -13,7 +13,7 @@ Image::~Image()
 {
 }
 
-void Image::init(uint32_t width, uint32_t height, VkFormat format, VkImageUsageFlags usage, const std::vector<uint32_t>& queueFamilyIndices)
+void Image::init(uint32_t width, uint32_t height, VkFormat format, VkImageUsageFlags usage, const std::vector<uint32_t>& queueFamilyIndices, VkImageCreateFlags flags, uint32_t arrayLayers)
 {
 	this->width = width;
 	this->height = height;
@@ -25,7 +25,7 @@ void Image::init(uint32_t width, uint32_t height, VkFormat format, VkImageUsageF
 	imageInfo.extent.height = height;
 	imageInfo.extent.depth = 1;
 	imageInfo.mipLevels = 1;
-	imageInfo.arrayLayers = 1;
+	imageInfo.arrayLayers = arrayLayers;
 	imageInfo.format = format;
 	//If you want to be able to directly access texels in the memory of the image, then you must use VK_IMAGE_TILING_LINEAR
 	imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
@@ -40,6 +40,7 @@ void Image::init(uint32_t width, uint32_t height, VkFormat format, VkImageUsageF
 
 	imageInfo.queueFamilyIndexCount = static_cast<uint32_t>(queueFamilyIndices.size());
 	imageInfo.pQueueFamilyIndices = queueFamilyIndices.data();
+	imageInfo.flags = flags;
 
 
 	ERROR_CHECK(vkCreateImage(Instance::get().getDevice(), &imageInfo, nullptr, &this->image), "Failed to create image!");
@@ -75,7 +76,7 @@ void Image::transistionLayout(TransistionDesc& desc)
 	barrier.subresourceRange.baseMipLevel = 0;
 	barrier.subresourceRange.levelCount = 1;
 	barrier.subresourceRange.baseArrayLayer = 0;
-	barrier.subresourceRange.layerCount = 1;
+	barrier.subresourceRange.layerCount = desc.layerCount;
 
 	barrier.srcAccessMask = 0;
 	barrier.dstAccessMask = 0;
@@ -115,23 +116,24 @@ void Image::transistionLayout(TransistionDesc& desc)
 
 void Image::copyBufferToImage(Buffer* buffer, CommandPool* pool)
 {
-	CommandBuffer* commandBuffer = pool->beginSingleTimeCommand();
-
 	VkBufferImageCopy region = {};
 	region.bufferOffset = 0;
 	region.bufferRowLength = 0;
 	region.bufferImageHeight = 0;
-
 	region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 	region.imageSubresource.mipLevel = 0;
 	region.imageSubresource.baseArrayLayer = 0;
 	region.imageSubresource.layerCount = 1;
-
 	region.imageOffset = { 0, 0, 0 };
 	region.imageExtent = { this->width, this->height, 1 };
+	std::vector<VkBufferImageCopy> regions = { region };
+	copyBufferToImage(buffer, pool, regions);
+}
 
-	commandBuffer->cmdCopyBufferToImage(buffer->getBuffer(), this->image, this->layout, 1, &region);
-
+void Image::copyBufferToImage(Buffer* buffer, CommandPool* pool, std::vector<VkBufferImageCopy> regions)
+{
+	CommandBuffer* commandBuffer = pool->beginSingleTimeCommand();
+	commandBuffer->cmdCopyBufferToImage(buffer->getBuffer(), this->image, this->layout, (uint32_t)regions.size(), regions.data());
 	pool->endSingleTimeCommand(commandBuffer);
 }
 

@@ -65,7 +65,7 @@ void VulkanProfiler::render(float dt)
 			overlay << "Average: " << std::fixed << average << getTimeUnitName();
 
 			std::string s = "Timings of " + r.first;
-			ImGui::PlotLines(s.c_str(), this->plotResults[r.first].data(), this->plotResults[r.first].size(), 0, overlay.str().c_str(), -1.f, 1.f, { 0, 80 });
+			ImGui::PlotLines(s.c_str(), this->plotResults[r.first].data(), (int)this->plotResults[r.first].size(), 0, overlay.str().c_str(), -1.f, 1.f, { 0, 80 });
 		}
 	}
 
@@ -170,7 +170,7 @@ void VulkanProfiler::addTimestamp(std::string name)
 
 void VulkanProfiler::startTimestamp(std::string name, CommandBuffer* commandBuffer, VkPipelineStageFlagBits pipelineStage)
 {
-	commandBuffer->cmdWriteTimestamp(pipelineStage, this->timestampQueryPool, this->timestamps[name].first);
+	commandBuffer->cmdWriteTimestamp(pipelineStage, this->timestampQueryPool, (uint32_t)this->timestamps[name].first);
 }
 
 void VulkanProfiler::startComputePipelineStat(CommandBuffer* commandBuffer)
@@ -185,7 +185,7 @@ void VulkanProfiler::startGraphicsPipelineStat(CommandBuffer* commandBuffer)
 
 void VulkanProfiler::endTimestamp(std::string name, CommandBuffer* commandBuffer, VkPipelineStageFlagBits pipelineStage)
 {
-	commandBuffer->cmdWriteTimestamp(pipelineStage, this->timestampQueryPool, this->timestamps[name].second);
+	commandBuffer->cmdWriteTimestamp(pipelineStage, this->timestampQueryPool, (uint32_t)this->timestamps[name].second);
 }
 
 void VulkanProfiler::endComputePipelineStat(CommandBuffer* commandBuffer)
@@ -211,7 +211,7 @@ void VulkanProfiler::getTimestamps()
 	size_t timestampCount = this->timestamps.size() * 2;
 	std::vector<uint64_t> poolResults(timestampCount);
 	ERROR_CHECK(vkGetQueryPoolResults(instance.getDevice(), this->timestampQueryPool, 0,
-		timestampCount, poolResults.size() * sizeof(uint64_t), poolResults.data(),
+		(uint32_t)timestampCount, (uint32_t)(poolResults.size() * sizeof(uint64_t)), poolResults.data(),
 		sizeof(uint64_t), VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT), "Failed to get timestamps!");
 
 	// If you CRASH here then you might have forgotten to init the necessary number of timestamp count with the
@@ -252,13 +252,13 @@ void VulkanProfiler::resetTimestampInterval(CommandBuffer* commandBuffer, uint32
 void VulkanProfiler::resetTimestamp(const std::string& name, CommandBuffer* commandBuffer)
 {
 	if (this->timestampQueryPool != VK_NULL_HANDLE)
-		commandBuffer->cmdResetQueryPool(this->timestampQueryPool, this->timestamps[name].first, 2);
+		commandBuffer->cmdResetQueryPool(this->timestampQueryPool, (uint32_t)this->timestamps[name].first, 2);
 }
 
 void VulkanProfiler::resetAllTimestamps(CommandBuffer* commandBuffer)
 {
 	if (this->timestampQueryPool != VK_NULL_HANDLE)
-		commandBuffer->cmdResetQueryPool(this->timestampQueryPool, 0, this->timestamps.size() * 2);
+		commandBuffer->cmdResetQueryPool(this->timestampQueryPool, 0, (uint32_t)this->timestamps.size() * 2);
 }
 
 void VulkanProfiler::resetPipelineStats(CommandBuffer* commandBuffer)
