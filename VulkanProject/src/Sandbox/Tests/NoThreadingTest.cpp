@@ -9,6 +9,7 @@
 #include "Core/Input.h"
 
 #include "Models/GLTFLoader.h"
+#include "Models/ModelRenderer.h"
 
 void NoThreadingTest::init()
 {
@@ -66,7 +67,8 @@ void NoThreadingTest::init()
 	desc.pool = &this->graphicsCommandPool;
 	this->depthTexture.getImage().transistionLayout(desc);
 
-	this->pipeline.setPushConstants(this->pushConstants);
+	PushConstants& pushConstants = ModelRenderer::get().getPushConstants();
+	this->pipeline.setPushConstants(pushConstants);
 	this->pipeline.setDescriptorLayouts(this->descManager.getLayouts());
 	this->pipeline.setGraphicsPipelineInfo(getSwapChain()->getExtent(), &this->renderPass);
 	PipelineInfo pipInfo;
@@ -125,6 +127,8 @@ void NoThreadingTest::cleanup()
 	this->stagingBuffer.cleanup();
 	this->stagingMemory.cleanup();
 	this->transferCommandPool.cleanup();
+	this->cameraBuffer.cleanup();
+	this->memory.cleanup();
 
 	delete this->camera;
 	this->graphicsCommandPool.cleanup();
@@ -164,11 +168,6 @@ void NoThreadingTest::prepareBuffers()
 		obj.tint = threadColor;
 		this->objects.push_back(obj);
 	}
-
-	// Create push constants
-	PushConstants pushConsts;
-	pushConsts.setLayout(VK_SHADER_STAGE_VERTEX_BIT, sizeof(PushConstantData), 0);
-	this->pushConstants.push_back(pushConsts);
 }
 
 void NoThreadingTest::recordThread(uint32_t frameIndex)
@@ -186,16 +185,16 @@ void NoThreadingTest::recordThread(uint32_t frameIndex)
 
 		// Apply push constants
 		PushConstantData pData;
-		pData.vp = this->camera->getMatrix();
 		pData.tint = objData.tint;
 		pData.mw = objData.world * objData.model;
-		this->pushConstants[0].setDataPtr(&pData);
-		this->primaryBuffers[frameIndex]->cmdPushConstants(&this->pipeline, &this->pushConstants[0]);
 
 		// Draw model
 		std::vector<VkDescriptorSet> sets = { this->descManager.getSet(frameIndex, 0) };
 		std::vector<uint32_t> offsets;
-		GLTFLoader::recordDraw(&this->model, this->primaryBuffers[frameIndex], &this->pipeline, sets, offsets); // Might need a model for each thread.
+		uint32_t pushOffset = ModelRenderer::get().getPushConstantSize();
+		this->primaryBuffers[frameIndex]->cmdPushConstants(&this->pipeline, VK_SHADER_STAGE_VERTEX_BIT, pushOffset, sizeof(PushConstantData), &pData);
+		ModelRenderer::get().record(&this->model, glm::mat4(1.0f), this->primaryBuffers[frameIndex], &this->pipeline, sets, offsets);
+		//GLTFLoader::recordDraw(&this->model, this->primaryBuffers[frameIndex], &this->pipeline, sets, offsets); // Might need a model for each thread.
 	}
 	VulkanProfiler::get().endTimestamp("Main thread", this->primaryBuffers[frameIndex], VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
 }
@@ -203,6 +202,10 @@ void NoThreadingTest::recordThread(uint32_t frameIndex)
 void NoThreadingTest::updateBuffers(uint32_t frameIndex, float dt)
 {
 	JAS_PROFILER_SAMPLE_FUNCTION();
+
+	// Update camera
+	glm::mat4 camMat = this->camera->getMatrix();
+	this->memory.directTransfer(&this->cameraBuffer, (void*)& camMat, sizeof(glm::mat4), 0);
 
 	// Record command buffers
 	this->primaryBuffers[frameIndex]->begin(0, nullptr);
@@ -225,6 +228,7 @@ void NoThreadingTest::updateBuffers(uint32_t frameIndex, float dt)
 void NoThreadingTest::setupPre()
 {
 	this->descLayout.add(new SSBO(VK_SHADER_STAGE_VERTEX_BIT, 1, nullptr)); // Vertices
+	this->descLayout.add(new UBO(VK_SHADER_STAGE_VERTEX_BIT, 1, nullptr)); // Camera
 	this->descLayout.init();
 
 	this->descManager.addLayout(this->descLayout);
@@ -235,18 +239,25 @@ void NoThreadingTest::setupPre()
 	this->stagingMemory.init(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 	GLTFLoader::transferToModel(&this->transferCommandPool, &this->model, &this->stagingBuffer, &this->stagingMemory);
 
-	PushConstants pushConsts;
-	pushConsts.setLayout(VK_SHADER_STAGE_VERTEX_BIT, sizeof(PushConstantData), 0);
-	this->pushConstants.push_back(pushConsts);
+	uint32_t pushOffset = ModelRenderer::get().getPushConstantSize();
+	ModelRenderer::get().addPushConstant(VK_SHADER_STAGE_VERTEX_BIT, sizeof(PushConstantData), pushOffset);
+	ModelRenderer::get().init();
 }
 
 void NoThreadingTest::setupPost()
 {
+	std::vector<uint32_t> queueIndices = { findQueueIndex(VK_QUEUE_GRAPHICS_BIT, Instance::get().getPhysicalDevice()) };
+	this->cameraBuffer.init(sizeof(glm::mat4), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, queueIndices);
+
+	this->memory.bindBuffer(&this->cameraBuffer);
+	this->memory.init(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
 	// Update descriptor
 	for (uint32_t i = 0; i < getSwapChain()->getNumImages(); i++)
 	{
 		VkDeviceSize vertexBufferSize = this->model.vertices.size() * sizeof(Vertex);
 		this->descManager.updateBufferDesc(0, 0, this->model.vertexBuffer.getBuffer(), 0, vertexBufferSize);
+		this->descManager.updateBufferDesc(0, 1, this->cameraBuffer.getBuffer(), 0, sizeof(glm::mat4));
 		this->descManager.updateSets({ 0 }, i);
 	}
 

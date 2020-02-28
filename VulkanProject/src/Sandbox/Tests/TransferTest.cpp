@@ -6,6 +6,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "Models/GLTFLoader.h"
+#include "Models/ModelRenderer.h"
 
 void TransferTest::init()
 {
@@ -59,6 +60,8 @@ void TransferTest::init()
 	desc.pool = &this->graphicsCommandPool;
 	this->depthTexture.getImage().transistionLayout(desc);
 
+	PushConstants& pushConstants = ModelRenderer::get().getPushConstants();
+	this->pipeline.setPushConstants(pushConstants);
 	this->pipeline.setDescriptorLayouts(this->descManager.getLayouts());
 	this->pipeline.setGraphicsPipelineInfo(getSwapChain()->getExtent(), &this->renderPass);
 	this->pipeline.init(Pipeline::Type::GRAPHICS, &this->shader);
@@ -118,6 +121,8 @@ void TransferTest::setupPre()
 	GLTFLoader::load(filePath, &this->defaultModel);
 	this->isTransferDone = false;
 	this->thread = new std::thread(&TransferTest::loadingThread, this);
+
+	ModelRenderer::get().init();
 }
 
 void TransferTest::setupPost()
@@ -184,10 +189,6 @@ void TransferTest::record()
 				this->descManager.updateBufferDesc(0, 0, this->transferModel.vertexBuffer.getBuffer(), 0, vertexBufferSize);
 				this->descManager.updateSets({ 0 }, i);
 			}
-			// Update world matrix, because Sponza is big.
-			glm::mat4 world(0.01f);
-			world[3][3] = 1.0f;
-			this->memory.directTransfer(&this->bufferUniform, (void*)&world[0][0], sizeof(world), offsetof(UboData, world));
 		}
 	}
 
@@ -208,9 +209,9 @@ void TransferTest::record()
 
 		
 	if (useTransferedModel)
-		GLTFLoader::recordDraw(&this->transferModel, this->cmdBuffs[currentImage], &this->pipeline, sets, offsets);
+		ModelRenderer::get().record(&this->transferModel, glm::mat4(1.0f), this->cmdBuffs[currentImage], &this->pipeline, sets, offsets);
 	else
-		GLTFLoader::recordDraw(&this->defaultModel, this->cmdBuffs[currentImage], &this->pipeline, sets, offsets);
+		ModelRenderer::get().record(&this->defaultModel, glm::mat4(1.0f), this->cmdBuffs[currentImage], &this->pipeline, sets, offsets);
 
 	this->cmdBuffs[currentImage]->cmdEndRenderPass();
 	this->cmdBuffs[currentImage]->end();

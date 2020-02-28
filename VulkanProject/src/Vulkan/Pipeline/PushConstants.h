@@ -10,6 +10,7 @@ public:
 	~PushConstants();
 
 	void init();
+	void cleanup();
 
 	void addLayout(VkShaderStageFlags stageFlags, uint32_t size, uint32_t offset);
 
@@ -20,13 +21,13 @@ public:
 	void setDataPtr(const void* data);
 
 	std::vector<VkPushConstantRange> getRanges() const;
-	const std::unordered_map<VkShaderStageFlags, std::vector<VkPushConstantRange>>& getRangeMap() const;
+	const std::unordered_map<VkShaderStageFlags, VkPushConstantRange>& getRangeMap() const;
 	const void* getData() const;
 	uint32_t getSize() const;
 
 private:
-	std::unordered_map<VkShaderStageFlags, std::vector<VkPushConstantRange>> ranges;
-	void* data{nullptr};
+	std::unordered_map<VkShaderStageFlags, VkPushConstantRange> ranges;
+	char* data{nullptr};
 	uint32_t size{0};
 	uint32_t offset{ 0 };
 };

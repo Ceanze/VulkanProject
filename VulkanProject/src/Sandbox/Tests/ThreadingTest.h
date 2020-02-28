@@ -43,7 +43,6 @@ private:
 		std::vector<uint32_t> activeBuffers;
 		std::mutex* mutex;
 		std::vector<ObjectData> objects;
-		std::vector<PushConstants> pushConstants;
 	};
 
 	struct ThreadDataTransfer
@@ -92,7 +91,6 @@ private:
 
 	uint32_t numThreads;
 	ThreadManager threadManager;
-	std::vector<PushConstants> pushConstants;
 	std::vector<ThreadData> threadData;
 	ThreadDataTransfer threadDataTransfer;
 };

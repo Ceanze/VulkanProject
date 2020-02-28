@@ -8,6 +8,11 @@ ModelRenderer& ModelRenderer::get()
 	return modelRenderer;
 }
 
+ModelRenderer::~ModelRenderer()
+{
+	this->pushConstants.cleanup();
+}
+
 void ModelRenderer::record(Model* model, glm::mat4 transform, CommandBuffer* commandBuffer, Pipeline* pipeline, const std::vector<VkDescriptorSet>& sets, const std::vector<uint32_t>& offsets)
 {
 	// TODO: Use different materials, can still use same pipeline if all meshes uses same type of material (i.e. PBR)!
@@ -27,28 +32,29 @@ void ModelRenderer::record(Model* model, glm::mat4 transform, CommandBuffer* com
 
 void ModelRenderer::init()
 {
-	this->pushConstants.addLayout(VK_SHADER_STAGE_VERTEX_BIT, sizeof(PushConstantData), this->pushConstants.getSize());
 	this->pushConstants.init();
 }
 
-void ModelRenderer::addPushconstant(VkShaderStageFlags stageFlags, uint32_t size, uint32_t offset)
+void ModelRenderer::addPushConstant(VkShaderStageFlags stageFlags, uint32_t size, uint32_t offset)
 {
 	this->pushConstants.addLayout(stageFlags, size, offset);
 }
 
-void ModelRenderer::setPushconstantData(void* data, uint32_t size, uint32_t offset)
+PushConstants& ModelRenderer::getPushConstants()
 {
-	this->pushConstants.setDataPtr(size, offset, data);
+	return this->pushConstants;
 }
 
-std::vector<PushConstants> ModelRenderer::getPushConstants() const
+uint32_t ModelRenderer::getPushConstantSize() const
 {
-	return { this->pushConstants };
+	return this->size;
 }
 
-ModelRenderer::ModelRenderer()
+ModelRenderer::ModelRenderer() : size(0)
 {
-
+	// Vertex push constants
+	this->pushConstants.addLayout(VK_SHADER_STAGE_VERTEX_BIT, sizeof(PushConstantData), 0);
+	this->size = this->pushConstants.getSize();
 }
 
 void ModelRenderer::drawNode(CommandBuffer* commandBuffer, Pipeline* pipeline, Model::Node& node, glm::mat4 transform)
@@ -57,9 +63,8 @@ void ModelRenderer::drawNode(CommandBuffer* commandBuffer, Pipeline* pipeline, M
 	{
 		// Set transformation matrix
 		PushConstantData pushConstantData;
-		pushConstantData.matrix = node.parent != nullptr ? (node.parent->matrix * node.matrix * transform) : (node.matrix * transform);
-		this->pushConstants.setDataPtr(sizeof(PushConstantData), pushConstants.getSize() - sizeof(PushConstantData), &pushConstantData);
-		commandBuffer->cmdPushConstants(pipeline, &this->pushConstants);
+		pushConstantData.matrix = node.parent != nullptr ? (transform * node.parent->matrix * node.matrix) : (transform * node.matrix);
+		commandBuffer->cmdPushConstants(pipeline, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(PushConstantData), &pushConstantData);
 
 		Mesh& mesh = node.mesh;
 		for (Primitive& primitive : mesh.primitives)

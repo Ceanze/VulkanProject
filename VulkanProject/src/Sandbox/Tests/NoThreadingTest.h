@@ -22,7 +22,6 @@ private:
 	struct PushConstantData
 	{
 		glm::mat4 mw;
-		glm::mat4 vp;
 		glm::vec4 tint;
 	};
 
@@ -61,6 +60,8 @@ private:
 	Texture depthTexture;
 	Memory imageMemory; // Holds depth texture
 
-	PushConstants pushConstants;
+	Buffer cameraBuffer;
+	Memory memory;
+
 	std::vector<ObjectData> objects;
 };

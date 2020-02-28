@@ -68,7 +68,8 @@ void ThreadingTest::init()
 	desc.pool = &this->graphicsCommandPool;
 	this->depthTexture.getImage().transistionLayout(desc);
 
-	this->pipeline.setPushConstants(this->pushConstants);
+	PushConstants& pushConstants = ModelRenderer::get().getPushConstants();
+	this->pipeline.setPushConstants(pushConstants);
 	this->pipeline.setDescriptorLayouts(this->descManager.getLayouts());
 	this->pipeline.setGraphicsPipelineInfo(getSwapChain()->getExtent(), &this->renderPass);
 	PipelineInfo pipInfo;
@@ -199,11 +200,6 @@ void ThreadingTest::prepareBuffers()
 			obj.tint = threadColor;
 			tData.objects.push_back(obj);
 		}
-
-		// Create push constants
-		PushConstants pushConsts;
-		pushConsts.setLayout(VK_SHADER_STAGE_VERTEX_BIT, sizeof(PushConstantData), 0);
-		tData.pushConstants.push_back(pushConsts);
 	}
 
 	// Record initial secondary buffers
@@ -249,17 +245,16 @@ void ThreadingTest::recordThread(uint32_t threadId, uint32_t frameIndex, VkComma
 		ObjectData& objData = tData.objects[i];
 
 		// Apply push constants
-		//PushConstantData pData;
-		//pData.tint = objData.tint;
-		//pData.mw = objData.world * objData.model;
-		//tData.pushConstants[0].setDataPtr(&pData);
-		//cmdBuff->cmdPushConstants(&this->pipeline, &tData.pushConstants[0]);
+		PushConstantData pData;
+		pData.tint = objData.tint;
+		pData.mw = objData.world * objData.model;
 
 		// Draw model
 		std::vector<VkDescriptorSet> sets = { this->descManager.getSet(frameIndex, 0) };
 		std::vector<uint32_t> offsets;
-		//GLTFLoader::recordDraw(model, cmdBuff, &this->pipeline, sets, offsets); // Might need a model for each thread.
-		ModelRenderer::get().record(model, objData.world * objData.model, cmdBuff, &this->pipeline, sets, offsets);
+		uint32_t pushOffset = ModelRenderer::get().getPushConstantSize();
+		cmdBuff->cmdPushConstants(&this->pipeline, VK_SHADER_STAGE_VERTEX_BIT, pushOffset, sizeof(PushConstantData), &pData); // Might need a model for each thread.
+		ModelRenderer::get().record(model, glm::mat4(1.0f), cmdBuff, &this->pipeline, sets, offsets);
 	}
 	//VulkanProfiler::get().endTimestamp("RecordThread_" + std::to_string(threadId), cmdBuff, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
 	cmdBuff->end();
@@ -413,10 +408,12 @@ void ThreadingTest::setupPre()
 	this->descManager.addLayout(this->descLayout);
 	this->descManager.init(getSwapChain()->getNumImages());
 
-	std::string filePath = "..\\assets\\Models\\Cube\\Cube.gltf";
+	std::string filePath = "..\\assets\\Models\\Sponza\\glTF\\Sponza.gltf";
+	filePath = "..\\assets\\Models\\Chicken\\Chicken.gltf";
+	//filePath = "..\\assets\\Models\\FlightHelmet\\FlightHelmet.gltf";
 	GLTFLoader::prepareStagingBuffer(filePath, &this->model, &this->stagingBuffer, &this->stagingMemory);
 
-	filePath = "..\\assets\\Models\\Chicken\\chicken.glb";
+	filePath = "..\\assets\\Models\\Cube\\Cube.gltf";
 	GLTFLoader::prepareStagingBuffer(filePath, &this->modelChicken, &this->stagingBuffer2, &this->stagingMemory);
 
 	// Create memory with the binded buffers
@@ -424,9 +421,9 @@ void ThreadingTest::setupPre()
 
 	GLTFLoader::transferToModel(&this->transferCommandPool, &this->model, &this->stagingBuffer, &this->stagingMemory);
 
-	PushConstants push;
-	push.setLayout(VK_SHADER_STAGE_VERTEX_BIT, sizeof(PushConstantData), 0);
-	this->pushConstants.push_back(push);
+	uint32_t pushOffset = ModelRenderer::get().getPushConstantSize();
+	ModelRenderer::get().addPushConstant(VK_SHADER_STAGE_VERTEX_BIT, sizeof(PushConstantData), pushOffset);
+	ModelRenderer::get().init();
 }
 
 void ThreadingTest::setupPost()

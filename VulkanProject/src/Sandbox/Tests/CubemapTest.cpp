@@ -70,7 +70,7 @@ void CubemapTest::init()
 
 	
 	// Create pipeline
-	std::vector<PushConstants> pushConstants = ModelRenderer::get().getPushConstants();
+	PushConstants& pushConstants = ModelRenderer::get().getPushConstants();
 	getPipeline(MAIN_PIPELINE).setPushConstants(pushConstants);
 	getPipeline(MAIN_PIPELINE).setDescriptorLayouts(this->descManager.getLayouts());
 	getPipeline(MAIN_PIPELINE).setGraphicsPipelineInfo(getSwapChain()->getExtent(), &this->renderPass);
@@ -203,7 +203,6 @@ void CubemapTest::setupPost()
 		std::vector<VkDescriptorSet> sets = { this->cubemapDescManager.getSet(i, 0), this->cubemapDescManager.getSet(i, 1) };
 		std::vector<uint32_t> offsets;
 		glm::mat4 transform = glm::scale(glm::vec3(50.0f));
-		transform = glm::rotate(transform, glm::pi<float>(), {1.0f, 0.0f, 0.0f}); // Texture was upside down.
 		this->cmdBuffs[i]->cmdBindPipeline(&getPipeline(CUBEMAP_PIPELINE));
 		ModelRenderer::get().record(&this->cube, transform, this->cmdBuffs[i], &getPipeline(CUBEMAP_PIPELINE), sets, offsets);
 
@@ -346,7 +345,7 @@ void CubemapTest::setupCubemap()
 	pipelineInfo.rasterizer.cullMode = VK_CULL_MODE_FRONT_BIT;
 	pipelineInfo.rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 	getPipeline(CUBEMAP_PIPELINE).setPipelineInfo(PipelineInfoFlag::RASTERIZATION, pipelineInfo);
-	std::vector<PushConstants> pushConstants = ModelRenderer::get().getPushConstants();
+	PushConstants& pushConstants = ModelRenderer::get().getPushConstants();
 	getPipeline(CUBEMAP_PIPELINE).setPushConstants(pushConstants);
 	getPipeline(CUBEMAP_PIPELINE).setDescriptorLayouts(this->cubemapDescManager.getLayouts());
 	getPipeline(CUBEMAP_PIPELINE).setGraphicsPipelineInfo(getSwapChain()->getExtent(), &this->renderPass);

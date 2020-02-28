@@ -107,8 +107,8 @@ void Renderer::run()
 		std::vector<uint32_t> offsets;
 		cmdBuffs[i]->cmdBindDescriptorSets(&this->pipeline, 0, sets, offsets);
 		const glm::vec4 tintData(0.3f, 0.4f, 0.4f, 1.0f);
-		this->pushConstants[0].setDataPtr(&tintData[0]);
-		cmdBuffs[i]->cmdPushConstants(&this->pipeline, &this->pushConstants[0]);
+		this->pushConstants.setDataPtr(&tintData[0]);
+		cmdBuffs[i]->cmdPushConstants(&this->pipeline, &this->pushConstants);
 
 		cmdBuffs[i]->cmdDraw(3, 1, 0, 0);
 
@@ -192,9 +192,8 @@ void Renderer::setupPreTEMP()
 	this->descManager.addLayout(this->descLayout);
 	this->descManager.init(this->swapChain.getNumImages());
 
-	PushConstants pushConsts;
-	pushConsts.setLayout(VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(glm::vec4), 0);
-	this->pushConstants.push_back(pushConsts);
+	this->pushConstants.addLayout(VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(glm::vec4), 0);
+	this->pushConstants.init();
 }
 
 void Renderer::setupPostTEMP()

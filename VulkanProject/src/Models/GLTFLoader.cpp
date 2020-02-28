@@ -210,9 +210,9 @@ void GLTFLoader::loadNode(Model& model, Model::Node* node, tinygltf::Model& gltf
 
 	// Set rotation
 	if (!gltfNode.rotation.empty())
-		node->rotation = glm::quat((float)gltfNode.rotation[0], (float)gltfNode.rotation[1], (float)gltfNode.rotation[2], (float)gltfNode.rotation[3]);
-	else node->rotation = glm::quat(0.0f, 0.0f, 0.0f, 1.0f);
-
+		node->rotation = glm::quat((float)gltfNode.rotation[3], (float)gltfNode.rotation[0], (float)gltfNode.rotation[1], (float)gltfNode.rotation[2]);
+	else node->rotation = glm::quat();
+	
 	// Compute the matrix
 	if (!gltfNode.matrix.empty())
 		node->matrix = glm::make_mat4(gltfNode.matrix.data());
@@ -220,7 +220,7 @@ void GLTFLoader::loadNode(Model& model, Model::Node* node, tinygltf::Model& gltf
 	{
 		glm::mat4 t = glm::translate(node->translation);
 		glm::mat4 s = glm::scale(node->scale);
-		glm::mat4 r = glm::toMat4(node->rotation);
+		glm::mat4 r = glm::mat4(node->rotation);
 		node->matrix = t * r * s;
 	}
 
