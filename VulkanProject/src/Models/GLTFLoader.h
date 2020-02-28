@@ -20,7 +20,7 @@ public:
 	static void load(const std::string& filePath, Model* model);
 	static void recordDraw(Model* model, CommandBuffer* commandBuffer, Pipeline* pipeline, const std::vector<VkDescriptorSet>& sets, const std::vector<uint32_t>& offsets);
 
-	static void loadToStagingBuffer(const std::string& filePath, Model* model, Buffer* stagingBuff, Memory* stagingMemory);
+	static void prepareStagingBuffer(const std::string& filePath, Model* model, Buffer* stagingBuff, Memory* stagingMemory);
 	static void transferToModel(CommandPool* transferCommandPool, Model* model, Buffer* stagingBuff, Memory* stagingMemory);
 
 private:

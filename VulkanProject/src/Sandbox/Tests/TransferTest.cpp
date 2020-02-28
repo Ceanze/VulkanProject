@@ -155,8 +155,9 @@ void TransferTest::loadingThread()
 {
 	const std::string filePath = "..\\assets\\Models\\Sponza\\glTF\\Sponza.gltf";
 
-	GLTFLoader::loadToStagingBuffer(filePath, &this->transferModel, &this->stagingBuffer, &this->stagingMemory);
+	GLTFLoader::prepareStagingBuffer(filePath, &this->transferModel, &this->stagingBuffer, &this->stagingMemory);
 
+	this->stagingMemory.init(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 	// Use the transfer queue, create a single command buffer and copy the contents of the staging buffer to the model's buffers.
 	GLTFLoader::transferToModel(&this->transferCommandPool, &this->transferModel, &this->stagingBuffer, &this->stagingMemory);
 

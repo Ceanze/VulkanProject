@@ -25,23 +25,29 @@ void GLTFLoader::load(const std::string& filePath, Model* model)
 	loadModel(*model, filePath);
 }
 
-void GLTFLoader::loadToStagingBuffer(const std::string& filePath, Model* model, Buffer* stagingBuff, Memory* stagingMemory)
+void GLTFLoader::prepareStagingBuffer(const std::string& filePath, Model* model, Buffer* stagingBuff, Memory* stagingMemory)
 {
 	loadModel(*model, filePath, stagingBuff, stagingMemory);
 }
 
 void GLTFLoader::transferToModel(CommandPool* transferCommandPool, Model* model, Buffer* stagingBuff, Memory* stagingMemory)
 {
+
+	// Transfer data to buffers
+	uint32_t indicesSize = (uint32_t)(model->indices.size() * sizeof(uint32_t));
+	uint32_t verticesSize = (uint32_t)(model->vertices.size() * sizeof(Vertex));
+	if (indicesSize > 0)
+		stagingMemory->directTransfer(stagingBuff, (const void*)model->indices.data(), indicesSize, 0);
+	stagingMemory->directTransfer(stagingBuff, (const void*)model->vertices.data(), verticesSize, (Offset)indicesSize);
+
 	// Create memory and buffers.
 	std::vector<uint32_t> queueIndices = { findQueueIndex(VK_QUEUE_TRANSFER_BIT, Instance::get().getPhysicalDevice()) };
-	uint32_t indicesSize = (uint32_t)(model->indices.size() * sizeof(uint32_t));
 	if (indicesSize > 0)
 	{
 		model->indexBuffer.init(indicesSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, queueIndices);
 		model->bufferMemory.bindBuffer(&model->indexBuffer);
 	}
 
-	uint32_t verticesSize = (uint32_t)(model->vertices.size() * sizeof(Vertex));
 	model->vertexBuffer.init(verticesSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, queueIndices);
 	model->bufferMemory.bindBuffer(&model->vertexBuffer);
 
@@ -396,12 +402,4 @@ void GLTFLoader::loadScenes(Model& model, tinygltf::Model& gltfModel, Buffer* st
 
 	stagingBuff->init(verticesSize + indicesSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, queueIndices);
 	stagingMemory->bindBuffer(stagingBuff);
-
-	// Create memory with the binded buffers
-	stagingMemory->init(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
-	// Transfer data to buffers
-	if (indicesSize > 0)
-		stagingMemory->directTransfer(stagingBuff, (const void*)model.indices.data(), indicesSize, 0);
-	stagingMemory->directTransfer(stagingBuff, (const void*)model.vertices.data(), verticesSize, (Offset)indicesSize);
 }

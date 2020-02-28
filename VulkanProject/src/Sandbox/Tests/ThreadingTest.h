@@ -34,6 +34,7 @@ private:
 		glm::vec4 tint;
 	};
 
+
 	// Data per thread.
 	struct ThreadData
 	{
@@ -45,8 +46,18 @@ private:
 		std::vector<PushConstants> pushConstants;
 	};
 
+	struct ThreadDataTransfer
+	{
+		CommandPool cmdPool;
+		CommandBuffer* cmdBuffs;
+		Buffer* buffer;
+		Memory* memory;
+	};
+
+
 	void prepareBuffers();
-	void recordThread(uint32_t threadId, uint32_t frameIndex, VkCommandBufferInheritanceInfo inheritanceInfo);
+	void recordThread(uint32_t threadId, uint32_t frameIndex, VkCommandBufferInheritanceInfo inheritanceInfo, Model* model);
+	void transferBuffer();
 	void updateBuffers(uint32_t frameIndex, float dt);
 
 	void setupPre();
@@ -69,7 +80,10 @@ private:
 	Memory memory;
 
 	Model model;
+	Model modelChicken;
+	Model* currentModel;
 	Buffer stagingBuffer;
+	Buffer stagingBuffer2;
 	Memory stagingMemory;
 
 	std::vector<CommandBuffer*> primaryBuffers;
@@ -80,4 +94,5 @@ private:
 	ThreadManager threadManager;
 	std::vector<PushConstants> pushConstants;
 	std::vector<ThreadData> threadData;
+	ThreadDataTransfer threadDataTransfer;
 };

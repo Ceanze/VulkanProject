@@ -12,7 +12,7 @@
 class ThreadManager
 {
 public:
-	
+	typedef uint32_t WorkID;
 
 public:
 	ThreadManager();
@@ -26,11 +26,14 @@ public:
 		
 	// Add work to a specific thread.
 	void addWork(uint32_t threadIndex, uint32_t queueIndex, std::function<void(void)> work);
+	WorkID addWorkTrace(uint32_t threadIndex, uint32_t queueIndex, std::function<void(void)> work);
 
 	// Wait for all threads to have no work left.
 	void wait();
 
-	bool isDone(uint32_t queueIndex);
+	bool isQueueEmpty(uint32_t queueIndex);
+	bool isWorkFinished(WorkID id);
+	bool isWorkFinished(WorkID id, uint32_t threadID);
 
 private:
 	struct Thread
@@ -38,12 +41,13 @@ private:
 		Thread(uint32_t numQueues);
 		~Thread();
 
-		void addWork(uint32_t queueIndex, std::function<void(void)> work);
+		void addWork(ThreadManager::WorkID id, uint32_t queueIndex, std::function<void(void)> work);
 
 		// Wait for the thread to be done with the queue.
 		void wait(uint32_t queueIndex);
 
-		bool isDone(uint32_t queueIndex);
+		bool isQueueEmpty(uint32_t queueIndex);
+		bool isWorkFinished(WorkID id);
 
 		uint32_t getNumQueues() const;
 
@@ -54,7 +58,8 @@ private:
 		bool destroying = false;
 		std::thread worker;
 		std::mutex mutex;
-		std::vector<std::queue<std::function<void(void)>>> queues;
+		std::vector<WorkID> worksDone;
+		std::vector<std::queue<std::pair<ThreadManager::WorkID, std::function<void(void)>>>> queues;
 		std::condition_variable condition;
 	};
 

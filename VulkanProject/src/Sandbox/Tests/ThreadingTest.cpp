@@ -124,11 +124,15 @@ void ThreadingTest::cleanup()
 {
 	this->threadManager.wait();
 	VulkanProfiler::get().cleanup();
+	this->modelChicken.cleanup();
 	this->stagingBuffer.cleanup();
+	this->stagingBuffer2.cleanup();
 	this->stagingMemory.cleanup();
 	this->cameraBuffer.cleanup();
 	this->memory.cleanup();
 	this->transferCommandPool.cleanup();
+
+	this->threadDataTransfer.cmdPool.cleanup();
 
 	delete this->camera;
 	for (ThreadData& tData : this->threadData)
@@ -162,6 +166,11 @@ void ThreadingTest::prepareBuffers()
 
 	// Create primary command buffers, one per swap chain image.
 	this->primaryBuffers = this->graphicsCommandPool.createCommandBuffers(getSwapChain()->getNumImages(), VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+
+	this->threadDataTransfer.cmdPool.init(CommandPool::Queue::TRANSFER, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+	this->threadDataTransfer.cmdBuffs = this->threadDataTransfer.cmdPool.createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_SECONDARY);
+	this->threadDataTransfer.buffer = &this->stagingBuffer2;
+	this->threadDataTransfer.memory = &this->stagingMemory;
 
 	this->threadData.resize(this->numThreads);
 	for (uint32_t t = 0; t < this->numThreads; t++)
@@ -197,6 +206,7 @@ void ThreadingTest::prepareBuffers()
 	}
 
 	// Record initial secondary buffers
+	this->currentModel = &this->model;
 	for (size_t f = 0; f < this->getSwapChain()->getNumImages(); f++)
 	{
 		VkCommandBufferInheritanceInfo inheritanceInfo = {};
@@ -208,14 +218,14 @@ void ThreadingTest::prepareBuffers()
 		for (uint32_t t = 0; t < this->numThreads; t++)
 		{
 			// Add work to a specific thread, the thread has a queue which it will go through.
-			this->threadManager.addWork(t, f, [=] { recordThread(t, f, inheritanceInfo); });
+			this->threadManager.addWork(t, f, [=] { recordThread(t, f, inheritanceInfo, this->currentModel); });
 		}
 	}
 
 	this->threadManager.wait();
 }
 
-void ThreadingTest::recordThread(uint32_t threadId, uint32_t frameIndex, VkCommandBufferInheritanceInfo inheritanceInfo)
+void ThreadingTest::recordThread(uint32_t threadId, uint32_t frameIndex, VkCommandBufferInheritanceInfo inheritanceInfo, Model* model)
 {
 	JAS_PROFILER_SAMPLE_FUNCTION();
 	ThreadData& tData = this->threadData[threadId];
@@ -247,7 +257,7 @@ void ThreadingTest::recordThread(uint32_t threadId, uint32_t frameIndex, VkComma
 		// Draw model
 		std::vector<VkDescriptorSet> sets = { this->descManager.getSet(frameIndex, 0) };
 		std::vector<uint32_t> offsets;
-		GLTFLoader::recordDraw(&this->model, cmdBuff, &this->pipeline, sets, offsets); // Might need a model for each thread.
+		GLTFLoader::recordDraw(model, cmdBuff, &this->pipeline, sets, offsets); // Might need a model for each thread.
 	}
 	//VulkanProfiler::get().endTimestamp("RecordThread_" + std::to_string(threadId), cmdBuff, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
 	cmdBuff->end();
@@ -257,6 +267,16 @@ void ThreadingTest::recordThread(uint32_t threadId, uint32_t frameIndex, VkComma
 		std::lock_guard<std::mutex> lck(*tData.mutex);
 		tData.activeBuffers[frameIndex] ^= 1;
 	}
+}
+
+void ThreadingTest::transferBuffer()
+{
+	static bool notLoaded = true;
+	if (notLoaded) {
+		
+		GLTFLoader::transferToModel(&this->threadDataTransfer.cmdPool, &this->modelChicken, this->threadDataTransfer.buffer, this->threadDataTransfer.memory);
+	}
+
 }
 
 void ThreadingTest::updateBuffers(uint32_t frameIndex, float dt)
@@ -291,7 +311,6 @@ void ThreadingTest::updateBuffers(uint32_t frameIndex, float dt)
 	static uint32_t objCount = 0;
 
 
-	static uint32_t frameCount = 0;
 	static bool keyWasPressed = false;
 	if (Input::get().isKeyDown(GLFW_KEY_G))
 		keyWasPressed = true;
@@ -330,15 +349,40 @@ void ThreadingTest::updateBuffers(uint32_t frameIndex, float dt)
 			objCount += this->threadData[t].objects.size();
 
 			inheritanceInfo.framebuffer = getFramebuffers()[0].getFramebuffer();
-			this->threadManager.addWork(t, 0, [=] { recordThread(t, 0, inheritanceInfo); });
+			this->threadManager.addWork(t, 0, [=] { recordThread(t, 0, inheritanceInfo, currentModel); });
 
 			inheritanceInfo.framebuffer = getFramebuffers()[1].getFramebuffer();
-			this->threadManager.addWork(t, 1, [=] { recordThread(t, 1, inheritanceInfo); });
+			this->threadManager.addWork(t, 1, [=] { recordThread(t, 1, inheritanceInfo, currentModel); });
 
 			inheritanceInfo.framebuffer = getFramebuffers()[2].getFramebuffer();
-			this->threadManager.addWork(t, 2, [=] { recordThread(t, 2, inheritanceInfo); });
+			this->threadManager.addWork(t, 2, [=] { recordThread(t, 2, inheritanceInfo, currentModel); });
 		}
 	}
+
+	static bool keyWasPressed2 = false;
+	static uint32_t transferWorkID = 0;
+	if (Input::get().isKeyDown(GLFW_KEY_H))
+		keyWasPressed2 = true;
+	else if (keyWasPressed2)
+	{
+		keyWasPressed2 = false;
+		transferWorkID = this->threadManager.addWorkTrace(0, 0, [=] { transferBuffer(); });
+	}
+
+	if (transferWorkID > 0)
+		if (this->threadManager.isWorkFinished(transferWorkID)) 
+		{
+			// Update descriptor
+			for (uint32_t i = 0; i < getSwapChain()->getNumImages(); i++)
+			{
+				VkDeviceSize vertexBufferSize = this->modelChicken.vertices.size() * sizeof(Vertex);
+				this->descManager.updateBufferDesc(0, 0, this->modelChicken.vertexBuffer.getBuffer(), 0, vertexBufferSize);
+				this->descManager.updateSets({ 0 }, i);
+			}
+			this->currentModel = &this->modelChicken;
+			transferWorkID = 0;
+		}
+
 
 	ImGui::Begin("Number objects");
 	ImGui::Text("Number of opbjects :%d", objCount);
@@ -367,8 +411,15 @@ void ThreadingTest::setupPre()
 	this->descManager.addLayout(this->descLayout);
 	this->descManager.init(getSwapChain()->getNumImages());
 
-	const std::string filePath = "..\\assets\\Models\\Cube\\Cube.gltf";
-	GLTFLoader::loadToStagingBuffer(filePath, &this->model, &this->stagingBuffer, &this->stagingMemory);
+	std::string filePath = "..\\assets\\Models\\Cube\\Cube.gltf";
+	GLTFLoader::prepareStagingBuffer(filePath, &this->model, &this->stagingBuffer, &this->stagingMemory);
+
+	filePath = "..\\assets\\Models\\Chicken\\chicken.glb";
+	GLTFLoader::prepareStagingBuffer(filePath, &this->modelChicken, &this->stagingBuffer2, &this->stagingMemory);
+
+	// Create memory with the binded buffers
+	this->stagingMemory.init(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
 	GLTFLoader::transferToModel(&this->transferCommandPool, &this->model, &this->stagingBuffer, &this->stagingMemory);
 
 	PushConstants push;
