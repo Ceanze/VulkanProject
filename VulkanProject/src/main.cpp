@@ -4,6 +4,7 @@
 #include <crtdbg.h>
 
 #include "Sandbox/SandboxManager.h"
+#include "Sandbox/Tests/HeightmapTest.h"
 #include "Sandbox/Tests/RenderTest.h"
 #include "Sandbox/Tests/ComputeTest/ComputeTest.h"
 #include "Sandbox/Tests/GLTFTest.h"

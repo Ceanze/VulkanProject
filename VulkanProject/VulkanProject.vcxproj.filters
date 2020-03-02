@@ -4,6 +4,9 @@
     <Filter Include="Core">
       <UniqueIdentifier>{2EB4837C-1AEB-840D-C3D7-6A10AFED000F}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Core\Heightmap">
+      <UniqueIdentifier>{B460C8A3-A02E-BCA9-89C2-2CD0752F980E}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Models">
       <UniqueIdentifier>{096F8DC3-F510-B899-DECB-CBEDCA0C3FEA}</UniqueIdentifier>
     </Filter>
@@ -33,8 +36,14 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\Core\CPUProfiler.h">
+      <Filter>Core</Filter>
+    </ClInclude>
     <ClInclude Include="src\Core\Camera.h">
       <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Core\Heightmap\Heightmap.h">
+      <Filter>Core\Heightmap</Filter>
     </ClInclude>
     <ClInclude Include="src\Core\Input.h">
       <Filter>Core</Filter>
@@ -58,6 +67,9 @@
       <Filter>Sandbox\Tests\ComputeTest</Filter>
     </ClInclude>
     <ClInclude Include="src\Sandbox\Tests\GLTFTest.h">
+      <Filter>Sandbox\Tests</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Sandbox\Tests\HeightmapTest.h">
       <Filter>Sandbox\Tests</Filter>
     </ClInclude>
     <ClInclude Include="src\Sandbox\Tests\RenderTest.h">
@@ -154,8 +166,14 @@
     <ClInclude Include="src\Models\ModelRenderer.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\Core\CPUProfiler.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
     <ClCompile Include="src\Core\Camera.cpp">
       <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Core\Heightmap\Heightmap.cpp">
+      <Filter>Core\Heightmap</Filter>
     </ClCompile>
     <ClCompile Include="src\Core\Input.cpp">
       <Filter>Core</Filter>
@@ -179,6 +197,9 @@
       <Filter>Sandbox\Tests\ComputeTest</Filter>
     </ClCompile>
     <ClCompile Include="src\Sandbox\Tests\GLTFTest.cpp">
+      <Filter>Sandbox\Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Sandbox\Tests\HeightmapTest.cpp">
       <Filter>Sandbox\Tests</Filter>
     </ClCompile>
     <ClCompile Include="src\Sandbox\Tests\RenderTest.cpp">

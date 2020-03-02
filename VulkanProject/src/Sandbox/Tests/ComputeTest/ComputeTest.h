@@ -66,7 +66,6 @@ private:
 	Memory particleMemory;
 
 	Camera* camera;
-	bool running = true;
 	Buffer camBuffer;
 	Memory memory;
 
