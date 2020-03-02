@@ -107,8 +107,8 @@ void Renderer::run()
 		std::vector<uint32_t> offsets;
 		cmdBuffs[i]->cmdBindDescriptorSets(&this->pipeline, 0, sets, offsets);
 		const glm::vec4 tintData(0.3f, 0.4f, 0.4f, 1.0f);
-		this->pushConstants[0].setDataPtr(&tintData[0]);
-		cmdBuffs[i]->cmdPushConstants(&this->pipeline, &this->pushConstants[0]);
+		this->pushConstants.setDataPtr(&tintData[0]);
+		cmdBuffs[i]->cmdPushConstants(&this->pipeline, &this->pushConstants);
 
 		cmdBuffs[i]->cmdDraw(3, 1, 0, 0);
 
@@ -192,9 +192,8 @@ void Renderer::setupPreTEMP()
 	this->descManager.addLayout(this->descLayout);
 	this->descManager.init(this->swapChain.getNumImages());
 
-	PushConstants pushConsts;
-	pushConsts.setLayout(VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(glm::vec4), 0);
-	this->pushConstants.push_back(pushConsts);
+	this->pushConstants.addLayout(VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(glm::vec4), 0);
+	this->pushConstants.init();
 }
 
 void Renderer::setupPostTEMP()
@@ -211,7 +210,7 @@ void Renderer::setupPostTEMP()
 		findQueueIndex(VK_QUEUE_TRANSFER_BIT, Instance::get().getPhysicalDevice()) };
 
 	// Create texture and sampler
-	this->texture.init(width, height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, queueIndices);
+	this->texture.init(width, height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, queueIndices, 0, 1);
 	this->sampler.init(VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT);
 
 	// Create buffer
@@ -228,7 +227,7 @@ void Renderer::setupPostTEMP()
 	this->memoryTexture.bindTexture(&this->texture);
 	this->memoryTexture.init(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-	this->texture.getImageView().init(this->texture.getVkImage(), VK_IMAGE_VIEW_TYPE_2D, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT);
+	this->texture.getImageView().init(this->texture.getVkImage(), VK_IMAGE_VIEW_TYPE_2D, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT, 1);
 
 	// Update buffer
 	this->memory.directTransfer(&this->buffer, (void*)&uvs[0], size, 0);

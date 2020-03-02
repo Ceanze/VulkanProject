@@ -11,6 +11,7 @@
 #include "Vulkan/Pipeline/PushConstants.h"
 #include "Models/Model/Model.h"
 #include "Threading/ThreadManager.h"
+#include <mutex>
 
 class ThreadingTest : public VKSandboxBase
 {
@@ -23,7 +24,6 @@ private:
 	struct PushConstantData
 	{
 		glm::mat4 mw;
-		glm::mat4 vp;
 		glm::vec4 tint;
 	};
 
@@ -34,17 +34,29 @@ private:
 		glm::vec4 tint;
 	};
 
+
 	// Data per thread.
 	struct ThreadData
 	{
 		CommandPool cmdPool;
-		std::vector<CommandBuffer*> cmdBuffs;
+		std::vector<std::vector<CommandBuffer*>> cmdBuffs;
+		std::vector<uint32_t> activeBuffers;
+		std::mutex* mutex;
 		std::vector<ObjectData> objects;
-		std::vector<PushConstants> pushConstants;
 	};
 
+	struct ThreadDataTransfer
+	{
+		CommandPool cmdPool;
+		CommandBuffer* cmdBuffs;
+		Buffer* buffer;
+		Memory* memory;
+	};
+
+
 	void prepareBuffers();
-	void recordThread(uint32_t threadId, uint32_t frameIndex, VkCommandBufferInheritanceInfo inheritanceInfo);
+	void recordThread(uint32_t threadId, uint32_t frameIndex, VkCommandBufferInheritanceInfo inheritanceInfo, Model* model);
+	void transferBuffer();
 	void updateBuffers(uint32_t frameIndex, float dt);
 
 	void setupPre();
@@ -54,6 +66,7 @@ private:
 	Camera* camera;
 	CommandBuffer* cmdBuffs[3];
 	CommandPool graphicsCommandPool;
+	CommandPool transferCommandPool;
 
 	Shader shader;
 	Pipeline pipeline;
@@ -62,7 +75,15 @@ private:
 	DescriptorLayout descLayout;
 	DescriptorManager descManager;
 
+	Buffer cameraBuffer;
+	Memory memory;
+
 	Model model;
+	Model modelChicken;
+	Model* currentModel;
+	Buffer stagingBuffer;
+	Buffer stagingBuffer2;
+	Memory stagingMemory;
 
 	std::vector<CommandBuffer*> primaryBuffers;
 	Texture depthTexture;
@@ -70,6 +91,6 @@ private:
 
 	uint32_t numThreads;
 	ThreadManager threadManager;
-	std::vector<PushConstants> pushConstants;
 	std::vector<ThreadData> threadData;
+	ThreadDataTransfer threadDataTransfer;
 };

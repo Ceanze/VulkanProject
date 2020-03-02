@@ -10,7 +10,7 @@ public:
 	Texture();
 	~Texture();
 
-	void init(uint32_t width, uint32_t height, VkFormat format, VkImageUsageFlags usage, const std::vector<uint32_t>& queueFamilyIndices);
+	void init(uint32_t width, uint32_t height, VkFormat format, VkImageUsageFlags usage, const std::vector<uint32_t>& queueFamilyIndices, VkImageCreateFlags flags, uint32_t arrayLayers);
 	void cleanup();
 
 	VkMemoryRequirements getMemReq() const;

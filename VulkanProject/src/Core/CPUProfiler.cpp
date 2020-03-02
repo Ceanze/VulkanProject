@@ -31,7 +31,8 @@ void InstrumentationTimer::stop()
 		long long start = std::chrono::time_point_cast<std::chrono::microseconds>(this->startTime).time_since_epoch().count();
 		long long end = std::chrono::time_point_cast<std::chrono::microseconds>(this->endTime).time_since_epoch().count();
 
-		Instrumentation::get().write({ this->name, start, end });
+		size_t tid = std::hash<std::thread::id>{}(std::this_thread::get_id());
+		Instrumentation::get().write({ this->name, start, end, tid });
 	}
 }
 
@@ -65,6 +66,7 @@ void Instrumentation::beginSession(const std::string& name, const std::string& f
 
 void Instrumentation::write(ProfileData data)
 {
+	std::lock_guard<std::mutex> lock(this->mutex);
 	if (this->counter++ > 0) this->file << ",";
 
 	std::string name = data.name;
@@ -75,7 +77,7 @@ void Instrumentation::write(ProfileData data)
 	this->file << "\"cat\": \"function\",";
 	this->file << "\"ph\": \"X\",";
 	this->file << "\"pid\": 0,";
-	this->file << "\"tid\": 0,";
+	this->file << "\"tid\": " << data.tid << ",";
 	this->file << "\"ts\": " << data.start << ",";
 	this->file << "\"dur\": " << (data.end - data.start);
 	this->file << "}";

@@ -83,7 +83,13 @@ void CommandBuffer::cmdBindIndexBuffer(VkBuffer buffer, VkDeviceSize offset, VkI
 
 void CommandBuffer::cmdPushConstants(Pipeline* pipeline, const PushConstants* pushConstant)
 {
-	vkCmdPushConstants(this->buffer, pipeline->getPipelineLayout(), pushConstant->getRange().stageFlags, pushConstant->getOffset(), pushConstant->getSize(), pushConstant->getData());
+	for (auto& range : pushConstant->getRangeMap())
+		vkCmdPushConstants(this->buffer, pipeline->getPipelineLayout(), range.first, range.second.offset, range.second.size, (void*)((char*)pushConstant->getData() + range.second.offset));
+}
+
+void CommandBuffer::cmdPushConstants(Pipeline* pipeline, VkShaderStageFlags stageFlags, uint32_t offset, uint32_t size, const void* data)
+{
+	vkCmdPushConstants(this->buffer, pipeline->getPipelineLayout(), stageFlags, offset, size, data);
 }
 
 void CommandBuffer::cmdBindDescriptorSets(Pipeline* pipeline, uint32_t firstSet, const std::vector<VkDescriptorSet>& sets, const std::vector<uint32_t>& offsets)

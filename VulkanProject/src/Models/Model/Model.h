@@ -67,7 +67,9 @@ public:
 		glm::vec3 translation;
 		glm::quat rotation;
 		glm::vec3 scale;
+		glm::mat4 matrix; // Combination of rotation, translation and scale.
 		std::vector<Node> children;
+		Node* parent{ nullptr };
 	};
 
 public:

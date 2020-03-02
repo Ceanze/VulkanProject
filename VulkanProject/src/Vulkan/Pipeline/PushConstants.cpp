@@ -3,43 +3,76 @@
 
 PushConstants::PushConstants() : data(nullptr), offset(0), size(0)
 {
-	this->range = {};
+
 }
 
 PushConstants::~PushConstants()
 {
+	
 }
 
-void PushConstants::setLayout(VkShaderStageFlags stageFlags, uint32_t size, uint32_t offset)
+void PushConstants::init()
 {
-	this->range.stageFlags = stageFlags;
-	this->range.size = size;
-	this->range.offset = offset;
+	this->data = new char[this->size];
+}
+
+void PushConstants::cleanup()
+{
+	if (this->data)
+	{
+		delete[] this->data;
+	}
+}
+
+void PushConstants::addLayout(VkShaderStageFlags stageFlags, uint32_t size, uint32_t offset)
+{
+	auto it = this->ranges.find(stageFlags);
+	if (it == this->ranges.end())
+	{
+		this->ranges[stageFlags] = {};
+		this->ranges[stageFlags].offset = UINT32_MAX;
+	}
+
+	VkPushConstantRange& range = this->ranges[stageFlags];
+	range.stageFlags = stageFlags;
+	range.size += size;
+	range.offset = offset < range.offset ? offset : range.offset;
+
+	uint32_t newSize = size + offset;
+	if (newSize > this->size) {
+		this->size = newSize;
+	}
 }
 
 void PushConstants::setDataPtr(uint32_t size, uint32_t offset, const void* data)
 {
-	JAS_ASSERT(size+offset <= this->range.offset + this->range.size, "Too much data was passed to the push constant!");
-	this->data = data;
-	this->size = size;
-	this->offset = offset;
+	JAS_ASSERT(size+offset > this->size, "Too much data was passed to the push constant!");
+	memcpy((void*)(this->data + offset), data, size);
 }
 
 void PushConstants::setDataPtr(const void* data)
 {
-	this->data = data;
-	this->size = this->range.size;
-	this->offset = this->range.offset;
+	memcpy((void*)this->data, data, this->size);
 }
 
-VkPushConstantRange PushConstants::getRange() const
+std::vector<VkPushConstantRange> PushConstants::getRanges() const
 {
-	return this->range;
+	std::vector<VkPushConstantRange> allRanges;
+
+	for (auto& range : this->ranges)
+		allRanges.push_back(range.second);
+
+	return allRanges;
+}
+
+const std::unordered_map<VkShaderStageFlags, VkPushConstantRange>& PushConstants::getRangeMap() const
+{
+	return this->ranges;
 }
 
 const void* PushConstants::getData() const
 {
-	return this->data;
+	return (void*)this->data;
 }
 
 uint32_t PushConstants::getSize() const
@@ -47,7 +80,3 @@ uint32_t PushConstants::getSize() const
 	return this->size;
 }
 
-uint32_t PushConstants::getOffset() const
-{
-	return this->offset;
-}

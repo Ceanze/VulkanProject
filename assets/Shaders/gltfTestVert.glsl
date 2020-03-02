@@ -16,6 +16,12 @@ layout(set=0, binding = 0) readonly buffer VertexData
 layout(location = 0) out vec3 fragNormal;
 layout(location = 1) out vec2 fragUv;
 
+
+layout(push_constant) uniform PushConstants
+{
+    mat4 transform;
+};
+
 layout(set=0, binding = 1) uniform UboData
 {
     mat4 world;
@@ -23,7 +29,7 @@ layout(set=0, binding = 1) uniform UboData
 };
 
 void main() {
-    gl_Position = vp * world * vec4(vertices[gl_VertexIndex].inPosition.xyz, 1.0);
-    fragNormal = normalize((world * vec4(vertices[gl_VertexIndex].inNormal.xyz, 0.0)).xyz);
+    gl_Position = vp * world * transform * vec4(vertices[gl_VertexIndex].inPosition.xyz, 1.0);
+    fragNormal = normalize((world * transform * vec4(vertices[gl_VertexIndex].inNormal.xyz, 0.0)).xyz);
     fragUv = vertices[gl_VertexIndex].inUv.xy;
 }

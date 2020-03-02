@@ -92,8 +92,8 @@ void ComputeTest::init()
 		sets[0] = { this->descManager.getSet(i, 0) };
 		cmdBuffs[i]->cmdBindDescriptorSets(&getPipeline((unsigned)PO::PARTICLE), 0, sets, offsets);
 		const glm::vec4 tintData(0.3f, 0.8f, 0.4f, 1.0f);
-		this->pushConstants[0].setDataPtr(&tintData[0]);
-		cmdBuffs[i]->cmdPushConstants(&getPipeline((unsigned)PO::PARTICLE), &this->pushConstants[0]);
+		this->pushConstants.setDataPtr(&tintData[0]);
+		cmdBuffs[i]->cmdPushConstants(&getPipeline((unsigned)PO::PARTICLE), &this->pushConstants);
 
 		if (i == 0) { VulkanProfiler::get().startTimestamp("Draw", cmdBuffs[0], VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT); }
 		cmdBuffs[i]->cmdDraw(NUM_PARTICLES, 1, 0, 0);
@@ -123,6 +123,7 @@ void ComputeTest::cleanup()
 	this->memory.cleanup();
 	this->commandPool.cleanup();
 	VulkanProfiler::get().cleanup();
+	this->pushConstants.cleanup();
 	
 	for (auto& pipeline : getPipelines())
 		pipeline.cleanup();
@@ -154,9 +155,8 @@ void ComputeTest::setupDescriptors()
 	generateParticleData();
 	updateBufferDescs();
 
-	PushConstants pushConsts;
-	pushConsts.setLayout(VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(glm::vec4), 0);
-	this->pushConstants.push_back(pushConsts);
+	this->pushConstants.addLayout(VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(glm::vec4), 0);
+	this->pushConstants.init();
 }
 
 void ComputeTest::updateBufferDescs()

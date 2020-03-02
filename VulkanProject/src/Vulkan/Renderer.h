@@ -56,5 +56,5 @@ private:
 	Sampler sampler;
 	DescriptorLayout descLayout;
 	DescriptorManager descManager;
-	std::vector<PushConstants> pushConstants;
+	PushConstants pushConstants;
 };

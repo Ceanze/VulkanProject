@@ -6,6 +6,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "Models/GLTFLoader.h"
+#include "Models/ModelRenderer.h"
 
 void GLTFTest::init()
 {
@@ -41,14 +42,14 @@ void GLTFTest::init()
 	VkFormat depthFormat = findDepthFormat(Instance::get().getPhysicalDevice());
 	std::vector<uint32_t> queueIndices = { findQueueIndex(VK_QUEUE_GRAPHICS_BIT, Instance::get().getPhysicalDevice()) };
 	this->depthTexture.init(getSwapChain()->getExtent().width, getSwapChain()->getExtent().height,
-		depthFormat, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, queueIndices);
+		depthFormat, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, queueIndices, 0, 1);
 
 	// Bind image to memory.
 	this->imageMemory.bindTexture(&this->depthTexture);
 	this->imageMemory.init(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
 	// Create image view for the depth texture.
-	this->depthTexture.getImageView().init(this->depthTexture.getVkImage(), VK_IMAGE_VIEW_TYPE_2D, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
+	this->depthTexture.getImageView().init(this->depthTexture.getVkImage(), VK_IMAGE_VIEW_TYPE_2D, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
 
 	// Transistion image
 	Image::TransistionDesc desc;
@@ -58,6 +59,8 @@ void GLTFTest::init()
 	desc.pool = &this->graphicsCommandPool;
 	this->depthTexture.getImage().transistionLayout(desc);
 
+	PushConstants& pushConstants = ModelRenderer::get().getPushConstants();
+	this->pipeline.setPushConstants(pushConstants);
 	this->pipeline.setDescriptorLayouts(this->descManager.getLayouts());
 	this->pipeline.setGraphicsPipelineInfo(getSwapChain()->getExtent(), &this->renderPass);
 	PipelineInfo pipInfo;
@@ -117,6 +120,8 @@ void GLTFTest::setupPre()
 
 	const std::string filePath = "..\\assets\\Models\\Cube\\Cube.gltf";
 	GLTFLoader::load(filePath, &this->model);
+
+	ModelRenderer::get().init();
 }
 
 void GLTFTest::setupPost()
@@ -161,7 +166,7 @@ void GLTFTest::setupPost()
 		std::vector<VkDescriptorSet> sets = { this->descManager.getSet(i, 0) };
 		std::vector<uint32_t> offsets;
 		this->cmdBuffs[i]->cmdBindPipeline(&this->pipeline);
-		GLTFLoader::recordDraw(&this->model, this->cmdBuffs[i], &this->pipeline, sets, offsets);
+		ModelRenderer::get().record(&this->model, glm::mat4(1.0f), this->cmdBuffs[i], &this->pipeline, sets, offsets);
 
 		this->cmdBuffs[i]->cmdEndRenderPass();
 		this->cmdBuffs[i]->end();

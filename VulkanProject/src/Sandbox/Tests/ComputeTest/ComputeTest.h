@@ -71,7 +71,7 @@ private:
 
 	DescriptorLayout descLayout;
 	DescriptorManager descManager;
-	std::vector<PushConstants> pushConstants;
+	PushConstants pushConstants;
 
 	CommandBuffer* cmdBuffs[3];
 };
