@@ -102,8 +102,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="src\Core\Camera.h" />
     <ClInclude Include="src\Core\CPUProfiler.h" />
+    <ClInclude Include="src\Core\Camera.h" />
+    <ClInclude Include="src\Core\Heightmap\Heightmap.h" />
     <ClInclude Include="src\Core\Input.h" />
     <ClInclude Include="src\Core\Logger.h" />
     <ClInclude Include="src\Core\Window.h" />
@@ -112,6 +113,7 @@
     <ClInclude Include="src\Sandbox\SandboxManager.h" />
     <ClInclude Include="src\Sandbox\Tests\ComputeTest\ComputeTest.h" />
     <ClInclude Include="src\Sandbox\Tests\GLTFTest.h" />
+    <ClInclude Include="src\Sandbox\Tests\HeightmapTest.h" />
     <ClInclude Include="src\Sandbox\Tests\RenderTest.h" />
     <ClInclude Include="src\Sandbox\Tests\ThreadingTest.h" />
     <ClInclude Include="src\Sandbox\Tests\TransferTest.h" />
@@ -144,8 +146,9 @@
     <ClInclude Include="src\jaspch.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\Core\Camera.cpp" />
     <ClCompile Include="src\Core\CPUProfiler.cpp" />
+    <ClCompile Include="src\Core\Camera.cpp" />
+    <ClCompile Include="src\Core\Heightmap\Heightmap.cpp" />
     <ClCompile Include="src\Core\Input.cpp" />
     <ClCompile Include="src\Core\Logger.cpp" />
     <ClCompile Include="src\Core\Window.cpp" />
@@ -154,6 +157,7 @@
     <ClCompile Include="src\Sandbox\SandboxManager.cpp" />
     <ClCompile Include="src\Sandbox\Tests\ComputeTest\ComputeTest.cpp" />
     <ClCompile Include="src\Sandbox\Tests\GLTFTest.cpp" />
+    <ClCompile Include="src\Sandbox\Tests\HeightmapTest.cpp" />
     <ClCompile Include="src\Sandbox\Tests\RenderTest.cpp" />
     <ClCompile Include="src\Sandbox\Tests\ThreadingTest.cpp" />
     <ClCompile Include="src\Sandbox\Tests\TransferTest.cpp" />
