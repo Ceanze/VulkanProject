@@ -15,6 +15,24 @@ std::vector<const char*> Instance::deviceExtensions = {
 
 VkPhysicalDeviceFeatures Instance::deviceFeatures = {};
 
+VkQueueFamilyProperties Instance::getQueueProperties(uint32_t queueIndex)
+{
+	uint32_t queueFamilyCount = 0;
+	vkGetPhysicalDeviceQueueFamilyProperties(Instance::get().getPhysicalDevice(), &queueFamilyCount, nullptr);
+	std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+	vkGetPhysicalDeviceQueueFamilyProperties(Instance::get().getPhysicalDevice(), &queueFamilyCount, queueFamilies.data());
+
+	return queueFamilies[queueIndex];
+}
+
+VkPhysicalDeviceProperties Instance::getPhysicalDeviceProperties()
+{
+	VkPhysicalDeviceProperties deviceProperties;
+	vkGetPhysicalDeviceProperties(this->physicalDevice, &deviceProperties);
+	
+	return deviceProperties;
+}
+
 Instance::Instance() :
 	debugMessenger(VK_NULL_HANDLE), device(VK_NULL_HANDLE), instance(VK_NULL_HANDLE),
 	physicalDevice(VK_NULL_HANDLE), surface(VK_NULL_HANDLE)
@@ -35,6 +53,7 @@ void Instance::init(Window* window)
 	deviceFeatures.samplerAnisotropy = VK_TRUE;
 	deviceFeatures.fillModeNonSolid = VK_TRUE;
 	deviceFeatures.logicOp = VK_TRUE;
+	deviceFeatures.pipelineStatisticsQuery = VK_TRUE;
 
 	this->createInstance();
 	this->setupDebugMessenger();

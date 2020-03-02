@@ -354,3 +354,5 @@ MigrationBackup/
 # Custom
 *.sln
 *.tlog
+imgui.ini
+*.lastbuildstate

@@ -10,7 +10,7 @@
 void GLTFTest::init()
 {
 	this->graphicsCommandPool.init(CommandPool::Queue::GRAPHICS, 0);
-	this->camera = new Camera(getWindow()->getAspectRatio(), 45.f, { 0.f, 0.f, 1.f }, { 0.f, 0.f, 0.f }, 0.8f);
+	this->camera = new Camera(getWindow()->getAspectRatio(), 45.f, { 0.f, 0.f, 5.f }, { 0.f, 0.f, 0.f }, 0.8f);
 
 	this->shader.addStage(Shader::Type::VERTEX, "gltfTestVert.spv");
 	this->shader.addStage(Shader::Type::FRAGMENT, "gltfTestFrag.spv");
@@ -85,7 +85,7 @@ void GLTFTest::loop(float dt)
 	this->memory.directTransfer(&this->bufferUniform, (void*)& this->camera->getMatrix()[0], sizeof(glm::mat4), (Offset)offsetof(UboData, vp));
 
 	// Render
-	getFrame()->beginFrame();
+	getFrame()->beginFrame(dt);
 	getFrame()->submit(Instance::get().getGraphicsQueue().queue, this->cmdBuffs);
 	getFrame()->endFrame();
 	this->camera->update(dt);

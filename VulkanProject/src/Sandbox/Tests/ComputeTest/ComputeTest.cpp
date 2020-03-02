@@ -2,6 +2,7 @@
 #include "ComputeTest.h"
 #include "Vulkan/Instance.h"
 #include "Core/Input.h"
+#include "Vulkan/VulkanProfiler.h"
 
 
 #include <GLFW/glfw3.h>
@@ -36,9 +37,20 @@ void ComputeTest::init()
 
 	initFramebuffers(&this->renderPass, VK_NULL_HANDLE);
 
-	for (int i = 0; i < getSwapChain()->getNumImages(); i++) {
+	VulkanProfiler::get().init(60, 60, VulkanProfiler::TimeUnit::MILLI);
+	VulkanProfiler::get().createGraphicsPipelineStats();
+	VulkanProfiler::get().createComputePipelineStats();
+	VulkanProfiler::get().createTimestamps(4);
+	VulkanProfiler::get().addTimestamp("Dispatch");
+	VulkanProfiler::get().addTimestamp("Draw");
+
+	for (int i = 0; i < (int)getSwapChain()->getNumImages(); i++) {
 		cmdBuffs[i] = this->commandPool.createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 		cmdBuffs[i]->begin(0, nullptr);
+
+		// Profiler
+		if (i == 0) { VulkanProfiler::get().resetAll(cmdBuffs[0]); }
+
 		std::vector<VkClearValue> clearValues = {};
 		VkClearValue value;
 		value.color = { 0.0f, 0.0f, 0.0f, 1.0f };
@@ -59,8 +71,13 @@ void ComputeTest::init()
 		std::vector<uint32_t> offsets;
 		cmdBuffs[i]->cmdBindDescriptorSets(&getPipeline((unsigned)PO::COMPUTE), 0, sets, offsets);
 
+		if (i == 0) { VulkanProfiler::get().startComputePipelineStat(cmdBuffs[0]); }
 		const size_t NUM_PARTICLES_PER_WORKGROUP = 16;
-		cmdBuffs[i]->cmdDispatch(std::ceilf((float)this->particles.size() / NUM_PARTICLES_PER_WORKGROUP), 1, 1);
+		if (i == 0) { VulkanProfiler::get().startTimestamp("Dispatch", cmdBuffs[0], VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT); }
+		cmdBuffs[i]->cmdDispatch((uint32_t)std::ceilf((float)this->particles.size() / NUM_PARTICLES_PER_WORKGROUP), 1, 1);
+		if (i == 0) { VulkanProfiler::get().endTimestamp("Dispatch", cmdBuffs[0], VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT); }
+		if (i == 0) { VulkanProfiler::get().endComputePipelineStat(cmdBuffs[0]); }
+
 
 		// Wait for compute shader to finish writing to the memory before vertex shader can read from it
 		memoryBarrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
@@ -69,6 +86,7 @@ void ComputeTest::init()
 		cmdBuffs[i]->cmdMemoryBarrier(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, 0, memoryBarriers);
 
 		// Graphics 
+		if (i == 0) { VulkanProfiler::get().startGraphicsPipelineStat(cmdBuffs[0]); }
 		cmdBuffs[i]->cmdBeginRenderPass(&this->renderPass, getFramebuffers()[i].getFramebuffer(), getSwapChain()->getExtent(), clearValues, VK_SUBPASS_CONTENTS_INLINE);
 		cmdBuffs[i]->cmdBindPipeline(&getPipeline((unsigned)PO::PARTICLE));
 		sets[0] = { this->descManager.getSet(i, 0) };
@@ -76,8 +94,12 @@ void ComputeTest::init()
 		const glm::vec4 tintData(0.3f, 0.8f, 0.4f, 1.0f);
 		this->pushConstants[0].setDataPtr(&tintData[0]);
 		cmdBuffs[i]->cmdPushConstants(&getPipeline((unsigned)PO::PARTICLE), &this->pushConstants[0]);
+
+		if (i == 0) { VulkanProfiler::get().startTimestamp("Draw", cmdBuffs[0], VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT); }
 		cmdBuffs[i]->cmdDraw(NUM_PARTICLES, 1, 0, 0);
+		if (i == 0) { VulkanProfiler::get().endTimestamp("Draw", cmdBuffs[0], VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT); }
 		cmdBuffs[i]->cmdEndRenderPass();
+		if (i == 0) { VulkanProfiler::get().endGraphicsPipelineStat(cmdBuffs[0]); }
 		cmdBuffs[i]->end();
 	}
 }
@@ -86,12 +108,7 @@ void ComputeTest::loop(float dt)
 {
 	this->memory.directTransfer(&this->camBuffer, (void*)&this->camera->getMatrix()[0], sizeof(glm::mat4), 0);
 
-	getFrame()->beginFrame();
-
-	ImGui::Begin("Hello world!");
-	ImGui::Text("Cool text");
-	ImGui::End();
-
+	getFrame()->beginFrame(dt);
 	getFrame()->submit(Instance::get().getGraphicsQueue().queue, cmdBuffs);
 	getFrame()->endFrame();
 	this->camera->update(dt);
@@ -105,6 +122,7 @@ void ComputeTest::cleanup()
 	this->camBuffer.cleanup();
 	this->memory.cleanup();
 	this->commandPool.cleanup();
+	VulkanProfiler::get().cleanup();
 	
 	for (auto& pipeline : getPipelines())
 		pipeline.cleanup();
@@ -157,7 +175,7 @@ void ComputeTest::updateBufferDescs()
 	{
 		this->descManager.updateBufferDesc(0, 0, this->particleBuffer.getBuffer(), 0, sizeof(Particle) * this->particles.size());
 		this->descManager.updateBufferDesc(0, 1, this->camBuffer.getBuffer(), 0, sizeof(glm::mat4));
-		this->descManager.updateSets({ 0 }, i);
+		this->descManager.updateSets({ 0 }, (uint32_t)i);
 	}
 }
 
@@ -170,7 +188,7 @@ void ComputeTest::generateParticleData()
 	for (unsigned i = 0; i < NUM_PARTICLES; i++)
 	{
 		this->particles[i].position = glm::vec3(0.2f * uniform(engine), 0.2f * uniform(engine), 0.2f * uniform(engine));
-		float velocity = 0.0008f + 0.0003f * uniform(engine);
+		float velocity = 0.00008f + 0.00003f * uniform(engine);
 		float angle = 100.0f * uniform(engine);
 		this->particles[i].velocity = (velocity * glm::vec3(glm::cos(angle), glm::sin(angle), glm::sin(angle)));
 	}
@@ -178,7 +196,7 @@ void ComputeTest::generateParticleData()
 	std::vector<uint32_t> queueIndices = { findQueueIndex(VK_QUEUE_COMPUTE_BIT, Instance::get().getPhysicalDevice()) };
 
 	// Create buffer
-	uint32_t size = sizeof(Particle) * this->particles.size();
+	uint32_t size = (uint32_t)(sizeof(Particle) * this->particles.size());
 	this->particleBuffer.init(size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, queueIndices);
 
 	// Create memory
@@ -192,7 +210,7 @@ void ComputeTest::generateParticleData()
 	for (size_t i = 0; i < getSwapChain()->getNumImages(); i++)
 	{
 		this->descManager.updateBufferDesc(1, 0, this->particleBuffer.getBuffer(), 0, size);
-		this->descManager.updateSets({1}, i);
+		this->descManager.updateSets({1}, (uint32_t)i);
 	}
 }
 

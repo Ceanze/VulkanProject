@@ -19,7 +19,7 @@ public:
 
 	void submit(VkQueue queue, CommandBuffer** commandBuffers);
 
-	bool beginFrame();
+	bool beginFrame(float dt);
 	bool endFrame();
 
 	uint32_t getCurrentImageIndex() const;
@@ -36,6 +36,7 @@ private:
 	uint32_t currentFrame;
 	uint32_t imageIndex;
 	uint32_t numImages;
+	float dt;
 	SwapChain* swapChain;
 
 	VKImgui* imgui;

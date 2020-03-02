@@ -72,7 +72,7 @@ void HeightmapTest::loop(float dt)
 	time += dt;
 	this->memory.directTransfer(&this->camBuffer, (void*)&time, sizeof(float), sizeof(glm::mat4));
 
-	getFrame()->beginFrame();
+	getFrame()->beginFrame(dt);
 
 	ImGui::Begin("Height Map Test");
 	ImGui::Text("This is a height map of Australia! Careful of the Macropods!");

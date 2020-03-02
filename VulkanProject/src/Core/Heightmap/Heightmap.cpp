@@ -49,7 +49,7 @@ void Heightmap::addHeightmap(int dimX, int dimY, unsigned char* data)
 		for (int j = 0; j < dimX; j++)
 		{
 			float val = this->minZ + ((float)data[i * dimX + j] / maxValue) * (this->maxZ - this->minZ);
-			float height = -std::min(this->maxZ, val * this->vertDist + this->minZ);
+			float height = std::min(this->maxZ, val * this->vertDist + this->minZ);
 			newVertexData.verticies.push_back(glm::vec4(j * this->vertDist, height, i * this->vertDist, 1.0));
 		}
 	}

@@ -109,7 +109,7 @@ void CommandBuffer::cmdMemoryBarrier(VkPipelineStageFlags srcStageMask, VkPipeli
 		srcStageMask,
 		dstStageMask,
 		dependencyFlag,
-		barriers.size(), barriers.data(),
+		(uint32_t)barriers.size(), barriers.data(),
 		0, nullptr,
 		0, nullptr);
 }
@@ -121,7 +121,7 @@ void CommandBuffer::cmdBufferMemoryBarrier(VkPipelineStageFlags srcStageMask, Vk
 		dstStageMask,
 		dependencyFlag,
 		0, nullptr,
-		barriers.size(), barriers.data(),
+		(uint32_t)barriers.size(), barriers.data(),
 		0, nullptr);
 }
 
@@ -133,7 +133,7 @@ void CommandBuffer::cmdImageMemoryBarrier(VkPipelineStageFlags srcStageMask, VkP
 		dependencyFlag,
 		0, nullptr,
 		0, nullptr,
-		barriers.size(), barriers.data());
+		(uint32_t)barriers.size(), barriers.data());
 }
 
 void CommandBuffer::cmdDispatch(uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ)
@@ -164,4 +164,24 @@ void CommandBuffer::cmdCopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, uint32
 void CommandBuffer::cmdCopyBufferToImage(VkBuffer srcBuffer, VkImage dstImage, VkImageLayout dstImageLayout, uint32_t regionCount, const VkBufferImageCopy* pRegions)
 {
 	vkCmdCopyBufferToImage(this->buffer, srcBuffer, dstImage, dstImageLayout, regionCount, pRegions);
+}
+
+void CommandBuffer::cmdWriteTimestamp(VkPipelineStageFlagBits pipelineStage, VkQueryPool queryPool, uint32_t query)
+{
+	vkCmdWriteTimestamp(this->buffer, pipelineStage, queryPool, query);
+}
+
+void CommandBuffer::cmdResetQueryPool(VkQueryPool queryPool, uint32_t firstQuery, uint32_t queryCount)
+{
+	vkCmdResetQueryPool(this->buffer, queryPool, firstQuery, queryCount);
+}
+
+void CommandBuffer::cmdBeginQuery(VkQueryPool queryPool, uint32_t query, VkQueryControlFlags flags)
+{
+	vkCmdBeginQuery(this->buffer, queryPool, query, flags);
+}
+
+void CommandBuffer::cmdEndQuery(VkQueryPool queryPool, uint32_t query)
+{
+	vkCmdEndQuery(this->buffer, queryPool, query);
 }

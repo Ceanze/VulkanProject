@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="ComputeTest">
-      <UniqueIdentifier>{E20953CD-4EBF-CBC2-D7B3-C5994368C2C6}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Core">
       <UniqueIdentifier>{2EB4837C-1AEB-840D-C3D7-6A10AFED000F}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Core\Heightmap">
+      <UniqueIdentifier>{B460C8A3-A02E-BCA9-89C2-2CD0752F980E}</UniqueIdentifier>
     </Filter>
     <Filter Include="Models">
       <UniqueIdentifier>{096F8DC3-F510-B899-DECB-CBEDCA0C3FEA}</UniqueIdentifier>
@@ -18,6 +18,9 @@
     </Filter>
     <Filter Include="Sandbox\Tests">
       <UniqueIdentifier>{B6433F28-2204-BB5E-EB3E-04DC57BEFF3A}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Sandbox\Tests\ComputeTest">
+      <UniqueIdentifier>{82EB63AA-EEAD-9734-375E-26C1A35F7012}</UniqueIdentifier>
     </Filter>
     <Filter Include="Threading">
       <UniqueIdentifier>{DB1BCC5F-4786-80D6-90C4-317CFC6D5E2B}</UniqueIdentifier>
@@ -33,8 +36,14 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\Core\CPUProfiler.h">
+      <Filter>Core</Filter>
+    </ClInclude>
     <ClInclude Include="src\Core\Camera.h">
       <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Core\Heightmap\Heightmap.h">
+      <Filter>Core\Heightmap</Filter>
     </ClInclude>
     <ClInclude Include="src\Core\Input.h">
       <Filter>Core</Filter>
@@ -54,13 +63,22 @@
     <ClInclude Include="src\Sandbox\SandboxManager.h">
       <Filter>Sandbox</Filter>
     </ClInclude>
+    <ClInclude Include="src\Sandbox\Tests\ComputeTest\ComputeTest.h">
+      <Filter>Sandbox\Tests\ComputeTest</Filter>
+    </ClInclude>
     <ClInclude Include="src\Sandbox\Tests\GLTFTest.h">
+      <Filter>Sandbox\Tests</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Sandbox\Tests\HeightmapTest.h">
       <Filter>Sandbox\Tests</Filter>
     </ClInclude>
     <ClInclude Include="src\Sandbox\Tests\RenderTest.h">
       <Filter>Sandbox\Tests</Filter>
     </ClInclude>
     <ClInclude Include="src\Sandbox\Tests\ThreadingTest.h">
+      <Filter>Sandbox\Tests</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Sandbox\Tests\TransferTest.h">
       <Filter>Sandbox\Tests</Filter>
     </ClInclude>
     <ClInclude Include="src\Sandbox\VKSandboxBase.h">
@@ -138,16 +156,20 @@
     <ClInclude Include="src\Vulkan\VulkanCommon.h">
       <Filter>Vulkan</Filter>
     </ClInclude>
-    <ClInclude Include="src\jaspch.h" />
-    <ClInclude Include="src\Sandbox\Tests\ComputeTest\ComputeTest.h">
-      <Filter>ComputeTest</Filter>
+    <ClInclude Include="src\Vulkan\VulkanProfiler.h">
+      <Filter>Vulkan</Filter>
     </ClInclude>
-    <ClInclude Include="src\Core\Heightmap\Heightmap.h" />
-    <ClInclude Include="src\Sandbox\Tests\HeightmapTest.h" />
+    <ClInclude Include="src\jaspch.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\Core\CPUProfiler.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
     <ClCompile Include="src\Core\Camera.cpp">
       <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Core\Heightmap\Heightmap.cpp">
+      <Filter>Core\Heightmap</Filter>
     </ClCompile>
     <ClCompile Include="src\Core\Input.cpp">
       <Filter>Core</Filter>
@@ -167,13 +189,22 @@
     <ClCompile Include="src\Sandbox\SandboxManager.cpp">
       <Filter>Sandbox</Filter>
     </ClCompile>
+    <ClCompile Include="src\Sandbox\Tests\ComputeTest\ComputeTest.cpp">
+      <Filter>Sandbox\Tests\ComputeTest</Filter>
+    </ClCompile>
     <ClCompile Include="src\Sandbox\Tests\GLTFTest.cpp">
+      <Filter>Sandbox\Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Sandbox\Tests\HeightmapTest.cpp">
       <Filter>Sandbox\Tests</Filter>
     </ClCompile>
     <ClCompile Include="src\Sandbox\Tests\RenderTest.cpp">
       <Filter>Sandbox\Tests</Filter>
     </ClCompile>
     <ClCompile Include="src\Sandbox\Tests\ThreadingTest.cpp">
+      <Filter>Sandbox\Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Sandbox\Tests\TransferTest.cpp">
       <Filter>Sandbox\Tests</Filter>
     </ClCompile>
     <ClCompile Include="src\Sandbox\VKSandboxBase.cpp">
@@ -242,12 +273,10 @@
     <ClCompile Include="src\Vulkan\VKImgui.cpp">
       <Filter>Vulkan</Filter>
     </ClCompile>
+    <ClCompile Include="src\Vulkan\VulkanProfiler.cpp">
+      <Filter>Vulkan</Filter>
+    </ClCompile>
     <ClCompile Include="src\jaspch.cpp" />
     <ClCompile Include="src\main.cpp" />
-    <ClCompile Include="src\Sandbox\Tests\ComputeTest\ComputeTest.cpp">
-      <Filter>ComputeTest</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Core\Heightmap\Heightmap.cpp" />
-    <ClCompile Include="src\Sandbox\Tests\HeightmapTest.cpp" />
   </ItemGroup>
 </Project>

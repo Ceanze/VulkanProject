@@ -52,12 +52,7 @@ void RenderTest::loop(float dt)
 	this->memory.directTransfer(&this->camBuffer, (void*)& this->camera->getMatrix()[0], sizeof(glm::mat4), 0);
 	this->camera->update(dt);
 
-	getFrame()->beginFrame();
-
-	ImGui::Begin("Hello world!");
-	ImGui::Text("Cool text");
-	ImGui::End();
-
+	getFrame()->beginFrame(dt);
 	getFrame()->submit(Instance::get().getGraphicsQueue().queue, cmdBuffs);
 	getFrame()->endFrame();
 }
@@ -106,8 +101,8 @@ void RenderTest::setupPost()
 	int width, height;
 	int channels;
 	stbi_uc* img = stbi_load("..\\assets\\Textures\\svenskt.jpg", &width, &height, &channels, 4);
-	glm::vec2 uvs[3] = { {0.0f, 0.0f}, {0.0f, 1.0f}, {1.0f, 1.0f} };
-	glm::vec2 position[3] = { {0.0f, -0.5f}, {0.0f, 0.0f}, {0.5f, 0.0f} };
+	glm::vec2 uvs[3] = { {1.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 1.0f} };
+	glm::vec2 position[3] = { {0.5f, 0.0f}, {0.0f, 0.0f}, {0.0f, -0.5f} };
 	uint32_t size = sizeof(glm::vec2) * 3;
 	uint32_t size2 = sizeof(glm::vec2) * 3;
 

@@ -6,10 +6,11 @@
 #include "Vulkan/CommandBuffer.h"
 #include "VKImgui.h"
 #include "Core/Window.h"
+#include "VulkanProfiler.h"
 
 Frame::Frame()
 	: window(nullptr), imgui(nullptr), swapChain(nullptr), numImages(0), framesInFlight(0),
-	currentFrame(0), imageIndex(0)
+	currentFrame(0), imageIndex(0), dt(0.0f)
 {
 }
 
@@ -41,6 +42,8 @@ void Frame::cleanup()
 
 void Frame::submit(VkQueue queue, CommandBuffer** commandBuffers)
 {
+	VulkanProfiler::get().render(this->dt);
+
 	this->imgui->end();
 	this->imgui->render();
 
@@ -62,10 +65,16 @@ void Frame::submit(VkQueue queue, CommandBuffer** commandBuffers)
 
 	vkResetFences(Instance::get().getDevice(), 1, &this->inFlightFences[this->currentFrame]);
 	ERROR_CHECK(vkQueueSubmit(queue, 1, &submitInfo, this->inFlightFences[this->currentFrame]), "Failed to sumbit commandbuffer!");
+
+	if (this->imageIndex == 0) {
+		VulkanProfiler::get().getAllQueries();
+	}
 }
 
-bool Frame::beginFrame()
+bool Frame::beginFrame(float dt)
 {
+	this->dt = dt;
+
 	vkWaitForFences(Instance::get().getDevice(), 1, &this->inFlightFences[this->currentFrame], VK_TRUE, UINT64_MAX);
 	VkResult result = vkAcquireNextImageKHR(Instance::get().getDevice(), this->swapChain->getSwapChain(), UINT64_MAX, this->imageAvailableSemaphores[this->currentFrame], VK_NULL_HANDLE, &this->imageIndex);
 

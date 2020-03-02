@@ -1,6 +1,6 @@
 #version 450
 
-layout (local_size_x = 16, local_size_y = 16) in;
+layout (local_size_x = 16, local_size_y = 1) in;
 
 struct Particle {
     vec4 position;

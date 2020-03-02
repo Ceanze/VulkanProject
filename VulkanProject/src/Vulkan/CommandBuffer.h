@@ -42,6 +42,13 @@ public:
 
 	// Compute/dispatch commands (used for compute queue)
 
+
+	// Others
+	void cmdWriteTimestamp(VkPipelineStageFlagBits pipelineStage, VkQueryPool queryPool, uint32_t query);
+	void cmdResetQueryPool(VkQueryPool queryPool, uint32_t firstQuery, uint32_t queryCount);
+	void cmdBeginQuery(VkQueryPool queryPool, uint32_t query, VkQueryControlFlags flags);
+	void cmdEndQuery(VkQueryPool queryPool, uint32_t query);
+
 private:
 
 	VkCommandPool pool;

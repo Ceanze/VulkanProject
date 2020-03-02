@@ -82,7 +82,7 @@ void ThreadingTest::init()
 
 void ThreadingTest::loop(float dt)
 {
-	getFrame()->beginFrame();
+	getFrame()->beginFrame(dt);
 	updateBuffers(getFrame()->getCurrentImageIndex(), dt);
 
 	// Render
