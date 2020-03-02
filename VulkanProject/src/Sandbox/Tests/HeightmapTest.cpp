@@ -176,7 +176,7 @@ void HeightmapTest::updateBufferDescs()
 
 void HeightmapTest::generateHeightmapData()
 {
-	this->heightmap.setVertexDist(0.01f);
+	this->heightmap.setVertexDist(0.1f);
 	this->heightmap.setMaxZ(10.f);
 	this->heightmap.setMinZ(0.f);
 
