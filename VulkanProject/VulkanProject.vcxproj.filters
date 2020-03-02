@@ -164,6 +164,7 @@
     <ClInclude Include="src\Sandbox\Tests\NoThreadingTest.h" />
     <ClInclude Include="src\Sandbox\Tests\CubemapTest.h" />
     <ClInclude Include="src\Models\ModelRenderer.h" />
+    <ClInclude Include="src\Sandbox\Tests\ComputeTransferTest.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Core\CPUProfiler.cpp">
@@ -286,5 +287,6 @@
     <ClCompile Include="src\Sandbox\Tests\CubemapTest.cpp" />
     <ClCompile Include="src\Models\ModelRenderer.cpp" />
     <ClCompile Include="src\Sandbox\Tests\NoThreadingTest.cpp" />
+    <ClCompile Include="src\Sandbox\Tests\ComputeTransferTest.cpp" />
   </ItemGroup>
 </Project>
