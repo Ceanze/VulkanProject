@@ -1,6 +1,7 @@
 #include "jaspch.h"
 #include "Camera.h"
 #include "glm/gtc/matrix_transform.hpp"
+#include "glm/gtx/norm.hpp"
 #include "Input.h"
 
 Camera::Camera(float aspect, float fov, const glm::vec3& position, const glm::vec3& target, float speed)
@@ -16,6 +17,14 @@ Camera::Camera(float aspect, float fov, const glm::vec3& position, const glm::ve
 	this->pitch = 0;
 	this->roll = 0;
 	this->speedFactor = 1.f;
+
+	float tang = tan(this->fov / 2);
+	this->nearHeight = this->nearPlane * tang * 2.0f;
+	this->nearWidth = this->nearHeight * this->aspect;
+	this->farHeight = this->farPlane * tang * 2.0f;
+	this->farWidth = this->farHeight * this->aspect;
+
+	this->planes.resize(6);
 }
 
 Camera::~Camera()
@@ -49,23 +58,28 @@ void Camera::update(float dt)
 	glm::vec2 cursorDelta = input.getCursorDelta();
 	cursorDelta *= 0.1f;
 
-	this->yaw += cursorDelta.x;
-	this->pitch -= cursorDelta.y;
+	if (glm::length2(cursorDelta) > glm::epsilon<float>())
+	{
+		this->yaw += cursorDelta.x;
+		this->pitch -= cursorDelta.y;
 
-	if (this->pitch > 89.0f)
-		this->pitch = 89.0f;
-	if (this->pitch < -89.0f)
-		this->pitch = -89.0f;
+		if (this->pitch > 89.0f)
+			this->pitch = 89.0f;
+		if (this->pitch < -89.0f)
+			this->pitch = -89.0f;
 
-	glm::vec3 direction;
-	direction.x = cos(glm::radians(this->yaw)) * cos(glm::radians(this->pitch));
-	direction.y = sin(glm::radians(this->pitch));
-	direction.z = sin(glm::radians(this->yaw)) * cos(glm::radians(this->pitch));
+		glm::vec3 direction;
+		direction.x = cos(glm::radians(this->yaw)) * cos(glm::radians(this->pitch));
+		direction.y = sin(glm::radians(this->pitch));
+		direction.z = sin(glm::radians(this->yaw)) * cos(glm::radians(this->pitch));
 
-	this->forward = glm::normalize(direction);
-	this->right = glm::cross(this->forward, this->globalUp);
-	this->up = glm::cross(this->right, this->forward);
-	this->target = this->position + this->forward;
+		this->forward = glm::normalize(direction);
+		this->right = glm::cross(this->forward, this->globalUp);
+		this->up = glm::cross(this->right, this->forward);
+		this->target = this->position + this->forward;
+
+		updatePlanes();
+	}
 }
 
 void Camera::setPosition(const glm::vec3& position)
@@ -98,4 +112,36 @@ glm::mat4 Camera::getView() const
 glm::vec3 Camera::getPosition() const
 {
 	return this->position;
+}
+
+const std::vector<Camera::Plane>& Camera::getPlanes() const
+{
+	return this->planes;
+}
+
+void Camera::updatePlanes()
+{
+	glm::vec3 point;
+	glm::vec3 nearCenter = this->position + this->forward * this->nearPlane;
+	glm::vec3 farCenter = this->position + this->forward * this->farPlane;
+
+	this->planes[NEAR_P].normal = this->forward;
+	this->planes[NEAR_P].point = nearCenter;
+
+	this->planes[FAR_P].normal = -this->forward;
+	this->planes[FAR_P].point = farCenter;
+
+	point = nearCenter + this->up * (this->nearHeight / 2) - this->right * (this->nearWidth / 2);
+	this->planes[LEFT_P].normal = glm::normalize(glm::cross(point - this->position, this->up));
+	this->planes[LEFT_P].point = point;
+
+	this->planes[TOP_P].normal = glm::normalize(glm::cross(point - this->position, this->right));
+	this->planes[TOP_P].point = point;
+
+	point = nearCenter - this->up * (this->nearHeight / 2) + this->right * (this->nearWidth / 2);
+	this->planes[RIGHT_P].normal = glm::normalize(glm::cross(point - this->position, -this->up));
+	this->planes[RIGHT_P].point = point;
+
+	this->planes[BOTTOM_P].normal = glm::normalize(glm::cross(point - this->position, -this->right));
+	this->planes[BOTTOM_P].point = point;
 }
