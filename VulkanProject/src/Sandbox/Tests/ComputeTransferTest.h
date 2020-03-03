@@ -33,10 +33,21 @@ private:
 		glm::mat4 vp;
 	};
 
+	struct WorldData
+	{
+		uint32_t regWidth;           // Region width in number of vertices.
+		uint32_t numIndicesPerReg;   // Number of indices per region.
+		uint32_t loadedWidth;        // Loaded world width in verticies
+		float _pad = 0;
+	};
+
 	void setupPre();
 	void setupPost();
+	void setupCompute();
 
+	void buildComputeCommandBuffer();
 	void loadingThread();
+	void recordCompute();
 	void record();
 
 private:
@@ -66,7 +77,16 @@ private:
 
 	// Compute
 	DescriptorManager descManagerComp;
-	Buffer inBufferComp;
-	Buffer outBufferComp;
-	Memory compMemory;
+	CommandPool compCommandPool;
+	Buffer compVertBuffer;
+	Buffer indirectDrawBuffer;
+	Memory compVertMemory;
+	Memory indirectDrawMemory;
+	uint32_t regionCount;
+	uint32_t vertCount;
+	Buffer compStagingBuffer;
+	Memory compStagingMemory;
+	Buffer compUniformBuffer;
+	Memory compUniformMemory;
+	CommandBuffer* compCommandBuffer;
 };
