@@ -6,9 +6,9 @@
 
 void HeightmapTest::init()
 {
-	this->camera = new Camera(getWindow()->getAspectRatio(), 45.f, { 0.f, 0.f, 1.f }, { 0.f, 0.f, 0.f }, 0.8f);
+	this->camera = new Camera(getWindow()->getAspectRatio(), 45.f, { 0.f, 2.f, 0.f }, { 0.f, -1.f, 0.f }, 0.8f);
 	
-	this->commandPool.init(CommandPool::Queue::GRAPHICS, 0);
+	this->commandPool.init(CommandPool::Queue::GRAPHICS, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
 
 	setupDescriptors();
 
@@ -59,7 +59,7 @@ void HeightmapTest::init()
 		std::vector<uint32_t> offsets;
 		cmdBuffs[i]->cmdBindDescriptorSets(&getPipeline((unsigned)PO::HEIGTHMAP), 0, sets, offsets);
 		cmdBuffs[i]->cmdBindIndexBuffer(this->indexBuffer.getBuffer(), 0, VK_INDEX_TYPE_UINT32);
-		cmdBuffs[i]->cmdDrawIndexed(this->heightmap.getVertexData(0).indicies.size(), 1, 0, 0, 0);
+		cmdBuffs[i]->cmdDrawIndexed(this->heightmap.getIndicies().size(), 1, 0, 0, 0);
 		cmdBuffs[i]->cmdEndRenderPass();
 		cmdBuffs[i]->end();
 	}
@@ -73,10 +73,37 @@ void HeightmapTest::loop(float dt)
 	this->memory.directTransfer(&this->camBuffer, (void*)&time, sizeof(float), sizeof(glm::mat4));
 
 	getFrame()->beginFrame(dt);
-
 	ImGui::Begin("Height Map Test");
 	ImGui::Text("This is a height map of Australia! Careful of the Macropods!");
 	ImGui::End();
+
+	std::vector<unsigned int>& indexData =  this->heightmap.getProximityIndicies(this->camera->getPosition());
+	std::vector<glm::vec4> vert;
+	int proxSize = this->heightmap.getProximityVertexDim();
+	vert.resize(proxSize* proxSize, glm::vec4(-1.f));
+	this->heightmap.getProximityVerticies(this->camera->getPosition(), vert);
+	int i =	getFrame()->getCurrentImageIndex();
+
+	cmdBuffs[i]->begin(0, nullptr);
+	std::vector<VkClearValue> clearValues = {};
+	VkClearValue value;
+	value.color = { 0.0f, 0.0f, 0.0f, 1.0f };
+	clearValues.push_back(value);
+	value.depthStencil = { 1.0f, 0 };
+	clearValues.push_back(value);
+	// Graphics 
+	cmdBuffs[i]->cmdBeginRenderPass(&this->renderPass, getFramebuffers()[i].getFramebuffer(), getSwapChain()->getExtent(), clearValues, VK_SUBPASS_CONTENTS_INLINE);
+	cmdBuffs[i]->cmdBindPipeline(&getPipeline((unsigned)PO::HEIGTHMAP));
+	std::vector<VkDescriptorSet> sets = { this->descManager.getSet(i, 0) };
+	sets[0] = { this->descManager.getSet(i, 0) };
+	std::vector<uint32_t> offsets;
+	cmdBuffs[i]->cmdBindDescriptorSets(&getPipeline((unsigned)PO::HEIGTHMAP), 0, sets, offsets);
+	cmdBuffs[i]->cmdBindIndexBuffer(this->indexBuffer.getBuffer(), 0, VK_INDEX_TYPE_UINT32);
+	cmdBuffs[i]->cmdDrawIndexed(indexData.size(), 1, 0, 0, 0);
+	cmdBuffs[i]->cmdEndRenderPass();
+	cmdBuffs[i]->end();
+
+	this->memory.directTransfer(&this->indexBuffer, (void*)indexData.data(), indexData.size()*sizeof(unsigned), 0);
 
 	getFrame()->submit(Instance::get().getGraphicsQueue().queue, cmdBuffs);
 	getFrame()->endFrame();
@@ -128,29 +155,31 @@ void HeightmapTest::setupDescriptors()
 void HeightmapTest::updateBufferDescs()
 {
 	// Initilize buffer and memory for heightmap and camera
-	Heightmap::HeightmapVertexData hmData = this->heightmap.getVertexData(0);
+	const std::vector<unsigned>& indicies = this->heightmap.getIndicies();
+	const std::vector<glm::vec4>& verticies = this->heightmap.getVerticies();
 
 	std::vector<uint32_t> queueIndices = { findQueueIndex(VK_QUEUE_GRAPHICS_BIT, Instance::get().getPhysicalDevice()) };
 
-	VkDeviceSize sizeHM = hmData.verticies.size() * sizeof(glm::vec4);
-	VkDeviceSize sizeIndex = hmData.indicies.size() * sizeof(unsigned int);
+	VkDeviceSize sizeHM = verticies.size() * sizeof(glm::vec4);
+	VkDeviceSize sizeIndex = indicies.size() * sizeof(unsigned int);
 	this->stagingBuffer.init(sizeHM, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, queueIndices);
 	this->heightBuffer.init(sizeHM, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, queueIndices);
-	this->stagingBuffer2.init(sizeIndex, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, queueIndices);
-	this->indexBuffer.init(sizeIndex, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, queueIndices);
+	//this->stagingBuffer2.init(sizeIndex, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, queueIndices);
+	this->indexBuffer.init(sizeIndex, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, queueIndices); // VK_BUFFER_USAGE_TRANSFER_DST_BIT
 	this->camBuffer.init(sizeof(glm::mat4) + sizeof(float), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, queueIndices);
 
 	this->memory.bindBuffer(&this->stagingBuffer);
-	this->memory.bindBuffer(&this->stagingBuffer2);
+	//this->memory.bindBuffer(&this->stagingBuffer2);
+	this->memory.bindBuffer(&this->indexBuffer);
 	this->memory.bindBuffer(&this->camBuffer);
 	this->memory.init(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
-	this->deviceMemory.bindBuffer(&this->indexBuffer);
 	this->deviceMemory.bindBuffer(&this->heightBuffer);
 	this->deviceMemory.init(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-	this->memory.directTransfer(&this->stagingBuffer, (void*)hmData.verticies.data(), sizeHM, 0);
-	this->memory.directTransfer(&this->stagingBuffer2, (void*)hmData.indicies.data(), sizeIndex, 0);
+	this->memory.directTransfer(&this->stagingBuffer, (void*)verticies.data(), sizeHM, 0);
+	this->memory.directTransfer(&this->indexBuffer, (void*)indicies.data(), sizeIndex , 0);
+	//this->memory.directTransfer(&this->stagingBuffer2, (void*)vertData.indicies.data(), sizeIndex, 0);
 	this->memory.directTransfer(&this->camBuffer, (void*)&this->camera->getMatrix()[0], sizeof(glm::mat4), 0);
 
 	// Copy heigh map to device local memory
@@ -160,8 +189,8 @@ void HeightmapTest::updateBufferDescs()
 	regions.dstOffset = 0;
 	regions.size = sizeHM;
 	commandBuffer->cmdCopyBuffer(this->stagingBuffer.getBuffer(), this->heightBuffer.getBuffer(), 1, &regions);
-	regions.size = sizeIndex;
-	commandBuffer->cmdCopyBuffer(this->stagingBuffer2.getBuffer(), this->indexBuffer.getBuffer(), 1, &regions);
+	//regions.size = sizeIndex;
+	//commandBuffer->cmdCopyBuffer(this->stagingBuffer2.getBuffer(), this->indexBuffer.getBuffer(), 1, &regions);
 
 	this->commandPool.endSingleTimeCommand(commandBuffer);
 
@@ -177,7 +206,7 @@ void HeightmapTest::updateBufferDescs()
 void HeightmapTest::generateHeightmapData()
 {
 	this->heightmap.setVertexDist(0.1f);
-	this->heightmap.setMaxZ(10.f);
+	this->heightmap.setMaxZ(1.f);
 	this->heightmap.setMinZ(0.f);
 
 	int width, height;
@@ -188,7 +217,7 @@ void HeightmapTest::generateHeightmapData()
 		JAS_ERROR("Failed to load heightmap, couldn't find file!");
 	else {
 		JAS_INFO("Loaded heightmap: {} successfully!", path);
-		this->heightmap.addHeightmap(width, height, data);
+		this->heightmap.init({-2.f, 0.f, -2.f}, 64, width, height, data);
 	}
 }
 
