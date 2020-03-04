@@ -63,7 +63,7 @@ void Camera::update(float dt)
 	direction.z = sin(glm::radians(this->yaw)) * cos(glm::radians(this->pitch));
 
 	this->forward = glm::normalize(direction);
-	this->right = glm::cross(this->forward, this->globalUp);
+	this->right = glm::normalize(glm::cross(this->forward, this->globalUp));
 	this->up = glm::cross(this->right, this->forward);
 	this->target = this->position + this->forward;
 }

@@ -11,31 +11,48 @@ public:
 		unsigned char* data;
 	};
 
-	struct HeightmapVertexData {
-		int dimX, dimY;
-		std::vector<unsigned> indicies;
-		std::vector<glm::vec4> verticies;
-	};
-
 public:
 	Heightmap();
 	~Heightmap();
 
+	void init(const glm::vec3& origin, int regionSize, int dataWidth, int dataHeight, unsigned char* data);
+
 	void setMinZ(float value);
 	void setMaxZ(float value);
 	void setVertexDist(float value);
+	void setProximitySize(int size);
 
-	HeightmapVertexData getVertexData(unsigned index);
-	HeightmapRawData getData(unsigned index);
-	void addHeightmap(int dimX, int dimY, unsigned char* data);
+	int getProximityVertexDim();
+	void getProximityVerticies(const glm::vec3& position, std::vector<glm::vec4>& verticies);
+	std::vector<unsigned> getProximityIndicies(const glm::vec3& position);
+	const std::vector<glm::vec4>& getVerticies();
+	const std::vector<unsigned>& getIndicies();
+	
+	static std::vector<unsigned> generateIndicies(int proximitySize, int regionSize);
+
+	int getRegionSize();
+	int getIndiciesPerRegion();
 
 	void cleanup();
 
 private:
+	glm::vec3 origin;
+	int proxDim;
+
+	int proxVertDim;
+	int indiciesPerRegion;
+	int regionSize;
+	int regionCountX;
+	int regionCountZ;
+
 	float minZ;
 	float maxZ;
 	float vertDist;
+	int heightmapWidth;
+	int heightmapHeight;
 
-	std::vector<HeightmapVertexData> vertexData;
-	std::vector<HeightmapRawData> rawData;
+	std::vector<unsigned> indicies;
+	std::vector<glm::vec4> verticies;
+
+	HeightmapRawData rawData;
 };
