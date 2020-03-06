@@ -76,10 +76,10 @@ void Camera::update(float dt)
 		this->forward = glm::normalize(direction);
 		this->right = glm::cross(this->forward, this->globalUp);
 		this->up = glm::cross(this->right, this->forward);
-		this->target = this->position + this->forward;
 
-		updatePlanes();
 	}
+	updatePlanes();
+	this->target = this->position + this->forward;
 }
 
 void Camera::setPosition(const glm::vec3& position)

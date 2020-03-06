@@ -29,7 +29,7 @@ private:
 
 	struct UboData
 	{
-		glm::mat4 world;
+		//glm::mat4 world;
 		glm::mat4 vp;
 	};
 
@@ -47,8 +47,10 @@ private:
 
 	void buildComputeCommandBuffer();
 	void loadingThread();
-	void recordCompute();
 	void record();
+
+	// Temp
+	void setupTemp();
 
 private:
 	Camera* camera;
@@ -83,10 +85,17 @@ private:
 	Memory compVertMemory;
 	Memory indirectDrawMemory;
 	uint32_t regionCount;
-	uint32_t vertCount;
+	uint32_t vertDim;
 	Buffer compStagingBuffer;
 	Memory compStagingMemory;
-	Buffer compUniformBuffer;
+	Buffer planesUBO;
+	Buffer worldDataUBO;
 	Memory compUniformMemory;
-	CommandBuffer* compCommandBuffer;
+	std::vector<CommandBuffer*> compCommandBuffers;
+
+	// Temp compute
+	std::vector<glm::vec4> tempVert;
+	std::vector<uint32_t> tempIndicies;
+	Buffer indexBufferTemp;
+	Memory indexMemoryTemp;
 };

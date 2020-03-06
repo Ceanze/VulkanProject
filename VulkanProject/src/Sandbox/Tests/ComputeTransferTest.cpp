@@ -10,6 +10,8 @@
 
 void ComputeTransferTest::init()
 {
+	this->vertDim = 128;
+
 	this->graphicsCommandPool.init(CommandPool::Queue::GRAPHICS, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
 	this->transferCommandPool.init(CommandPool::Queue::TRANSFER, 0);
 	this->compCommandPool.init(CommandPool::Queue::COMPUTE, 0);
@@ -18,8 +20,8 @@ void ComputeTransferTest::init()
 	getShaders().resize(2);
 	getPipelines().resize(2);
 
-	getShader(MESH_SHADER).addStage(Shader::Type::VERTEX, "gltfTestVert.spv");
-	getShader(MESH_SHADER).addStage(Shader::Type::FRAGMENT, "gltfTestFrag.spv");
+	getShader(MESH_SHADER).addStage(Shader::Type::VERTEX, "ComputeTransferTest\\compTransferVert.spv");
+	getShader(MESH_SHADER).addStage(Shader::Type::FRAGMENT, "ComputeTransferTest\\compTransferFrag.spv");
 	getShader(MESH_SHADER).init();
 
 	// Add attachments
@@ -64,8 +66,8 @@ void ComputeTransferTest::init()
 	desc.pool = &this->graphicsCommandPool;
 	this->depthTexture.getImage().transistionLayout(desc);
 
-	PushConstants& pushConstants = ModelRenderer::get().getPushConstants();
-	getPipeline(MESH_PIPELINE).setPushConstants(pushConstants);
+	//PushConstants& pushConstants = ModelRenderer::get().getPushConstants();
+	//getPipeline(MESH_PIPELINE).setPushConstants(pushConstants);
 	getPipeline(MESH_PIPELINE).setDescriptorLayouts(this->descManager.getLayouts());
 	getPipeline(MESH_PIPELINE).setGraphicsPipelineInfo(getSwapChain()->getExtent(), &this->renderPass);
 	getPipeline(MESH_PIPELINE).init(Pipeline::Type::GRAPHICS, &getShader(MESH_SHADER));
@@ -73,27 +75,33 @@ void ComputeTransferTest::init()
 
 	initFramebuffers(&this->renderPass, this->depthTexture.getVkImageView());
 
+	setupTemp();
+	setupCompute();
 	setupPost();
+	buildComputeCommandBuffer();
 }
 
 void ComputeTransferTest::loop(float dt)
 {
 	// Update view matrix
+	this->camera->update(dt);
+
 	this->memory.directTransfer(&this->bufferUniform, (void*)& this->camera->getMatrix()[0], sizeof(glm::mat4), (Offset)offsetof(UboData, vp));
+
+	this->compUniformMemory.directTransfer(&this->planesUBO, (void*)this->camera->getPlanes().data(), sizeof(Camera::Plane) * 6, 0);
 
 	// Render
 	getFrame()->beginFrame(dt);
-	recordCompute();
 	record();
+	getFrame()->submitCompute(Instance::get().getComputeQueue().queue, this->compCommandBuffers.data());
 	getFrame()->submit(Instance::get().getGraphicsQueue().queue, this->cmdBuffs);
 	getFrame()->endFrame();
-	this->camera->update(dt);
 }
 
 void ComputeTransferTest::cleanup()
 {
-	this->thread->join();
-	delete this->thread;
+	//this->thread->join();
+	//delete this->thread;
 
 	this->descManagerComp.cleanup();
 
@@ -129,12 +137,12 @@ void ComputeTransferTest::setupPre()
 	this->descManager.init(getSwapChain()->getNumImages());
 
 	// This can now be done in another thread.
-	const std::string filePath = "..\\assets\\Models\\Cube\\Cube.gltf";
-	GLTFLoader::load(filePath, &this->defaultModel);
-	this->isTransferDone = false;
-	this->thread = new std::thread(&ComputeTransferTest::loadingThread, this);
+	//const std::string filePath = "..\\assets\\Models\\Cube\\Cube.gltf";
+	//GLTFLoader::load(filePath, &this->defaultModel);
+	//this->isTransferDone = false;
+	//this->thread = new std::thread(&ComputeTransferTest::loadingThread, this);
 
-	ModelRenderer::get().init();
+	//ModelRenderer::get().init();
 }
 
 void ComputeTransferTest::setupPost()
@@ -142,25 +150,31 @@ void ComputeTransferTest::setupPost()
 	// Set uniform data.
 	UboData uboData;
 	uboData.vp = this->camera->getMatrix();
-	uboData.world = glm::translate(glm::mat4(1.0f), glm::vec3{ 0.0f, 0.0f, -1.0f });
-	uboData.world[3][3] = 1.0f;
-	uint32_t unsiformBufferSize = sizeof(UboData);
+	//uboData.world = glm::translate(glm::mat4(1.0f), glm::vec3{ 0.0f, 0.0f, -1.0f });
+	//uboData.world[3][3] = 1.0f;
+	uint32_t uniformBufferSize = sizeof(UboData);
 
 	// Create the buffer and memory
 	std::vector<uint32_t> queueIndices = { findQueueIndex(VK_QUEUE_GRAPHICS_BIT, Instance::get().getPhysicalDevice()) };
-	this->bufferUniform.init(unsiformBufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, queueIndices);
+	this->bufferUniform.init(uniformBufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, queueIndices);
 	this->memory.bindBuffer(&this->bufferUniform);
 	this->memory.init(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
+	// TEMP--------------- Create index buffer
+	this->indexBufferTemp.init(this->tempIndicies.size() * sizeof(uint32_t), VK_BUFFER_USAGE_INDEX_BUFFER_BIT, { Instance::get().getGraphicsQueue().queueIndex });
+	this->indexMemoryTemp.bindBuffer(&this->indexBufferTemp);
+	this->indexMemoryTemp.init(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+	this->indexMemoryTemp.directTransfer(&this->indexBufferTemp, this->tempIndicies.data(), this->tempIndicies.size() * sizeof(uint32_t), 0);
+
 	// Transfer the data to the buffer.
-	this->memory.directTransfer(&this->bufferUniform, (void*)& uboData, unsiformBufferSize, 0);
+	this->memory.directTransfer(&this->bufferUniform, (void*)& uboData, uniformBufferSize, 0);
 
 	// Update descriptor
 	for (uint32_t i = 0; i < static_cast<uint32_t>(getSwapChain()->getNumImages()); i++)
 	{
-		VkDeviceSize vertexBufferSize = this->defaultModel.vertices.size() * sizeof(Vertex);
-		this->descManager.updateBufferDesc(0, 0, this->defaultModel.vertexBuffer.getBuffer(), 0, vertexBufferSize);
-		this->descManager.updateBufferDesc(0, 1, this->bufferUniform.getBuffer(), 0, unsiformBufferSize);
+		VkDeviceSize vertexBufferSize = this->vertDim * this->vertDim * sizeof(glm::vec4);
+		this->descManager.updateBufferDesc(0, 0, this->compVertBuffer.getBuffer(), 0, vertexBufferSize);
+		this->descManager.updateBufferDesc(0, 1, this->bufferUniform.getBuffer(), 0, uniformBufferSize);
 		this->descManager.updateSets({ 0 }, i);
 	}
 
@@ -197,15 +211,18 @@ void ComputeTransferTest::setupCompute()
 
 	// Verticies
 	std::vector<uint32_t> queueIndices = { findQueueIndex(VK_QUEUE_COMPUTE_BIT, Instance::get().getPhysicalDevice()) };
-	this->compVertBuffer.init(sizeof(glm::vec4) * this->vertCount, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, queueIndices);
+	this->compVertBuffer.init(sizeof(glm::vec4) * this->vertDim * this->vertDim, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, queueIndices);
 	this->compVertMemory.bindBuffer(&this->compVertBuffer);
 	this->compVertMemory.init(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
 	// Indirect draw buffer
-	this->indirectDrawBuffer.init(sizeof(VkDrawIndexedIndirectCommand) * this->regionCount, VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, queueIndices);
+	this->regionCount = 1;
+	this->indirectDrawBuffer.init(sizeof(VkDrawIndexedIndirectCommand) * this->regionCount, VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+		{  Instance::get().getGraphicsQueue().queueIndex/*, Instance::get().getComputeQueue().queueIndex, Instance::get().getTransferQueue().queueIndex*/ });
 	this->indirectDrawMemory.bindBuffer(&this->indirectDrawBuffer);
 	this->indirectDrawMemory.init(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
+	// Copy data to device memory
 	{
 		Buffer indirectStagingBuffer;
 		Memory indirectMemoryStagingBuffer;
@@ -221,92 +238,142 @@ void ComputeTransferTest::setupCompute()
 
 		indirectMemoryStagingBuffer.directTransfer(&indirectStagingBuffer, indirectData.data(), indirectData.size() * sizeof(VkDrawIndexedIndirectCommand), 0);
 
-		CommandBuffer* cbuff = this->transferCommandPool.beginSingleTimeCommand();
+		CommandBuffer* cbuff = this->graphicsCommandPool.beginSingleTimeCommand();
 
-		// Copy vertex data.
 		VkBufferCopy region = {};
 		region.srcOffset = 0;
 		region.dstOffset = 0;
 		region.size = indirectData.size() * sizeof(VkDrawIndexedIndirectCommand);
 		cbuff->cmdCopyBuffer(indirectStagingBuffer.getBuffer(), this->indirectDrawBuffer.getBuffer(), 1, &region);
 
-		this->transferCommandPool.endSingleTimeCommand(cbuff);
+		// Release to compute
+		VkBufferMemoryBarrier bufferBarrier = {};
+		bufferBarrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+		bufferBarrier.buffer = this->indirectDrawBuffer.getBuffer();
+		bufferBarrier.size = sizeof(VkDrawIndexedIndirectCommand) * this->regionCount;
+		bufferBarrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+		bufferBarrier.dstAccessMask = 0;
+		bufferBarrier.srcQueueFamilyIndex = Instance::get().getGraphicsQueue().queueIndex;
+		bufferBarrier.dstQueueFamilyIndex = Instance::get().getComputeQueue().queueIndex;
+
+		vkCmdPipelineBarrier(
+			cbuff->getCommandBuffer(),
+			VK_PIPELINE_STAGE_TRANSFER_BIT,
+			VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT,
+			0,
+			0, nullptr,
+			1, &bufferBarrier,
+			0, nullptr);
+
+		this->graphicsCommandPool.endSingleTimeCommand(cbuff);
 
 		indirectStagingBuffer.cleanup();
 		indirectMemoryStagingBuffer.cleanup();
 	}
+	{
+		Buffer vertStagingBuffer;
+		Memory vertStagingMemory;
+		vertStagingBuffer.init(sizeof(glm::vec4) * this->tempVert.size(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, { Instance::get().getTransferQueue().queueIndex });
+		vertStagingMemory.bindBuffer(&vertStagingBuffer);
+		vertStagingMemory.init(VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+
+		vertStagingMemory.directTransfer(&vertStagingBuffer, this->tempVert.data(), tempVert.size() * sizeof(glm::vec4), 0);
+
+		CommandBuffer* cbuff = this->transferCommandPool.beginSingleTimeCommand();
+
+		// Copy vertex data.
+		VkBufferCopy region = {};
+		region.srcOffset = 0;
+		region.dstOffset = 0;
+		region.size = tempVert.size() * sizeof(glm::vec4);
+		cbuff->cmdCopyBuffer(vertStagingBuffer.getBuffer(), this->compVertBuffer.getBuffer(), 1, &region);
+
+		this->transferCommandPool.endSingleTimeCommand(cbuff);
+
+		vertStagingBuffer.cleanup();
+		vertStagingMemory.cleanup();
+	}
 
 	// Uniforms in compute
-	this->compUniformBuffer.init(sizeof(WorldData) + sizeof(Camera::Plane) * 6, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, queueIndices);
-	this->compUniformMemory.bindBuffer(&this->compUniformBuffer);
+	this->worldDataUBO.init(sizeof(WorldData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, queueIndices);
+	this->planesUBO.init(sizeof(Camera::Plane) * 6, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, queueIndices);
+	this->compUniformMemory.bindBuffer(&this->worldDataUBO);
+	this->compUniformMemory.bindBuffer(&this->planesUBO);
 	this->compUniformMemory.init(VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 
 	WorldData tempData;
-	this->compUniformMemory.directTransfer(&this->compUniformBuffer, &tempData, sizeof(WorldData), 0);
+	tempData.loadedWidth = this->vertDim;
+	tempData.numIndicesPerReg = 6 * (this->vertDim - 1) * (this->vertDim - 1);
+	tempData.regWidth = this->vertDim;
+	this->compUniformMemory.directTransfer(&this->worldDataUBO, &tempData, sizeof(WorldData), 0);
 
 	queueIndices = { findQueueIndex(VK_QUEUE_TRANSFER_BIT, Instance::get().getPhysicalDevice()) };
-	this->compStagingBuffer.init(sizeof(glm::vec4) * this->vertCount, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, queueIndices);
+	this->compStagingBuffer.init(sizeof(glm::vec4) * this->vertDim * this->vertDim, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, queueIndices);
 	this->compStagingMemory.bindBuffer(&this->compStagingBuffer);
 	this->compStagingMemory.init(VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 
 	// Update descriptor
 	this->descManagerComp.updateBufferDesc(0, 0, this->indirectDrawBuffer.getBuffer(), 0, sizeof(VkDrawIndexedIndirectCommand) * this->regionCount);
-	this->descManagerComp.updateBufferDesc(0, 1, this->compVertBuffer.getBuffer(), 0, sizeof(glm::vec4) * this->vertCount);
-	this->descManagerComp.updateBufferDesc(0, 2, this->compUniformBuffer.getBuffer(), 0, sizeof(WorldData));
-	this->descManagerComp.updateBufferDesc(0, 3, this->compUniformBuffer.getBuffer(), sizeof(WorldData), sizeof(Camera::Plane) * 6);
+	this->descManagerComp.updateBufferDesc(0, 1, this->compVertBuffer.getBuffer(), 0, sizeof(glm::vec4) * this->vertDim * this->vertDim);
+	this->descManagerComp.updateBufferDesc(0, 2, this->worldDataUBO.getBuffer(), 0, sizeof(WorldData));
+	this->descManagerComp.updateBufferDesc(0, 3, this->planesUBO.getBuffer(), 0, sizeof(Camera::Plane) * 6);
 	this->descManagerComp.updateSets({ 0 }, 0);
 }
 
 void ComputeTransferTest::buildComputeCommandBuffer()
 {
-	this->compCommandBuffer = this->compCommandPool.createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
-	this->compCommandBuffer->begin(0, nullptr);
+	this->compCommandBuffers = this->compCommandPool.createCommandBuffers(3, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+	for (size_t i = 0; i < 3; i++)
+	{
+		this->compCommandBuffers[i]->begin(0, nullptr);
 
-	// Add memory barrier to ensure that the indirect commands have been consumed before the compute shader updates them
-	VkBufferMemoryBarrier bufferBarrier = {};
-	bufferBarrier.buffer = this->indirectDrawBuffer.getBuffer();
-	bufferBarrier.size = sizeof(VkDrawIndexedIndirectCommand) * this->regionCount;
-	bufferBarrier.srcAccessMask = VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
-	bufferBarrier.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-	bufferBarrier.srcQueueFamilyIndex = Instance::get().getGraphicsQueue().queueIndex;
-	bufferBarrier.dstQueueFamilyIndex = Instance::get().getComputeQueue().queueIndex;
+		// Add memory barrier to ensure that the indirect commands have been consumed before the compute shader updates them
+		VkBufferMemoryBarrier bufferBarrier = {};
+		bufferBarrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+		bufferBarrier.buffer = this->indirectDrawBuffer.getBuffer();
+		bufferBarrier.size = sizeof(VkDrawIndexedIndirectCommand) * this->regionCount;
+		bufferBarrier.srcAccessMask = 0;
+		bufferBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+		bufferBarrier.srcQueueFamilyIndex = Instance::get().getGraphicsQueue().queueIndex;
+		bufferBarrier.dstQueueFamilyIndex = Instance::get().getComputeQueue().queueIndex;
 
-	vkCmdPipelineBarrier(
-		this->compCommandBuffer->getCommandBuffer(),
-		VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT,
-		VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-		0,
-		0, nullptr,
-		1, &bufferBarrier,
-		0, nullptr);
+		vkCmdPipelineBarrier(
+			this->compCommandBuffers[i]->getCommandBuffer(),
+			VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT,
+			VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+			0,
+			0, nullptr,
+			1, &bufferBarrier,
+			0, nullptr);
 
-	this->compCommandBuffer->cmdBindPipeline(&getPipeline(COMP_PIPELINE));
-	std::vector<VkDescriptorSet> sets = { this->descManagerComp.getSet(0, 0) };
-	std::vector<uint32_t> offsets;
-	this->compCommandBuffer->cmdBindDescriptorSets(&getPipeline(COMP_PIPELINE), 0, sets, offsets);
+		this->compCommandBuffers[i]->cmdBindPipeline(&getPipeline(COMP_PIPELINE));
+		std::vector<VkDescriptorSet> sets = { this->descManagerComp.getSet(0, 0) };
+		std::vector<uint32_t> offsets;
+		this->compCommandBuffers[i]->cmdBindDescriptorSets(&getPipeline(COMP_PIPELINE), 0, sets, offsets);
 
-	// Dispatch the compute job
-	// The compute shader will do the frustum culling and adjust the indirect draw calls depending on object visibility.
-	this->compCommandBuffer->cmdDispatch(this->regionCount / 16, 1, 1);
+		// Dispatch the compute job
+		// The compute shader will do the frustum culling and adjust the indirect draw calls depending on object visibility.
+		this->compCommandBuffers[i]->cmdDispatch((uint32_t)ceilf((float)this->regionCount / 16), 1, 1);
 
-	// Add memory barrier to ensure that the compute shader has finished writing the indirect command buffer before it's consumed
-	bufferBarrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-	bufferBarrier.dstAccessMask = VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
-	bufferBarrier.buffer = this->indirectDrawBuffer.getBuffer();
-	bufferBarrier.size = sizeof(VkDrawIndexedIndirectCommand) * this->regionCount;
-	bufferBarrier.srcQueueFamilyIndex = Instance::get().getComputeQueue().queueIndex;
-	bufferBarrier.dstQueueFamilyIndex = Instance::get().getGraphicsQueue().queueIndex;
+		// Add memory barrier to ensure that the compute shader has finished writing the indirect command buffer before it's consumed
+		bufferBarrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+		bufferBarrier.dstAccessMask = 0;
+		bufferBarrier.buffer = this->indirectDrawBuffer.getBuffer();
+		bufferBarrier.size = sizeof(VkDrawIndexedIndirectCommand) * this->regionCount;
+		bufferBarrier.srcQueueFamilyIndex = Instance::get().getComputeQueue().queueIndex;
+		bufferBarrier.dstQueueFamilyIndex = Instance::get().getGraphicsQueue().queueIndex;
 
-	vkCmdPipelineBarrier(
-		this->compCommandBuffer->getCommandBuffer(),
-		VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-		VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT,
-		0,
-		0, nullptr,
-		1, &bufferBarrier,
-		0, nullptr);
+		vkCmdPipelineBarrier(
+			this->compCommandBuffers[i]->getCommandBuffer(),
+			VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+			VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT,
+			0,
+			0, nullptr,
+			1, &bufferBarrier,
+			0, nullptr);
 
-	this->compCommandBuffer->end();
+		this->compCommandBuffers[i]->end();
+	}
 }
 
 void ComputeTransferTest::loadingThread()
@@ -325,33 +392,31 @@ void ComputeTransferTest::loadingThread()
 	}
 }
 
-void ComputeTransferTest::recordCompute()
-{
-}
-
 void ComputeTransferTest::record()
 {
-	static bool useTransferedModel = false;
-	{
-		std::lock_guard<std::mutex> lock(this->mutex);
-		if (this->isTransferDone)
-		{
-			this->isTransferDone = false;
-			useTransferedModel = true;
-
-			// Update descriptor
-			for (uint32_t i = 0; i < static_cast<uint32_t>(getSwapChain()->getNumImages()); i++)
-			{
-				VkDeviceSize vertexBufferSize = this->transferModel.vertices.size() * sizeof(Vertex);
-				this->descManager.updateBufferDesc(0, 0, this->transferModel.vertexBuffer.getBuffer(), 0, vertexBufferSize);
-				this->descManager.updateSets({ 0 }, i);
-			}
-		}
-	}
-
 	// Record command buffer
 	uint32_t currentImage = getFrame()->getCurrentImageIndex();
 	this->cmdBuffs[currentImage]->begin(VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT, nullptr);
+
+	// Acquire from compute
+	VkBufferMemoryBarrier bufferBarrier = {};
+	bufferBarrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+	bufferBarrier.srcAccessMask = 0;
+	bufferBarrier.dstAccessMask = VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
+	bufferBarrier.buffer = this->indirectDrawBuffer.getBuffer();
+	bufferBarrier.size = sizeof(VkDrawIndexedIndirectCommand) * this->regionCount;
+	bufferBarrier.srcQueueFamilyIndex = Instance::get().getComputeQueue().queueIndex;
+	bufferBarrier.dstQueueFamilyIndex = Instance::get().getGraphicsQueue().queueIndex;
+
+	vkCmdPipelineBarrier(
+		this->cmdBuffs[currentImage]->getCommandBuffer(),
+		VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+		VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT,
+		0,
+		0, nullptr,
+		1, &bufferBarrier,
+		0, nullptr);
+
 	std::vector<VkClearValue> clearValues = {};
 	VkClearValue value;
 	value.color = { 0.0f, 0.0f, 0.0f, 1.0f };
@@ -364,11 +429,60 @@ void ComputeTransferTest::record()
 
 	std::vector<VkDescriptorSet> sets = { this->descManager.getSet(currentImage, 0) };
 	std::vector<uint32_t> offsets;
-	if (useTransferedModel)
-		ModelRenderer::get().record(&this->transferModel, glm::mat4(1.0f), this->cmdBuffs[currentImage], &getPipeline(MESH_PIPELINE), sets, offsets);
-	else
-		ModelRenderer::get().record(&this->defaultModel, glm::mat4(1.0f), this->cmdBuffs[currentImage], &getPipeline(MESH_PIPELINE), sets, offsets);
+
+	this->cmdBuffs[currentImage]->cmdBindIndexBuffer(this->indexBufferTemp.getBuffer(), 0, VK_INDEX_TYPE_UINT32);
+	this->cmdBuffs[currentImage]->cmdBindDescriptorSets(&getPipeline(MESH_PIPELINE), 0, sets, offsets);
+
+	//this->cmdBuffs[currentImage]->cmdDrawIndexed(this->tempIndicies.size(), 1, 0, 0, 0);
+	this->cmdBuffs[currentImage]->cmdDrawIndexedIndirect(this->indirectDrawBuffer.getBuffer(), 0, 1, sizeof(VkDrawIndexedIndirectCommand));
 
 	this->cmdBuffs[currentImage]->cmdEndRenderPass();
+
+	// Release to transfer
+	bufferBarrier.buffer = this->indirectDrawBuffer.getBuffer();
+	bufferBarrier.size = sizeof(VkDrawIndexedIndirectCommand) * this->regionCount;
+	bufferBarrier.srcAccessMask = VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
+	bufferBarrier.dstAccessMask = 0;
+	bufferBarrier.srcQueueFamilyIndex = Instance::get().getGraphicsQueue().queueIndex;
+	bufferBarrier.dstQueueFamilyIndex = Instance::get().getComputeQueue().queueIndex;
+
+	vkCmdPipelineBarrier(
+		this->cmdBuffs[currentImage]->getCommandBuffer(),
+		VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT,
+		VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+		0,
+		0, nullptr,
+		1, &bufferBarrier,
+		0, nullptr);
+
 	this->cmdBuffs[currentImage]->end();
+}
+
+void ComputeTransferTest::setupTemp()
+{
+	// TEMP --------------------
+	// Verticies
+	this->tempVert.resize(this->vertDim * this->vertDim);
+	for (uint32_t z = 0; z < this->vertDim; z++) {
+		for (uint32_t x = 0; x < this->vertDim; x++) {
+			uint32_t i = x + z * this->vertDim;
+			this->tempVert[i] = glm::vec4((float)x, 0.0, (float)z, 1.0);
+		}
+	}
+
+	// Indicies
+	for (int z = 0; z < this->vertDim - 1; z++)
+	{
+		for (int x = 0; x < this->vertDim - 1; x++)
+		{
+			// First triangle
+			this->tempIndicies.push_back(z * this->vertDim + x);
+			this->tempIndicies.push_back((z + 1) * this->vertDim + x);
+			this->tempIndicies.push_back((z + 1) * this->vertDim + x + 1);
+			// Second triangle
+			this->tempIndicies.push_back(z * this->vertDim + x);
+			this->tempIndicies.push_back((z + 1) * this->vertDim + x + 1);
+			this->tempIndicies.push_back(z * this->vertDim + x + 1);
+		}
+	}
 }

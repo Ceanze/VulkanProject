@@ -108,6 +108,11 @@ void CommandBuffer::cmdDrawIndexed(uint32_t indexCount, uint32_t instanceCount, 
 	vkCmdDrawIndexed(this->buffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
 }
 
+void CommandBuffer::cmdDrawIndexedIndirect(VkBuffer buffer, VkDeviceSize offset, uint32_t drawCount, uint32_t stride)
+{
+	vkCmdDrawIndexedIndirect(this->buffer, buffer, offset, drawCount, stride);
+}
+
 void CommandBuffer::cmdMemoryBarrier(VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask, VkDependencyFlags dependencyFlag, std::vector<VkMemoryBarrier> barriers)
 {
 	vkCmdPipelineBarrier(

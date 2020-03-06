@@ -20,4 +20,6 @@ C:/VulkanSDK/1.1.130.0/Bin32/glslc.exe -fshader-stage=frag CubemapTest/reflectFr
 C:/VulkanSDK/1.1.130.0/Bin32/glslc.exe -fshader-stage=vertex CubemapTest/reflectVert.glsl -o CubemapTest/reflectVert.spv
 
 C:/VulkanSDK/1.1.130.0/Bin32/glslc.exe -fshader-stage=compute ComputeTransferTest/compTransferComp.glsl -o ComputeTransferTest/compTransferComp.spv
+C:/VulkanSDK/1.1.130.0/Bin32/glslc.exe -fshader-stage=vertex ComputeTransferTest/compTransferVert.glsl -o ComputeTransferTest/compTransferVert.spv
+C:/VulkanSDK/1.1.130.0/Bin32/glslc.exe -fshader-stage=frag ComputeTransferTest/compTransferFrag.glsl -o ComputeTransferTest/compTransferFrag.spv
 pause

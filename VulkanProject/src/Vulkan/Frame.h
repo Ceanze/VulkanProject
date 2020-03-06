@@ -18,6 +18,7 @@ public:
 	void cleanup();
 
 	void submit(VkQueue queue, CommandBuffer** commandBuffers);
+	void submitCompute(VkQueue queue, CommandBuffer** commandBuffer);
 
 	bool beginFrame(float dt);
 	bool endFrame();
@@ -30,6 +31,8 @@ private:
 
 	std::vector<VkSemaphore> imageAvailableSemaphores;
 	std::vector<VkSemaphore> renderFinishedSemaphores;
+	std::vector<VkSemaphore> computeSemaphores;
+	VkFence computeFence;
 	std::vector<VkFence> inFlightFences;
 	std::vector<VkFence> imagesInFlight;
 	uint32_t framesInFlight;
