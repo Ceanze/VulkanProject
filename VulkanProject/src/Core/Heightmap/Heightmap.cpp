@@ -8,6 +8,7 @@ Heightmap::Heightmap()
 	vertDist(0.1),
 	origin(0.f, 0.f, 0.f),
 	regionCount(0),
+	regionWidthCount(0),
 	regionSize(2),
 	proxDim(1),
 	rawData(),
@@ -41,11 +42,11 @@ void Heightmap::init(const glm::vec3& origin, int regionSize, int dataWidth, int
 
 	int B = dataWidth;
 	int b = regionSize;
-	this->regionCount = static_cast<int>(ceilf(((B - 1) / (float)(b - 1))));
-
+	this->regionWidthCount = static_cast<int>(ceilf(((B - 1) / (float)(b - 1))));
+	this->regionCount = this->regionWidthCount * this->regionWidthCount;
 	int padX = 0;
 	int padY = 0;
-	padX = padY = this->regionCount * (b-1) + 1 - dataWidth;
+	padX = padY = this->regionWidthCount * (b-1) + 1 - dataWidth;
 
 	int paddedSizeX = dataWidth + padX;
 	int paddedSizeZ = dataHeight + padY;
@@ -70,9 +71,9 @@ void Heightmap::init(const glm::vec3& origin, int regionSize, int dataWidth, int
 	//this->regionCountZ = static_cast<int>(ceilf(((B - b) / (float)(b - 1)) + 1)); // Must be changed
 	
 	const int numQuads = regionSize - 1;
-	for (int y = 0; y < this->regionCount; y++)
+	for (int y = 0; y < this->regionWidthCount; y++)
 	{
-		for (int x = 0; x < this->regionCount; x++)
+		for (int x = 0; x < this->regionWidthCount; x++)
 		{
 			for (int i = vertOffsetY; i < vertOffsetY + numQuads; i++)
 			{
@@ -163,9 +164,9 @@ std::vector<unsigned> Heightmap::getProximityIndicies(const glm::vec3& position)
 
 	std::vector<unsigned int> data;
 	if (xDistance >= 0.f &&
-		xDistance <= this->regionCount * worldSize &&
+		xDistance <= this->regionWidthCount * worldSize &&
 		zDistance >= 0.f &&
-		zDistance <= this->regionCount * worldSize)
+		zDistance <= this->regionWidthCount * worldSize)
 	{
 		// Calculate vertex index from position
 		int xIndex = static_cast<int>(xDistance / worldSize);
@@ -258,6 +259,11 @@ int Heightmap::getRegionCount()
 	return this->regionCount;
 }
 
+int Heightmap::getRegionWidthCount()
+{
+	return this->regionWidthCount;
+}
+
 int Heightmap::getRegionSize()
 {
 	return this->regionSize;
@@ -266,6 +272,16 @@ int Heightmap::getRegionSize()
 int Heightmap::getIndiciesPerRegion()
 {
 	return this->indiciesPerRegion;
+}
+
+int Heightmap::getWidth()
+{
+	return this->heightmapWidth;
+}
+
+int Heightmap::getHeight()
+{
+	return this->heightmapHeight;
 }
 
 void Heightmap::cleanup()
