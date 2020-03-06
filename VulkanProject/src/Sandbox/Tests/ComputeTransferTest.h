@@ -10,6 +10,7 @@
 #include "Vulkan/Sampler.h"
 #include "Vulkan/Pipeline/PushConstants.h"
 #include "Models/Model/Model.h"
+#include "Core/Heightmap/Heightmap.h"
 
 #include <thread>
 #include <mutex>
@@ -48,6 +49,8 @@ private:
 	void buildComputeCommandBuffer();
 	void loadingThread();
 	void record();
+	
+	void generateHeightmap();
 
 	// Temp
 	void setupTemp();
@@ -92,6 +95,8 @@ private:
 	Buffer worldDataUBO;
 	Memory compUniformMemory;
 	std::vector<CommandBuffer*> compCommandBuffers;
+
+	Heightmap heightmap;
 
 	// Temp compute
 	std::vector<glm::vec4> tempVert;

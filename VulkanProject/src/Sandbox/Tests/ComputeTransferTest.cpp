@@ -4,12 +4,15 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/rotate_vector.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <stb/stb_image.h>
 
 #include "Models/GLTFLoader.h"
 #include "Models/ModelRenderer.h"
 
 void ComputeTransferTest::init()
 {
+	generateHeightmap();
+
 	this->vertDim = 128;
 
 	this->graphicsCommandPool.init(CommandPool::Queue::GRAPHICS, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
@@ -66,8 +69,6 @@ void ComputeTransferTest::init()
 	desc.pool = &this->graphicsCommandPool;
 	this->depthTexture.getImage().transistionLayout(desc);
 
-	//PushConstants& pushConstants = ModelRenderer::get().getPushConstants();
-	//getPipeline(MESH_PIPELINE).setPushConstants(pushConstants);
 	getPipeline(MESH_PIPELINE).setDescriptorLayouts(this->descManager.getLayouts());
 	getPipeline(MESH_PIPELINE).setGraphicsPipelineInfo(getSwapChain()->getExtent(), &this->renderPass);
 	getPipeline(MESH_PIPELINE).init(Pipeline::Type::GRAPHICS, &getShader(MESH_SHADER));
@@ -100,9 +101,6 @@ void ComputeTransferTest::loop(float dt)
 
 void ComputeTransferTest::cleanup()
 {
-	//this->thread->join();
-	//delete this->thread;
-
 	this->descManagerComp.cleanup();
 
 	this->transferModel.cleanup();
@@ -135,14 +133,6 @@ void ComputeTransferTest::setupPre()
 	this->descManager.addLayout(descLayout);
 
 	this->descManager.init(getSwapChain()->getNumImages());
-
-	// This can now be done in another thread.
-	//const std::string filePath = "..\\assets\\Models\\Cube\\Cube.gltf";
-	//GLTFLoader::load(filePath, &this->defaultModel);
-	//this->isTransferDone = false;
-	//this->thread = new std::thread(&ComputeTransferTest::loadingThread, this);
-
-	//ModelRenderer::get().init();
 }
 
 void ComputeTransferTest::setupPost()
@@ -150,8 +140,6 @@ void ComputeTransferTest::setupPost()
 	// Set uniform data.
 	UboData uboData;
 	uboData.vp = this->camera->getMatrix();
-	//uboData.world = glm::translate(glm::mat4(1.0f), glm::vec3{ 0.0f, 0.0f, -1.0f });
-	//uboData.world[3][3] = 1.0f;
 	uint32_t uniformBufferSize = sizeof(UboData);
 
 	// Create the buffer and memory
@@ -161,18 +149,20 @@ void ComputeTransferTest::setupPost()
 	this->memory.init(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
 	// TEMP--------------- Create index buffer
-	this->indexBufferTemp.init(this->tempIndicies.size() * sizeof(uint32_t), VK_BUFFER_USAGE_INDEX_BUFFER_BIT, { Instance::get().getGraphicsQueue().queueIndex });
+	auto indicies = Heightmap::generateIndicies(this->heightmap.getProximityVertexDim(), 8);
+	this->indexBufferTemp.init(indicies.size() * sizeof(uint32_t), VK_BUFFER_USAGE_INDEX_BUFFER_BIT, { Instance::get().getGraphicsQueue().queueIndex });
 	this->indexMemoryTemp.bindBuffer(&this->indexBufferTemp);
 	this->indexMemoryTemp.init(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-	this->indexMemoryTemp.directTransfer(&this->indexBufferTemp, this->tempIndicies.data(), this->tempIndicies.size() * sizeof(uint32_t), 0);
+	this->indexMemoryTemp.directTransfer(&this->indexBufferTemp, indicies.data(), indicies.size() * sizeof(uint32_t), 0);
 
 	// Transfer the data to the buffer.
 	this->memory.directTransfer(&this->bufferUniform, (void*)& uboData, uniformBufferSize, 0);
 
 	// Update descriptor
+	auto verticies = this->heightmap.getVerticies();
+	VkDeviceSize vertexBufferSize = verticies.size() * sizeof(glm::vec4);
 	for (uint32_t i = 0; i < static_cast<uint32_t>(getSwapChain()->getNumImages()); i++)
 	{
-		VkDeviceSize vertexBufferSize = this->vertDim * this->vertDim * sizeof(glm::vec4);
 		this->descManager.updateBufferDesc(0, 0, this->compVertBuffer.getBuffer(), 0, vertexBufferSize);
 		this->descManager.updateBufferDesc(0, 1, this->bufferUniform.getBuffer(), 0, uniformBufferSize);
 		this->descManager.updateSets({ 0 }, i);
@@ -184,15 +174,6 @@ void ComputeTransferTest::setupPost()
 
 void ComputeTransferTest::setupCompute()
 {
-	/*
-	TODO:
-		- compStagingBuffer needs the data when setting up compute (this buffer will need to be updated with data)
-		- Need planes data and WorldData
-		- Get planes from camera before updating
-		- Use IndirectDraw with the SSBO on the GPU
-		- CALL ALL FUNCTIONS FOR GODS SAKE!!!!!
-	
-	*/
 
 	DescriptorLayout descLayout;
 	descLayout.add(new SSBO(VK_SHADER_STAGE_COMPUTE_BIT, 1, nullptr)); // Out
@@ -211,7 +192,7 @@ void ComputeTransferTest::setupCompute()
 
 	// Verticies
 	std::vector<uint32_t> queueIndices = { findQueueIndex(VK_QUEUE_COMPUTE_BIT, Instance::get().getPhysicalDevice()) };
-	this->compVertBuffer.init(sizeof(glm::vec4) * this->vertDim * this->vertDim, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, queueIndices);
+	this->compVertBuffer.init(sizeof(glm::vec4) * this->heightmap.getVerticies().size(), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, queueIndices);
 	this->compVertMemory.bindBuffer(&this->compVertBuffer);
 	this->compVertMemory.init(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
@@ -273,11 +254,12 @@ void ComputeTransferTest::setupCompute()
 	{
 		Buffer vertStagingBuffer;
 		Memory vertStagingMemory;
-		vertStagingBuffer.init(sizeof(glm::vec4) * this->tempVert.size(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, { Instance::get().getTransferQueue().queueIndex });
+		auto verticies = this->heightmap.getVerticies();
+		vertStagingBuffer.init(sizeof(glm::vec4) * verticies.size(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, { Instance::get().getTransferQueue().queueIndex });
 		vertStagingMemory.bindBuffer(&vertStagingBuffer);
 		vertStagingMemory.init(VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 
-		vertStagingMemory.directTransfer(&vertStagingBuffer, this->tempVert.data(), tempVert.size() * sizeof(glm::vec4), 0);
+		vertStagingMemory.directTransfer(&vertStagingBuffer, verticies.data(), verticies.size() * sizeof(glm::vec4), 0);
 
 		CommandBuffer* cbuff = this->transferCommandPool.beginSingleTimeCommand();
 
@@ -303,8 +285,8 @@ void ComputeTransferTest::setupCompute()
 
 	WorldData tempData;
 	tempData.loadedWidth = this->vertDim;
-	tempData.numIndicesPerReg = 6 * (this->vertDim - 1) * (this->vertDim - 1);
-	tempData.regWidth = this->vertDim;
+	tempData.numIndicesPerReg = this->heightmap.getIndiciesPerRegion();
+	tempData.regWidth = this->heightmap.getRegionSize();
 	this->compUniformMemory.directTransfer(&this->worldDataUBO, &tempData, sizeof(WorldData), 0);
 
 	queueIndices = { findQueueIndex(VK_QUEUE_TRANSFER_BIT, Instance::get().getPhysicalDevice()) };
@@ -314,7 +296,7 @@ void ComputeTransferTest::setupCompute()
 
 	// Update descriptor
 	this->descManagerComp.updateBufferDesc(0, 0, this->indirectDrawBuffer.getBuffer(), 0, sizeof(VkDrawIndexedIndirectCommand) * this->regionCount);
-	this->descManagerComp.updateBufferDesc(0, 1, this->compVertBuffer.getBuffer(), 0, sizeof(glm::vec4) * this->vertDim * this->vertDim);
+	this->descManagerComp.updateBufferDesc(0, 1, this->compVertBuffer.getBuffer(), 0, sizeof(glm::vec4) * this->heightmap.getVerticies().size());
 	this->descManagerComp.updateBufferDesc(0, 2, this->worldDataUBO.getBuffer(), 0, sizeof(WorldData));
 	this->descManagerComp.updateBufferDesc(0, 3, this->planesUBO.getBuffer(), 0, sizeof(Camera::Plane) * 6);
 	this->descManagerComp.updateSets({ 0 }, 0);
@@ -456,6 +438,24 @@ void ComputeTransferTest::record()
 		0, nullptr);
 
 	this->cmdBuffs[currentImage]->end();
+}
+
+void ComputeTransferTest::generateHeightmap()
+{
+	this->heightmap.setVertexDist(0.1f);
+	this->heightmap.setMaxZ(1.f);
+	this->heightmap.setMinZ(0.f);
+
+	int width, height;
+	int channels;
+	std::string path = "../assets/Textures/australia.jpg";
+	unsigned char* data = static_cast<unsigned char*>(stbi_load(path.c_str(), &width, &height, &channels, 1));
+	if (data == nullptr)
+		JAS_ERROR("Failed to load heightmap, couldn't find file!");
+	else {
+		JAS_INFO("Loaded heightmap: {} successfully!", path);
+		this->heightmap.init({ -2.f, 0.f, -2.f }, 8, width, height, data);
+	}
 }
 
 void ComputeTransferTest::setupTemp()
