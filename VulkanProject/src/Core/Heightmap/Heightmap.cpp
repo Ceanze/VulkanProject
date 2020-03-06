@@ -178,14 +178,14 @@ std::vector<unsigned> Heightmap::getProximityIndicies(const glm::vec3& position)
 			for (int x = -proxDim; x <= proxDim; x++)
 			{
 				int xTemp = xIndex + x;
-				if (xTemp >= 0 && xTemp < regionCount && zTemp >= 0 && zTemp < regionCount) {
+				if (xTemp >= 0 && xTemp < regionWidthCount && zTemp >= 0 && zTemp < regionWidthCount) {
 					// Copy over indicies of region to return vector
 					unsigned int vecOffset = data.size();
 					data.resize(data.size() + this->indiciesPerRegion);
 
 					unsigned int* vecData = data.data();
 
-					int offset = xTemp * this->indiciesPerRegion + zTemp * this->indiciesPerRegion * regionCount;
+					int offset = xTemp * this->indiciesPerRegion + zTemp * this->indiciesPerRegion * regionWidthCount;
 					memcpy((void*)(vecData + vecOffset), (void*)(&this->indicies[offset]), this->indiciesPerRegion * sizeof(unsigned int));
 				}
 			}
