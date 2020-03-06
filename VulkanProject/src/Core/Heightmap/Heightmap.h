@@ -27,6 +27,8 @@ public:
 	std::vector<unsigned> getProximityIndicies(const glm::vec3& position);
 	const std::vector<glm::vec4>& getVerticies();
 	const std::vector<unsigned>& getIndicies();
+	int getVerticiesSize();
+	int getIndiciesSize();
 	
 	static std::vector<unsigned> generateIndicies(int proximitySize, int regionSize);
 

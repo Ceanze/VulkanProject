@@ -205,6 +205,16 @@ const std::vector<unsigned>& Heightmap::getIndicies()
 	return this->indicies;
 }
 
+int Heightmap::getVerticiesSize()
+{
+	return this->verticies.size();
+}
+
+int Heightmap::getIndiciesSize()
+{
+	return this->indicies.size();
+}
+
 std::vector<unsigned> Heightmap::generateIndicies(int proximitySize, int regionSize)
 {
 	std::vector<unsigned> indexData;
