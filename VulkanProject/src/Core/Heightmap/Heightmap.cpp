@@ -219,7 +219,7 @@ std::vector<unsigned> Heightmap::generateIndicies(int proximitySize, int regionS
 {
 	std::vector<unsigned> indexData;
 
-	const int numQuads = proximitySize - 1;
+	const int numQuads = regionSize - 1;
 
 	int B = proximitySize;
 	int b = regionSize;
@@ -274,6 +274,11 @@ int Heightmap::getIndiciesPerRegion()
 	return this->indiciesPerRegion;
 }
 
+int Heightmap::getProximityRegionCount()
+{
+	return (1 + this->proxDim * 2) * (1 + this->proxDim * 2);
+}
+
 int Heightmap::getWidth()
 {
 	return this->heightmapWidth;
@@ -286,5 +291,4 @@ int Heightmap::getHeight()
 
 void Heightmap::cleanup()
 {
-	delete[] this->rawData.data;
 }

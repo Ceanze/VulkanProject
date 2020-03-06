@@ -9,11 +9,13 @@
 #include "Models/GLTFLoader.h"
 #include "Models/ModelRenderer.h"
 
+#define REGION_SIZE 8
+
 void ComputeTransferTest::init()
 {
 	generateHeightmap();
 
-	this->vertDim = 128;
+	this->regionCount = this->heightmap.getProximityRegionCount();
 
 	this->graphicsCommandPool.init(CommandPool::Queue::GRAPHICS, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
 	this->transferCommandPool.init(CommandPool::Queue::TRANSFER, 0);
@@ -71,12 +73,13 @@ void ComputeTransferTest::init()
 
 	getPipeline(MESH_PIPELINE).setDescriptorLayouts(this->descManager.getLayouts());
 	getPipeline(MESH_PIPELINE).setGraphicsPipelineInfo(getSwapChain()->getExtent(), &this->renderPass);
+	//getPipeline(MESH_PIPELINE).setWireframe(true);
 	getPipeline(MESH_PIPELINE).init(Pipeline::Type::GRAPHICS, &getShader(MESH_SHADER));
 	JAS_INFO("Created Renderer!");
 
 	initFramebuffers(&this->renderPass, this->depthTexture.getVkImageView());
 
-	setupTemp();
+	//setupTemp();
 	setupCompute();
 	setupPost();
 	buildComputeCommandBuffer();
@@ -149,7 +152,7 @@ void ComputeTransferTest::setupPost()
 	this->memory.init(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
 	// TEMP--------------- Create index buffer
-	auto indicies = Heightmap::generateIndicies(this->heightmap.getProximityVertexDim(), 8);
+	auto indicies = Heightmap::generateIndicies(this->heightmap.getProximityVertexDim(), REGION_SIZE);
 	this->indexBufferTemp.init(indicies.size() * sizeof(uint32_t), VK_BUFFER_USAGE_INDEX_BUFFER_BIT, { Instance::get().getGraphicsQueue().queueIndex });
 	this->indexMemoryTemp.bindBuffer(&this->indexBufferTemp);
 	this->indexMemoryTemp.init(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
@@ -159,8 +162,7 @@ void ComputeTransferTest::setupPost()
 	this->memory.directTransfer(&this->bufferUniform, (void*)& uboData, uniformBufferSize, 0);
 
 	// Update descriptor
-	auto verticies = this->heightmap.getVerticies();
-	VkDeviceSize vertexBufferSize = verticies.size() * sizeof(glm::vec4);
+	VkDeviceSize vertexBufferSize = this->verticies.size() * sizeof(glm::vec4);
 	for (uint32_t i = 0; i < static_cast<uint32_t>(getSwapChain()->getNumImages()); i++)
 	{
 		this->descManager.updateBufferDesc(0, 0, this->compVertBuffer.getBuffer(), 0, vertexBufferSize);
@@ -192,12 +194,11 @@ void ComputeTransferTest::setupCompute()
 
 	// Verticies
 	std::vector<uint32_t> queueIndices = { findQueueIndex(VK_QUEUE_COMPUTE_BIT, Instance::get().getPhysicalDevice()) };
-	this->compVertBuffer.init(sizeof(glm::vec4) * this->heightmap.getVerticies().size(), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, queueIndices);
+	this->compVertBuffer.init(sizeof(glm::vec4) * this->verticies.size(), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, queueIndices);
 	this->compVertMemory.bindBuffer(&this->compVertBuffer);
 	this->compVertMemory.init(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
 	// Indirect draw buffer
-	this->regionCount = 1;
 	this->indirectDrawBuffer.init(sizeof(VkDrawIndexedIndirectCommand) * this->regionCount, VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 		{  Instance::get().getGraphicsQueue().queueIndex/*, Instance::get().getComputeQueue().queueIndex, Instance::get().getTransferQueue().queueIndex*/ });
 	this->indirectDrawMemory.bindBuffer(&this->indirectDrawBuffer);
@@ -228,23 +229,8 @@ void ComputeTransferTest::setupCompute()
 		cbuff->cmdCopyBuffer(indirectStagingBuffer.getBuffer(), this->indirectDrawBuffer.getBuffer(), 1, &region);
 
 		// Release to compute
-		VkBufferMemoryBarrier bufferBarrier = {};
-		bufferBarrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-		bufferBarrier.buffer = this->indirectDrawBuffer.getBuffer();
-		bufferBarrier.size = sizeof(VkDrawIndexedIndirectCommand) * this->regionCount;
-		bufferBarrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-		bufferBarrier.dstAccessMask = 0;
-		bufferBarrier.srcQueueFamilyIndex = Instance::get().getGraphicsQueue().queueIndex;
-		bufferBarrier.dstQueueFamilyIndex = Instance::get().getComputeQueue().queueIndex;
-
-		vkCmdPipelineBarrier(
-			cbuff->getCommandBuffer(),
-			VK_PIPELINE_STAGE_TRANSFER_BIT,
-			VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT,
-			0,
-			0, nullptr,
-			1, &bufferBarrier,
-			0, nullptr);
+		cbuff->releaseBuffer(&this->indirectDrawBuffer, VK_ACCESS_TRANSFER_READ_BIT, Instance::get().getGraphicsQueue().queueIndex, Instance::get().getComputeQueue().queueIndex,
+			VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT);
 
 		this->graphicsCommandPool.endSingleTimeCommand(cbuff);
 
@@ -254,12 +240,11 @@ void ComputeTransferTest::setupCompute()
 	{
 		Buffer vertStagingBuffer;
 		Memory vertStagingMemory;
-		auto verticies = this->heightmap.getVerticies();
-		vertStagingBuffer.init(sizeof(glm::vec4) * verticies.size(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, { Instance::get().getTransferQueue().queueIndex });
+		vertStagingBuffer.init(sizeof(glm::vec4) * this->verticies.size(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, { Instance::get().getTransferQueue().queueIndex });
 		vertStagingMemory.bindBuffer(&vertStagingBuffer);
 		vertStagingMemory.init(VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 
-		vertStagingMemory.directTransfer(&vertStagingBuffer, verticies.data(), verticies.size() * sizeof(glm::vec4), 0);
+		vertStagingMemory.directTransfer(&vertStagingBuffer, this->verticies.data(), this->verticies.size() * sizeof(glm::vec4), 0);
 
 		CommandBuffer* cbuff = this->transferCommandPool.beginSingleTimeCommand();
 
@@ -267,7 +252,7 @@ void ComputeTransferTest::setupCompute()
 		VkBufferCopy region = {};
 		region.srcOffset = 0;
 		region.dstOffset = 0;
-		region.size = tempVert.size() * sizeof(glm::vec4);
+		region.size = this->verticies.size() * sizeof(glm::vec4);
 		cbuff->cmdCopyBuffer(vertStagingBuffer.getBuffer(), this->compVertBuffer.getBuffer(), 1, &region);
 
 		this->transferCommandPool.endSingleTimeCommand(cbuff);
@@ -284,19 +269,20 @@ void ComputeTransferTest::setupCompute()
 	this->compUniformMemory.init(VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 
 	WorldData tempData;
-	tempData.loadedWidth = this->vertDim;
+	tempData.loadedWidth = this->heightmap.getProximityVertexDim();
 	tempData.numIndicesPerReg = this->heightmap.getIndiciesPerRegion();
 	tempData.regWidth = this->heightmap.getRegionSize();
+	tempData.regionCount = this->heightmap.getProximityRegionCount();
 	this->compUniformMemory.directTransfer(&this->worldDataUBO, &tempData, sizeof(WorldData), 0);
 
 	queueIndices = { findQueueIndex(VK_QUEUE_TRANSFER_BIT, Instance::get().getPhysicalDevice()) };
-	this->compStagingBuffer.init(sizeof(glm::vec4) * this->vertDim * this->vertDim, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, queueIndices);
+	this->compStagingBuffer.init(sizeof(glm::vec4) * this->verticies.size(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, queueIndices);
 	this->compStagingMemory.bindBuffer(&this->compStagingBuffer);
 	this->compStagingMemory.init(VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 
 	// Update descriptor
 	this->descManagerComp.updateBufferDesc(0, 0, this->indirectDrawBuffer.getBuffer(), 0, sizeof(VkDrawIndexedIndirectCommand) * this->regionCount);
-	this->descManagerComp.updateBufferDesc(0, 1, this->compVertBuffer.getBuffer(), 0, sizeof(glm::vec4) * this->heightmap.getVerticies().size());
+	this->descManagerComp.updateBufferDesc(0, 1, this->compVertBuffer.getBuffer(), 0, sizeof(glm::vec4) * this->verticies.size());
 	this->descManagerComp.updateBufferDesc(0, 2, this->worldDataUBO.getBuffer(), 0, sizeof(WorldData));
 	this->descManagerComp.updateBufferDesc(0, 3, this->planesUBO.getBuffer(), 0, sizeof(Camera::Plane) * 6);
 	this->descManagerComp.updateSets({ 0 }, 0);
@@ -310,23 +296,9 @@ void ComputeTransferTest::buildComputeCommandBuffer()
 		this->compCommandBuffers[i]->begin(0, nullptr);
 
 		// Add memory barrier to ensure that the indirect commands have been consumed before the compute shader updates them
-		VkBufferMemoryBarrier bufferBarrier = {};
-		bufferBarrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-		bufferBarrier.buffer = this->indirectDrawBuffer.getBuffer();
-		bufferBarrier.size = sizeof(VkDrawIndexedIndirectCommand) * this->regionCount;
-		bufferBarrier.srcAccessMask = 0;
-		bufferBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-		bufferBarrier.srcQueueFamilyIndex = Instance::get().getGraphicsQueue().queueIndex;
-		bufferBarrier.dstQueueFamilyIndex = Instance::get().getComputeQueue().queueIndex;
-
-		vkCmdPipelineBarrier(
-			this->compCommandBuffers[i]->getCommandBuffer(),
-			VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT,
-			VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-			0,
-			0, nullptr,
-			1, &bufferBarrier,
-			0, nullptr);
+		this->compCommandBuffers[i]->acquireBuffer(&this->indirectDrawBuffer, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
+			Instance::get().getGraphicsQueue().queueIndex, Instance::get().getComputeQueue().queueIndex,
+			VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
 
 		this->compCommandBuffers[i]->cmdBindPipeline(&getPipeline(COMP_PIPELINE));
 		std::vector<VkDescriptorSet> sets = { this->descManagerComp.getSet(0, 0) };
@@ -338,39 +310,11 @@ void ComputeTransferTest::buildComputeCommandBuffer()
 		this->compCommandBuffers[i]->cmdDispatch((uint32_t)ceilf((float)this->regionCount / 16), 1, 1);
 
 		// Add memory barrier to ensure that the compute shader has finished writing the indirect command buffer before it's consumed
-		bufferBarrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-		bufferBarrier.dstAccessMask = 0;
-		bufferBarrier.buffer = this->indirectDrawBuffer.getBuffer();
-		bufferBarrier.size = sizeof(VkDrawIndexedIndirectCommand) * this->regionCount;
-		bufferBarrier.srcQueueFamilyIndex = Instance::get().getComputeQueue().queueIndex;
-		bufferBarrier.dstQueueFamilyIndex = Instance::get().getGraphicsQueue().queueIndex;
-
-		vkCmdPipelineBarrier(
-			this->compCommandBuffers[i]->getCommandBuffer(),
-			VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-			VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT,
-			0,
-			0, nullptr,
-			1, &bufferBarrier,
-			0, nullptr);
+		this->compCommandBuffers[i]->releaseBuffer(&this->indirectDrawBuffer, VK_ACCESS_SHADER_WRITE_BIT,
+			Instance::get().getComputeQueue().queueIndex, Instance::get().getGraphicsQueue().queueIndex,
+			VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT);
 
 		this->compCommandBuffers[i]->end();
-	}
-}
-
-void ComputeTransferTest::loadingThread()
-{
-	const std::string filePath = "..\\assets\\Models\\Sponza\\glTF\\Sponza.gltf";
-
-	GLTFLoader::prepareStagingBuffer(filePath, &this->transferModel, &this->stagingBuffer, &this->stagingMemory);
-
-	this->stagingMemory.init(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-	// Use the transfer queue, create a single command buffer and copy the contents of the staging buffer to the model's buffers.
-	GLTFLoader::transferToModel(&this->transferCommandPool, &this->transferModel, &this->stagingBuffer, &this->stagingMemory);
-
-	{
-		std::lock_guard<std::mutex> lock(this->mutex);
-		this->isTransferDone = true;
 	}
 }
 
@@ -381,23 +325,9 @@ void ComputeTransferTest::record()
 	this->cmdBuffs[currentImage]->begin(VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT, nullptr);
 
 	// Acquire from compute
-	VkBufferMemoryBarrier bufferBarrier = {};
-	bufferBarrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-	bufferBarrier.srcAccessMask = 0;
-	bufferBarrier.dstAccessMask = VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
-	bufferBarrier.buffer = this->indirectDrawBuffer.getBuffer();
-	bufferBarrier.size = sizeof(VkDrawIndexedIndirectCommand) * this->regionCount;
-	bufferBarrier.srcQueueFamilyIndex = Instance::get().getComputeQueue().queueIndex;
-	bufferBarrier.dstQueueFamilyIndex = Instance::get().getGraphicsQueue().queueIndex;
-
-	vkCmdPipelineBarrier(
-		this->cmdBuffs[currentImage]->getCommandBuffer(),
-		VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-		VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT,
-		0,
-		0, nullptr,
-		1, &bufferBarrier,
-		0, nullptr);
+	this->cmdBuffs[currentImage]->acquireBuffer(&this->indirectDrawBuffer, VK_ACCESS_INDIRECT_COMMAND_READ_BIT,
+		Instance::get().getComputeQueue().queueIndex, Instance::get().getGraphicsQueue().queueIndex,
+		VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT);
 
 	std::vector<VkClearValue> clearValues = {};
 	VkClearValue value;
@@ -416,34 +346,23 @@ void ComputeTransferTest::record()
 	this->cmdBuffs[currentImage]->cmdBindDescriptorSets(&getPipeline(MESH_PIPELINE), 0, sets, offsets);
 
 	//this->cmdBuffs[currentImage]->cmdDrawIndexed(this->tempIndicies.size(), 1, 0, 0, 0);
-	this->cmdBuffs[currentImage]->cmdDrawIndexedIndirect(this->indirectDrawBuffer.getBuffer(), 0, 1, sizeof(VkDrawIndexedIndirectCommand));
+	this->cmdBuffs[currentImage]->cmdDrawIndexedIndirect(this->indirectDrawBuffer.getBuffer(), 0, this->regionCount, sizeof(VkDrawIndexedIndirectCommand));
 
 	this->cmdBuffs[currentImage]->cmdEndRenderPass();
 
 	// Release to transfer
-	bufferBarrier.buffer = this->indirectDrawBuffer.getBuffer();
-	bufferBarrier.size = sizeof(VkDrawIndexedIndirectCommand) * this->regionCount;
-	bufferBarrier.srcAccessMask = VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
-	bufferBarrier.dstAccessMask = 0;
-	bufferBarrier.srcQueueFamilyIndex = Instance::get().getGraphicsQueue().queueIndex;
-	bufferBarrier.dstQueueFamilyIndex = Instance::get().getComputeQueue().queueIndex;
-
-	vkCmdPipelineBarrier(
-		this->cmdBuffs[currentImage]->getCommandBuffer(),
-		VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT,
-		VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-		0,
-		0, nullptr,
-		1, &bufferBarrier,
-		0, nullptr);
+	this->cmdBuffs[currentImage]->releaseBuffer(&this->indirectDrawBuffer, VK_ACCESS_INDIRECT_COMMAND_READ_BIT,
+		Instance::get().getGraphicsQueue().queueIndex, Instance::get().getComputeQueue().queueIndex,
+		VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
 
 	this->cmdBuffs[currentImage]->end();
 }
 
 void ComputeTransferTest::generateHeightmap()
 {
-	this->heightmap.setVertexDist(0.1f);
-	this->heightmap.setMaxZ(1.f);
+	this->heightmap.setVertexDist(1.f);
+	this->heightmap.setProximitySize(16);
+	this->heightmap.setMaxZ(100.f);
 	this->heightmap.setMinZ(0.f);
 
 	int width, height;
@@ -454,35 +373,11 @@ void ComputeTransferTest::generateHeightmap()
 		JAS_ERROR("Failed to load heightmap, couldn't find file!");
 	else {
 		JAS_INFO("Loaded heightmap: {} successfully!", path);
-		this->heightmap.init({ -2.f, 0.f, -2.f }, 8, width, height, data);
-	}
-}
-
-void ComputeTransferTest::setupTemp()
-{
-	// TEMP --------------------
-	// Verticies
-	this->tempVert.resize(this->vertDim * this->vertDim);
-	for (uint32_t z = 0; z < this->vertDim; z++) {
-		for (uint32_t x = 0; x < this->vertDim; x++) {
-			uint32_t i = x + z * this->vertDim;
-			this->tempVert[i] = glm::vec4((float)x, 0.0, (float)z, 1.0);
-		}
+		this->heightmap.init({ -256.f, 0.f, -256.f }, REGION_SIZE, width, height, data);
+		JAS_INFO("Initilized heightmap successfully!");
+		delete[] data;
 	}
 
-	// Indicies
-	for (int z = 0; z < this->vertDim - 1; z++)
-	{
-		for (int x = 0; x < this->vertDim - 1; x++)
-		{
-			// First triangle
-			this->tempIndicies.push_back(z * this->vertDim + x);
-			this->tempIndicies.push_back((z + 1) * this->vertDim + x);
-			this->tempIndicies.push_back((z + 1) * this->vertDim + x + 1);
-			// Second triangle
-			this->tempIndicies.push_back(z * this->vertDim + x);
-			this->tempIndicies.push_back((z + 1) * this->vertDim + x + 1);
-			this->tempIndicies.push_back(z * this->vertDim + x + 1);
-		}
-	}
+	this->verticies.resize(this->heightmap.getProximityVertexDim() * this->heightmap.getProximityVertexDim());
+	this->heightmap.getProximityVerticies({ 0.0, 0.0, 0.0 }, this->verticies);
 }

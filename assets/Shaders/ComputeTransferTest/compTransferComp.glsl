@@ -32,7 +32,7 @@ layout(set = 0, binding = 2) uniform WorldData
     uint regWidth;           // Region width in number of vertices.
     uint numIndicesPerReg;   // Number of indices per region.
     uint loadedWidth;        // Loaded world width in verticies
-    float _pad;
+    uint regionCount;
 };
 
 layout(set = 0, binding = 3) uniform Planes
@@ -60,7 +60,7 @@ layout(set = 0, binding = 3) uniform Planes
 
 bool frustum(vec4 pos)
 {
-    for(uint i = 0; i < 6; i++)
+    for(uint i = 0; i < 4; i++)
     {
         if(dot(pos.xyz - planes[i].point.xyz, planes[i].normal.xyz) < 0.0)
             return false;
@@ -70,28 +70,35 @@ bool frustum(vec4 pos)
 
 void main()
 {
-    uint id = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y * gl_NumWorkGroups.x * gl_WorkGroupSize.x;
+    uint id = gl_GlobalInvocationID.x; // + gl_GlobalInvocationID.y * gl_NumWorkGroups.x * gl_WorkGroupSize.x;
 
-    uint x = (id * (regWidth - 1)) % (loadedWidth - 1);
-    uint y = ((id * (regWidth - 1)) / (loadedWidth - 1)) * (regWidth - 1);
-
-    // Corner positions (Approximation)
-    uint vtl = x + y * loadedWidth;
-    uint vbr = vtl + loadedWidth * (regWidth - 1) + regWidth - 1;
-    vec4 tl = vertices[vtl];
-    vec4 br = vertices[vbr];
-    vec4 tr = tl + vec4(float(regWidth) - 1.0, 0.0, 0.0, 0.0);
-    vec4 bl = br - vec4(float(regWidth) - 1.0, 0.0, 0.0, 0.0);
-
-    bool shouldDraw = frustum(tl) || frustum(br) || frustum(tr) || frustum(bl);
-    if(shouldDraw)
+    if (id < regionCount)
     {
-        indirectDraws[id].instanceCount = 1;
-        indirectDraws[id].firstIndex = id * numIndicesPerReg;
-        indirectDraws[id].indexCount = numIndicesPerReg;
-    }
-    else
-    {
-        indirectDraws[id].instanceCount = 0;
+        uint x = (id * (regWidth - 1)) % (loadedWidth - 1);
+        uint y = ((id * (regWidth - 1)) / (loadedWidth - 1)) * (regWidth - 1);
+
+        // Corner positions (Approximation)
+        uint vtl = x + y * loadedWidth;
+        uint vbr = vtl + loadedWidth * (regWidth - 1) + regWidth - 1;
+        vec4 tl = vertices[vtl];
+        vec4 br = vertices[vbr];
+        uint vtr = x + y * loadedWidth + regWidth - 1;
+        uint vbl = vtl + loadedWidth * (regWidth - 1);
+        vec4 tr = vertices[vtr];
+        vec4 bl = vertices[vbl];
+        // vec4 tr = tl + vec4(float(regWidth) - 1.0, 0.0, 0.0, 0.0);
+        // vec4 bl = br - vec4(float(regWidth) - 1.0, 0.0, 0.0, 0.0);
+
+        bool shouldDraw = frustum(tl) || frustum(br) || frustum(tr) || frustum(bl);
+        if(shouldDraw)
+        {
+            indirectDraws[id].instanceCount = 1;
+            indirectDraws[id].firstIndex = id * numIndicesPerReg;
+            indirectDraws[id].indexCount = numIndicesPerReg;
+        }
+        else
+        {
+            indirectDraws[id].instanceCount = 0;
+        }
     }
 }

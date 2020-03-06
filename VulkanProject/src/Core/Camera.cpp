@@ -4,6 +4,8 @@
 #include "glm/gtx/norm.hpp"
 #include "Input.h"
 
+#define FRUSTUM_SHRINK_FACTOR -5.f
+
 Camera::Camera(float aspect, float fov, const glm::vec3& position, const glm::vec3& target, float speed)
 	: position(position), target(target), speed(speed), globalUp(0.f, 1.f, 0.f), aspect(aspect)
 {
@@ -133,14 +135,14 @@ void Camera::updatePlanes()
 
 	point = nearCenter + this->up * (this->nearHeight / 2) - this->right * (this->nearWidth / 2);
 	this->planes[LEFT_P].normal = glm::normalize(glm::cross(point - this->position, this->up));
-	this->planes[LEFT_P].point = point;
+	this->planes[LEFT_P].point = point + this->planes[LEFT_P].normal * FRUSTUM_SHRINK_FACTOR;
 
 	this->planes[TOP_P].normal = glm::normalize(glm::cross(point - this->position, this->right));
 	this->planes[TOP_P].point = point;
 
 	point = nearCenter - this->up * (this->nearHeight / 2) + this->right * (this->nearWidth / 2);
 	this->planes[RIGHT_P].normal = glm::normalize(glm::cross(point - this->position, -this->up));
-	this->planes[RIGHT_P].point = point;
+	this->planes[RIGHT_P].point = point + this->planes[RIGHT_P].normal * FRUSTUM_SHRINK_FACTOR;
 
 	this->planes[BOTTOM_P].normal = glm::normalize(glm::cross(point - this->position, -this->right));
 	this->planes[BOTTOM_P].point = point;

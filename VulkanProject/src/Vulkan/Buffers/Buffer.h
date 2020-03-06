@@ -15,9 +15,11 @@ public:
 
 	VkBuffer getBuffer() const;
 	VkMemoryRequirements getMemReq() const;
+	VkDeviceSize getSize() const;
 
 	void cleanup();
 
 private:
 	VkBuffer buffer;
+	VkDeviceSize size;
 };

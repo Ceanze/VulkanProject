@@ -36,6 +36,7 @@ public:
 	int getRegionWidthCount();
 	int getRegionSize();
 	int getIndiciesPerRegion();
+	int getProximityRegionCount();
 
 	int getWidth();
 	int getHeight();

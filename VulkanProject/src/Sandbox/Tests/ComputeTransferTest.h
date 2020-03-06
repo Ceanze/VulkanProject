@@ -39,7 +39,7 @@ private:
 		uint32_t regWidth;           // Region width in number of vertices.
 		uint32_t numIndicesPerReg;   // Number of indices per region.
 		uint32_t loadedWidth;        // Loaded world width in verticies
-		float _pad = 0;
+		uint32_t regionCount;
 	};
 
 	void setupPre();
@@ -47,13 +47,9 @@ private:
 	void setupCompute();
 
 	void buildComputeCommandBuffer();
-	void loadingThread();
 	void record();
 	
 	void generateHeightmap();
-
-	// Temp
-	void setupTemp();
 
 private:
 	Camera* camera;
@@ -88,7 +84,6 @@ private:
 	Memory compVertMemory;
 	Memory indirectDrawMemory;
 	uint32_t regionCount;
-	uint32_t vertDim;
 	Buffer compStagingBuffer;
 	Memory compStagingMemory;
 	Buffer planesUBO;
@@ -99,8 +94,7 @@ private:
 	Heightmap heightmap;
 
 	// Temp compute
-	std::vector<glm::vec4> tempVert;
-	std::vector<uint32_t> tempIndicies;
 	Buffer indexBufferTemp;
 	Memory indexMemoryTemp;
+	std::vector<glm::vec4> verticies;
 };
