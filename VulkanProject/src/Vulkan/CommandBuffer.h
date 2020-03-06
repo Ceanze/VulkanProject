@@ -5,6 +5,7 @@
 class PushConstants;
 class RenderPass;
 class Pipeline;
+class Buffer;
 
 class CommandBuffer
 {
@@ -33,7 +34,6 @@ public:
 	void cmdMemoryBarrier(VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask, VkDependencyFlags dependencyFlag, std::vector<VkMemoryBarrier> barriers);
 	void cmdBufferMemoryBarrier(VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask, VkDependencyFlags dependencyFlag, std::vector<VkBufferMemoryBarrier> barriers);
 	void cmdImageMemoryBarrier(VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask, VkDependencyFlags dependencyFlag, std::vector<VkImageMemoryBarrier> barriers);
-	void cmdDispatch(uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ);
 	void cmdExecuteCommands(uint32_t bufferCount, const VkCommandBuffer* secondaryBuffers);
 	void cmdEndRenderPass();
 	void end();
@@ -43,13 +43,17 @@ public:
 	void cmdCopyBufferToImage(VkBuffer srcBuffer, VkImage dstImage, VkImageLayout dstImageLayout, uint32_t regionCount, const VkBufferImageCopy* pRegions);
 
 	// Compute/dispatch commands (used for compute queue)
-
+	void cmdDispatch(uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ);
 
 	// Others
 	void cmdWriteTimestamp(VkPipelineStageFlagBits pipelineStage, VkQueryPool queryPool, uint32_t query);
 	void cmdResetQueryPool(VkQueryPool queryPool, uint32_t firstQuery, uint32_t queryCount);
 	void cmdBeginQuery(VkQueryPool queryPool, uint32_t query, VkQueryControlFlags flags);
 	void cmdEndQuery(VkQueryPool queryPool, uint32_t query);
+
+	// Queue acquire and release
+	void acquireBuffer(Buffer* buffer, VkAccessFlags dstAccessMask, uint32_t srcQueue, uint32_t dstQueue, VkPipelineStageFlagBits srcStage, VkPipelineStageFlagBits dstStage);
+	void releaseBuffer(Buffer* buffer, VkAccessFlags srcAccessMask, uint32_t srcQueue, uint32_t dstQueue, VkPipelineStageFlagBits srcStage, VkPipelineStageFlagBits dstStage);
 
 private:
 
