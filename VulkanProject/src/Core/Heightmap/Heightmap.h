@@ -32,6 +32,7 @@ public:
 	
 	static std::vector<unsigned> generateIndicies(int proximitySize, int regionSize);
 
+	int getRegionCount();
 	int getRegionSize();
 	int getIndiciesPerRegion();
 
@@ -44,8 +45,7 @@ private:
 	int proxVertDim;
 	int indiciesPerRegion;
 	int regionSize;
-	int regionCountX;
-	int regionCountZ;
+	int regionCount;
 
 	float minZ;
 	float maxZ;
