@@ -78,10 +78,7 @@ void HeightmapTest::loop(float dt)
 	ImGui::End();
 
 	std::vector<unsigned int>& indexData =  this->heightmap.getProximityIndicies(this->camera->getPosition());
-	std::vector<glm::vec4> vert;
-	int proxSize = this->heightmap.getProximityVertexDim();
-	vert.resize(proxSize* proxSize, glm::vec4(-1.f));
-	this->heightmap.getProximityVerticies(this->camera->getPosition(), vert);
+	
 	int i =	getFrame()->getCurrentImageIndex();
 
 	cmdBuffs[i]->begin(0, nullptr);

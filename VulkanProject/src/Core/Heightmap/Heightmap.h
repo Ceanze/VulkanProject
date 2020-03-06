@@ -27,11 +27,18 @@ public:
 	std::vector<unsigned> getProximityIndicies(const glm::vec3& position);
 	const std::vector<glm::vec4>& getVerticies();
 	const std::vector<unsigned>& getIndicies();
+	int getVerticiesSize();
+	int getIndiciesSize();
 	
 	static std::vector<unsigned> generateIndicies(int proximitySize, int regionSize);
 
+	int getRegionCount();
+	int getRegionWidthCount();
 	int getRegionSize();
 	int getIndiciesPerRegion();
+
+	int getWidth();
+	int getHeight();
 
 	void cleanup();
 
@@ -42,8 +49,8 @@ private:
 	int proxVertDim;
 	int indiciesPerRegion;
 	int regionSize;
-	int regionCountX;
-	int regionCountZ;
+	int regionCount;
+	int regionWidthCount;
 
 	float minZ;
 	float maxZ;
