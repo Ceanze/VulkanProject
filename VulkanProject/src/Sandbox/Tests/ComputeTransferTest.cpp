@@ -111,12 +111,26 @@ void ComputeTransferTest::cleanup()
 
 	this->transferModel.cleanup();
 	this->defaultModel.cleanup();
+
+	this->compStagingBuffer.cleanup();
+	this->compVertBuffer.cleanup();
+	this->indirectDrawBuffer.cleanup();
+	this->indexBufferTemp.cleanup();
+	this->planesUBO.cleanup();
+	this->worldDataUBO.cleanup();
 	this->stagingBuffer.cleanup();
-	this->stagingMemory.cleanup();
-	this->depthTexture.cleanup();
-	this->imageMemory.cleanup();
 	this->bufferUniform.cleanup();
+
+	this->stagingMemory.cleanup();
+	this->indirectDrawMemory.cleanup();
+	this->compStagingMemory.cleanup();
+	this->compVertMemory.cleanup();
+	this->compUniformMemory.cleanup();
+	this->indexMemoryTemp.cleanup();
+	this->imageMemory.cleanup();
 	this->memory.cleanup();
+
+	this->depthTexture.cleanup();
 	this->descManager.cleanup();
 	this->renderPass.cleanup();
 	for (auto& pipeline : getPipelines())
