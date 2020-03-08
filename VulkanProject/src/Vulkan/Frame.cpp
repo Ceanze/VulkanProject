@@ -10,7 +10,7 @@
 
 Frame::Frame()
 	: window(nullptr), imgui(nullptr), swapChain(nullptr), numImages(0), framesInFlight(0),
-	currentFrame(0), imageIndex(0), dt(0.0f)
+	currentFrame(0), imageIndex(0), dt(0.0f), queueFlags(VK_QUEUE_GRAPHICS_BIT)
 {
 }
 
@@ -51,9 +51,15 @@ void Frame::submit(VkQueue queue, CommandBuffer** commandBuffers)
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT };
 
-	VkSemaphore waitSemaphores[] = { this->imageAvailableSemaphores[this->currentFrame], this->computeSemaphores[0] };
-	submitInfo.waitSemaphoreCount = 2;
-	submitInfo.pWaitSemaphores = waitSemaphores;
+	std::vector<VkSemaphore> waitSemaphores;
+	//VkSemaphore waitSemaphores[] = { this->imageAvailableSemaphores[this->currentFrame], this->computeSemaphores[0] };
+
+	if (this->queueFlags & VK_QUEUE_GRAPHICS_BIT)
+		waitSemaphores.push_back(this->imageAvailableSemaphores[this->currentFrame]);
+	if (this->queueFlags & VK_QUEUE_COMPUTE_BIT)
+		waitSemaphores.push_back(this->computeSemaphores);
+	submitInfo.waitSemaphoreCount = waitSemaphores.size();
+	submitInfo.pWaitSemaphores = waitSemaphores.data();
 
 	VkSemaphore signalSemaphores[] = { this->renderFinishedSemaphores[this->currentFrame] };
 	std::vector<VkCommandBuffer> buffers = { commandBuffers[this->imageIndex]->getCommandBuffer(), this->imgui->getCurrentCommandBuffer() };
@@ -71,7 +77,7 @@ void Frame::submit(VkQueue queue, CommandBuffer** commandBuffers)
 	}
 }
 
-void Frame::submitCompute(VkQueue queue, CommandBuffer** commandBuffer)
+void Frame::submitCompute(VkQueue queue, CommandBuffer* commandBuffer)
 {
 	vkQueueWaitIdle(Instance::get().getGraphicsQueue().queue);
 
@@ -82,12 +88,12 @@ void Frame::submitCompute(VkQueue queue, CommandBuffer** commandBuffer)
 	//vkResetFences(Instance::get().getDevice(), 1, &this->computeFence);
 
 	VkSubmitInfo computeSubmitInfo = { };
-	std::array<VkCommandBuffer, 1> buff = { commandBuffer[0]->getCommandBuffer() };
+	std::array<VkCommandBuffer, 1> buff = { commandBuffer->getCommandBuffer() };
 	computeSubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 	computeSubmitInfo.commandBufferCount = buff.size();
 	computeSubmitInfo.pCommandBuffers = buff.data();
 	computeSubmitInfo.signalSemaphoreCount = 1;
-	computeSubmitInfo.pSignalSemaphores = &this->computeSemaphores[0];
+	computeSubmitInfo.pSignalSemaphores = &this->computeSemaphores;
 
 	ERROR_CHECK(vkQueueSubmit(queue, 1, &computeSubmitInfo, VK_NULL_HANDLE), "Failed to submit compute queue!");
 }
@@ -152,32 +158,33 @@ uint32_t Frame::getCurrentImageIndex() const
 	return this->imageIndex;
 }
 
+void Frame::queueUsage(VkQueueFlags queueFlags)
+{
+	this->queueFlags = queueFlags;
+}
+
 void Frame::createSyncObjects()
 {
 	this->imageAvailableSemaphores.resize(this->framesInFlight);
 	this->renderFinishedSemaphores.resize(this->framesInFlight);
-	this->computeSemaphores.resize(this->framesInFlight);
 	this->inFlightFences.resize(this->framesInFlight);
 	this->imagesInFlight.resize(this->numImages, VK_NULL_HANDLE);
 
 	// Graphics
-	for (uint32_t i = 0; i < this->framesInFlight; i++) {
-		VkSemaphoreCreateInfo SemaCreateInfo = {};
-		SemaCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-		VkFenceCreateInfo fenceCreateInfo = {};
-		fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-		fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-		ERROR_CHECK(vkCreateSemaphore(Instance::get().getDevice(), &SemaCreateInfo, nullptr, &this->imageAvailableSemaphores[i]), "Failed to create graphics semaphore");
-		ERROR_CHECK(vkCreateSemaphore(Instance::get().getDevice(), &SemaCreateInfo, nullptr, &this->renderFinishedSemaphores[i]), "Failed to create graphics semaphore");
-		ERROR_CHECK(vkCreateFence(Instance::get().getDevice(), &fenceCreateInfo, nullptr, &this->inFlightFences[i]), "Failed to create graphics fence");
-
-		ERROR_CHECK(vkCreateSemaphore(Instance::get().getDevice(), &SemaCreateInfo, nullptr, &this->computeSemaphores[i]), "Failed to create compute semaphore");
-	}
-
-	// Compute
+	VkSemaphoreCreateInfo SemaCreateInfo = {};
+	SemaCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 	VkFenceCreateInfo fenceCreateInfo = {};
 	fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 	fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+	for (uint32_t i = 0; i < this->framesInFlight; i++) {
+		ERROR_CHECK(vkCreateSemaphore(Instance::get().getDevice(), &SemaCreateInfo, nullptr, &this->imageAvailableSemaphores[i]), "Failed to create graphics semaphore");
+		ERROR_CHECK(vkCreateSemaphore(Instance::get().getDevice(), &SemaCreateInfo, nullptr, &this->renderFinishedSemaphores[i]), "Failed to create graphics semaphore");
+		ERROR_CHECK(vkCreateFence(Instance::get().getDevice(), &fenceCreateInfo, nullptr, &this->inFlightFences[i]), "Failed to create graphics fence");
+	}
+	ERROR_CHECK(vkCreateSemaphore(Instance::get().getDevice(), &SemaCreateInfo, nullptr, &this->computeSemaphores), "Failed to create compute semaphore");
+
+	// Compute
 	ERROR_CHECK(vkCreateFence(Instance::get().getDevice(), &fenceCreateInfo, nullptr, &this->computeFence), "Failed to create graphics fence");
 }
 
@@ -187,7 +194,7 @@ void Frame::destroySyncObjects()
 		vkDestroySemaphore(Instance::get().getDevice(), this->imageAvailableSemaphores[i], nullptr);
 		vkDestroySemaphore(Instance::get().getDevice(), this->renderFinishedSemaphores[i], nullptr);
 		vkDestroyFence(Instance::get().getDevice(), this->inFlightFences[i], nullptr);
-		vkDestroySemaphore(Instance::get().getDevice(), this->computeSemaphores[i], nullptr);
 	}
+	vkDestroySemaphore(Instance::get().getDevice(), this->computeSemaphores, nullptr);
 	vkDestroyFence(Instance::get().getDevice(), this->computeFence, nullptr);
 }

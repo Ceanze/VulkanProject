@@ -14,24 +14,29 @@ public:
 	Frame();
 	~Frame();
 
+
 	void init(Window* window, SwapChain* swapChain);
 	void cleanup();
 
 	void submit(VkQueue queue, CommandBuffer** commandBuffers);
-	void submitCompute(VkQueue queue, CommandBuffer** commandBuffer);
+	void submitCompute(VkQueue queue, CommandBuffer* commandBuffer);
 
 	bool beginFrame(float dt);
 	bool endFrame();
 
 	uint32_t getCurrentImageIndex() const;
 
+	void queueUsage(VkQueueFlags queueFlags);
+
 private:
 	void createSyncObjects();
 	void destroySyncObjects();
 
+	VkQueueFlags queueFlags;
+
 	std::vector<VkSemaphore> imageAvailableSemaphores;
 	std::vector<VkSemaphore> renderFinishedSemaphores;
-	std::vector<VkSemaphore> computeSemaphores;
+	VkSemaphore computeSemaphores;
 	VkFence computeFence;
 	std::vector<VkFence> inFlightFences;
 	std::vector<VkFence> imagesInFlight;
