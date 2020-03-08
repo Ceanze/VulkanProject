@@ -122,6 +122,7 @@
     <ClInclude Include="src\Sandbox\Tests\ThreadingTest.h" />
     <ClInclude Include="src\Sandbox\Tests\TransferTest.h" />
     <ClInclude Include="src\Sandbox\VKSandboxBase.h" />
+    <ClInclude Include="src\Threading\ThreadDispatcher.h" />
     <ClInclude Include="src\Threading\ThreadManager.h" />
     <ClInclude Include="src\Vulkan\Buffers\Buffer.h" />
     <ClInclude Include="src\Vulkan\Buffers\Framebuffer.h" />
@@ -170,6 +171,7 @@
     <ClCompile Include="src\Sandbox\Tests\ThreadingTest.cpp" />
     <ClCompile Include="src\Sandbox\Tests\TransferTest.cpp" />
     <ClCompile Include="src\Sandbox\VKSandboxBase.cpp" />
+    <ClCompile Include="src\Threading\ThreadDispatcher.cpp" />
     <ClCompile Include="src\Threading\ThreadManager.cpp" />
     <ClCompile Include="src\Vulkan\Buffers\Buffer.cpp" />
     <ClCompile Include="src\Vulkan\Buffers\Framebuffer.cpp" />

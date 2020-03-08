@@ -12,8 +12,6 @@
 #include "Models/Model/Model.h"
 #include "Core/Heightmap/Heightmap.h"
 
-#include <thread>
-#include <mutex>
 
 class ComputeTransferTest : public VKSandboxBase
 {
@@ -52,6 +50,8 @@ private:
 	void generateHeightmap();
 	void verticesToDevice(Buffer* buffer, const std::vector<glm::vec4>& verticies);
 
+	void transferVertexData();
+
 private:
 	Camera* camera;
 	CommandBuffer* compCommandBuffer;
@@ -62,6 +62,10 @@ private:
 	RenderPass renderPass;
 
 	DescriptorManager descManager;
+
+	// Threading
+	
+
 
 	// For loading model
 	Model defaultModel;

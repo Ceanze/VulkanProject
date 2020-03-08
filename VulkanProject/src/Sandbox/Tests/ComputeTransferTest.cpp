@@ -9,6 +9,8 @@
 #include "Models/GLTFLoader.h"
 #include "Models/ModelRenderer.h"
 
+#include "Threading/ThreadDispatcher.h"
+
 #define REGION_SIZE 2
 
 void ComputeTransferTest::init()
@@ -16,6 +18,7 @@ void ComputeTransferTest::init()
 	// Set queue usage
 	getFrame()->queueUsage(VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT);
 
+	ThreadDispatcher::init(1);
 
 	this->graphicsCommandPool.init(CommandPool::Queue::GRAPHICS, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
 	this->transferCommandPool.init(CommandPool::Queue::TRANSFER, 0);
@@ -98,16 +101,8 @@ void ComputeTransferTest::loop(float dt)
 	this->compUniformMemory.directTransfer(&this->planesUBO, (void*)this->camera->getPlanes().data(), sizeof(Camera::Plane) * 6, 0);
 
 	// Test transfering vertex data over time.
-	glm::vec3 camPos = this->camera->getPosition();
-	glm::ivec2 currRegion = this->heightmap.getRegionFromPos(camPos);
-	glm::ivec2 diff = this->lastRegionIndex - currRegion;
-	if (abs(diff.x) > this->transferThreshold || abs(diff.y) > this->transferThreshold) {
-		this->lastRegionIndex = currRegion;
-		// Transfer proximity verticies to device
-		this->heightmap.getProximityVerticies(camPos, this->verticies);
-		verticesToDevice(&this->compVertBuffer, this->verticies);
-	}
-
+	this->transferVertexData();
+	
 	// Render
 	getFrame()->beginFrame(dt);
 	getFrame()->submitCompute(Instance::get().getComputeQueue().queue, this->compCommandBuffer);
@@ -117,6 +112,8 @@ void ComputeTransferTest::loop(float dt)
 
 void ComputeTransferTest::cleanup()
 {
+	ThreadDispatcher::shutdown();
+
 	this->descManagerComp.cleanup();
 
 	this->transferModel.cleanup();
@@ -390,7 +387,7 @@ void ComputeTransferTest::record()
 void ComputeTransferTest::generateHeightmap()
 {
 	this->heightmap.setVertexDist(1.f);
-	this->heightmap.setProximitySize(100);
+	this->heightmap.setProximitySize(50);
 	this->heightmap.setMaxZ(100.f);
 	this->heightmap.setMinZ(0.f);
 
@@ -409,7 +406,7 @@ void ComputeTransferTest::generateHeightmap()
 
 	// Set data used for transfer
 	this->lastRegionIndex = this->heightmap.getRegionFromPos(this->camera->getPosition());
-	this->transferThreshold = 50;
+	this->transferThreshold = 1;
 
 	this->regionCount = this->heightmap.getProximityRegionCount();
 
@@ -437,3 +434,21 @@ void ComputeTransferTest::verticesToDevice(Buffer* buffer, const std::vector<glm
 
 	this->transferCommandPool.endSingleTimeCommand(cbuff);
 }
+
+void ComputeTransferTest::transferVertexData()
+{
+	glm::vec3 camPos = this->camera->getPosition();
+	glm::ivec2 currRegion = this->heightmap.getRegionFromPos(camPos);
+	glm::ivec2 diff = this->lastRegionIndex - currRegion;
+	if (abs(diff.x) > this->transferThreshold || abs(diff.y) > this->transferThreshold) {
+		if (ThreadDispatcher::finished()) {
+			this->lastRegionIndex = currRegion;
+			// Transfer proximity verticies to device
+			ThreadDispatcher::dispatch([&, camPos]() {
+				this->heightmap.getProximityVerticies(camPos, this->verticies);
+				verticesToDevice(&this->compVertBuffer, this->verticies);
+			});
+		}
+	}
+}
+
