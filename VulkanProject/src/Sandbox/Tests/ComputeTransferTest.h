@@ -63,10 +63,6 @@ private:
 
 	DescriptorManager descManager;
 
-	// Threading
-	
-
-
 	// For loading model
 	Model defaultModel;
 	Model transferModel;

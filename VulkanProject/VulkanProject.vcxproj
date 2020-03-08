@@ -102,6 +102,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="src\Core\Skybox.h" />
     <ClInclude Include="src\Core\CPUProfiler.h" />
     <ClInclude Include="src\Core\Camera.h" />
     <ClInclude Include="src\Core\Heightmap\Heightmap.h" />
@@ -151,6 +152,7 @@
     <ClInclude Include="src\jaspch.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\Core\Skybox.cpp" />
     <ClCompile Include="src\Core\CPUProfiler.cpp" />
     <ClCompile Include="src\Core\Camera.cpp" />
     <ClCompile Include="src\Core\Heightmap\Heightmap.cpp" />
