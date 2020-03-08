@@ -9,7 +9,7 @@
 #include "Models/GLTFLoader.h"
 #include "Models/ModelRenderer.h"
 
-#define REGION_SIZE 2
+#define REGION_SIZE 10
 
 void ComputeTransferTest::init()
 {
@@ -372,13 +372,13 @@ void ComputeTransferTest::record()
 void ComputeTransferTest::generateHeightmap()
 {
 	this->heightmap.setVertexDist(1.f);
-	this->heightmap.setProximitySize(100);
+	this->heightmap.setProximitySize(1);
 	this->heightmap.setMaxZ(100.f);
 	this->heightmap.setMinZ(0.f);
 
 	int width, height;
 	int channels;
-	std::string path = "../assets/Textures/island.png";
+	std::string path = "../assets/Textures/australia.jpg";
 	unsigned char* data = static_cast<unsigned char*>(stbi_load(path.c_str(), &width, &height, &channels, 1));
 	if (data == nullptr)
 		JAS_ERROR("Failed to load heightmap, couldn't find file!");
@@ -391,7 +391,7 @@ void ComputeTransferTest::generateHeightmap()
 
 	// Set data used for transfer
 	this->lastRegionIndex = this->heightmap.getRegionFromPos(this->camera->getPosition());
-	this->transferThreshold = 50;
+	this->transferThreshold = 1;
 
 	this->regionCount = this->heightmap.getProximityRegionCount();
 

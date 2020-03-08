@@ -77,7 +77,8 @@ void HeightmapTest::loop(float dt)
 	ImGui::Text("This is a height map of Australia! Careful of the Macropods!");
 	ImGui::End();
 
-	std::vector<unsigned int>& indexData =  this->heightmap.getProximityIndicies(this->camera->getPosition());
+	// TODO: This does not work anymore!
+	std::vector<unsigned int> indexData;// = this->heightmap.getProximityIndicies(this->camera->getPosition());
 	
 	int i =	getFrame()->getCurrentImageIndex();
 
@@ -109,8 +110,6 @@ void HeightmapTest::loop(float dt)
 
 void HeightmapTest::cleanup()
 {
-	this->heightmap.cleanup();
-
 	this->depthTexture.cleanup();
 	// Compute
 	this->stagingBuffer.cleanup();

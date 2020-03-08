@@ -5,13 +5,6 @@
 class Heightmap 
 {
 public:
-	struct HeightmapRawData {
-		int dimX, dimY;
-		size_t size;
-		unsigned char* data;
-	};
-
-public:
 	Heightmap();
 	~Heightmap();
 
@@ -26,7 +19,6 @@ public:
 
 	int getProximityVertexDim();
 	void getProximityVerticies(const glm::vec3& position, std::vector<glm::vec4>& verticies);
-	std::vector<unsigned> getProximityIndicies(const glm::vec3& position);
 	const std::vector<glm::vec4>& getVerticies();
 	const std::vector<unsigned>& getIndicies();
 	int getVerticiesSize();
@@ -43,8 +35,6 @@ public:
 
 	int getWidth();
 	int getHeight();
-
-	void cleanup();
 
 private:
 	glm::vec3 origin;
@@ -64,6 +54,4 @@ private:
 
 	std::vector<unsigned> indicies;
 	std::vector<glm::vec4> verticies;
-
-	HeightmapRawData rawData;
 };
