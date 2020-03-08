@@ -9,21 +9,19 @@
 #include "Models/GLTFLoader.h"
 #include "Models/ModelRenderer.h"
 
-#define REGION_SIZE 8
+#define REGION_SIZE 2
 
 void ComputeTransferTest::init()
 {
-	generateHeightmap();
-
 	// Set queue usage
 	getFrame()->queueUsage(VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT);
 
-	this->regionCount = this->heightmap.getProximityRegionCount();
 
 	this->graphicsCommandPool.init(CommandPool::Queue::GRAPHICS, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
 	this->transferCommandPool.init(CommandPool::Queue::TRANSFER, 0);
 	this->compCommandPool.init(CommandPool::Queue::COMPUTE, 0);
-	this->camera = new Camera(getWindow()->getAspectRatio(), 45.f, { 0.f, 0.f, 1.f }, { 0.f, 0.f, 0.f }, 8.0f, 2.0f);
+	this->camera = new Camera(getWindow()->getAspectRatio(), 45.f, { 0.f, 120.f, 10.f }, { 0.f, 0.f, 0.f }, 8.0f, 4.0f);
+	generateHeightmap();
 
 	getShaders().resize(2);
 	getPipelines().resize(2);
@@ -76,7 +74,7 @@ void ComputeTransferTest::init()
 
 	getPipeline(MESH_PIPELINE).setDescriptorLayouts(this->descManager.getLayouts());
 	getPipeline(MESH_PIPELINE).setGraphicsPipelineInfo(getSwapChain()->getExtent(), &this->renderPass);
-	//getPipeline(MESH_PIPELINE).setWireframe(true);
+	getPipeline(MESH_PIPELINE).setWireframe(true);
 	getPipeline(MESH_PIPELINE).init(Pipeline::Type::GRAPHICS, &getShader(MESH_SHADER));
 	JAS_INFO("Created Renderer!");
 
@@ -97,9 +95,25 @@ void ComputeTransferTest::loop(float dt)
 
 	this->compUniformMemory.directTransfer(&this->planesUBO, (void*)this->camera->getPlanes().data(), sizeof(Camera::Plane) * 6, 0);
 
+	// Test transfering vertex data over time.
+	glm::vec3 camPos = this->camera->getPosition();
+	glm::ivec2 currRegion = this->heightmap.getRegionFromPos(camPos);
+	glm::ivec2 diff = this->lastRegionIndex - currRegion;
+	if (abs(diff.x) > this->transferThreshold || abs(diff.y) > this->transferThreshold) {
+		this->lastRegionIndex = currRegion;
+		// Transfer proximity verticies to device
+		this->heightmap.getProximityVerticies(camPos, this->verticies);
+		verticesToDevice(&this->compVertBuffer, this->verticies);
+	}
+
 	// Render
 	getFrame()->beginFrame(dt);
-	record();
+	static int frames = 0;
+	if (frames < 3)
+	{
+		record();
+		frames++;
+	}
 	getFrame()->submitCompute(Instance::get().getComputeQueue().queue, this->compCommandBuffers);
 	getFrame()->submit(Instance::get().getGraphicsQueue().queue, this->cmdBuffs);
 	getFrame()->endFrame();
@@ -112,8 +126,11 @@ void ComputeTransferTest::cleanup()
 	this->transferModel.cleanup();
 	this->defaultModel.cleanup();
 
+	this->vertStagingBuffer.cleanup();
+	this->vertStagingMemory.cleanup();
 	this->compStagingBuffer.cleanup();
 	this->compVertBuffer.cleanup();
+	this->compVertBuffer2.cleanup();
 	this->indirectDrawBuffer.cleanup();
 	this->indexBufferTemp.cleanup();
 	this->planesUBO.cleanup();
@@ -212,7 +229,9 @@ void ComputeTransferTest::setupCompute()
 	// Verticies
 	std::vector<uint32_t> queueIndices = { findQueueIndex(VK_QUEUE_COMPUTE_BIT, Instance::get().getPhysicalDevice()) };
 	this->compVertBuffer.init(sizeof(glm::vec4) * this->verticies.size(), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, queueIndices);
+	this->compVertBuffer2.init(sizeof(glm::vec4) * this->verticies.size(), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, queueIndices);
 	this->compVertMemory.bindBuffer(&this->compVertBuffer);
+	this->compVertMemory.bindBuffer(&this->compVertBuffer2);
 	this->compVertMemory.init(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
 	// Indirect draw buffer
@@ -254,29 +273,7 @@ void ComputeTransferTest::setupCompute()
 		indirectStagingBuffer.cleanup();
 		indirectMemoryStagingBuffer.cleanup();
 	}
-	{
-		Buffer vertStagingBuffer;
-		Memory vertStagingMemory;
-		vertStagingBuffer.init(sizeof(glm::vec4) * this->verticies.size(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, { Instance::get().getTransferQueue().queueIndex });
-		vertStagingMemory.bindBuffer(&vertStagingBuffer);
-		vertStagingMemory.init(VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-
-		vertStagingMemory.directTransfer(&vertStagingBuffer, this->verticies.data(), this->verticies.size() * sizeof(glm::vec4), 0);
-
-		CommandBuffer* cbuff = this->transferCommandPool.beginSingleTimeCommand();
-
-		// Copy vertex data.
-		VkBufferCopy region = {};
-		region.srcOffset = 0;
-		region.dstOffset = 0;
-		region.size = this->verticies.size() * sizeof(glm::vec4);
-		cbuff->cmdCopyBuffer(vertStagingBuffer.getBuffer(), this->compVertBuffer.getBuffer(), 1, &region);
-
-		this->transferCommandPool.endSingleTimeCommand(cbuff);
-
-		vertStagingBuffer.cleanup();
-		vertStagingMemory.cleanup();
-	}
+	verticesToDevice(&this->compVertBuffer, this->verticies);
 
 	// Uniforms in compute
 	this->worldDataUBO.init(sizeof(WorldData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, queueIndices);
@@ -375,13 +372,13 @@ void ComputeTransferTest::record()
 void ComputeTransferTest::generateHeightmap()
 {
 	this->heightmap.setVertexDist(1.f);
-	this->heightmap.setProximitySize(16);
+	this->heightmap.setProximitySize(100);
 	this->heightmap.setMaxZ(100.f);
 	this->heightmap.setMinZ(0.f);
 
 	int width, height;
 	int channels;
-	std::string path = "../assets/Textures/australia.jpg";
+	std::string path = "../assets/Textures/island.png";
 	unsigned char* data = static_cast<unsigned char*>(stbi_load(path.c_str(), &width, &height, &channels, 1));
 	if (data == nullptr)
 		JAS_ERROR("Failed to load heightmap, couldn't find file!");
@@ -392,6 +389,33 @@ void ComputeTransferTest::generateHeightmap()
 		delete[] data;
 	}
 
+	// Set data used for transfer
+	this->lastRegionIndex = this->heightmap.getRegionFromPos(this->camera->getPosition());
+	this->transferThreshold = 50;
+
+	this->regionCount = this->heightmap.getProximityRegionCount();
+
 	this->verticies.resize(this->heightmap.getProximityVertexDim() * this->heightmap.getProximityVertexDim());
-	this->heightmap.getProximityVerticies({ 0.0, 0.0, 0.0 }, this->verticies);
+	this->heightmap.getProximityVerticies(this->camera->getPosition(), this->verticies);
+
+	vertStagingBuffer.init(sizeof(glm::vec4) * verticies.size(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, { Instance::get().getTransferQueue().queueIndex });
+	vertStagingMemory.bindBuffer(&vertStagingBuffer);
+	vertStagingMemory.init(VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+
+}
+
+void ComputeTransferTest::verticesToDevice(Buffer* buffer, const std::vector<glm::vec4>& verticies)
+{
+	vertStagingMemory.directTransfer(&vertStagingBuffer, verticies.data(), verticies.size() * sizeof(glm::vec4), 0);
+
+	CommandBuffer* cbuff = this->transferCommandPool.beginSingleTimeCommand();
+
+	// Copy vertex data.
+	VkBufferCopy region = {};
+	region.srcOffset = 0;
+	region.dstOffset = 0;
+	region.size = verticies.size() * sizeof(glm::vec4);
+	cbuff->cmdCopyBuffer(vertStagingBuffer.getBuffer(), buffer->getBuffer(), 1, &region);
+
+	this->transferCommandPool.endSingleTimeCommand(cbuff);
 }

@@ -50,6 +50,7 @@ private:
 	void record();
 	
 	void generateHeightmap();
+	void verticesToDevice(Buffer* buffer, const std::vector<glm::vec4>& verticies);
 
 private:
 	Camera* camera;
@@ -79,9 +80,15 @@ private:
 	// Compute
 	DescriptorManager descManagerComp;
 	CommandPool compCommandPool;
+
+	Buffer vertStagingBuffer;
+	Memory vertStagingMemory;
+
 	Buffer compVertBuffer;
-	Buffer indirectDrawBuffer;
+	Buffer compVertBuffer2;
 	Memory compVertMemory;
+
+	Buffer indirectDrawBuffer;
 	Memory indirectDrawMemory;
 	uint32_t regionCount;
 	Buffer compStagingBuffer;
@@ -92,6 +99,8 @@ private:
 	CommandBuffer* compCommandBuffers;
 
 	Heightmap heightmap;
+	glm::ivec2 lastRegionIndex;
+	int transferThreshold;
 
 	// Temp compute
 	Buffer indexBufferTemp;

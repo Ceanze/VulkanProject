@@ -22,6 +22,8 @@ public:
 	void setVertexDist(float value);
 	void setProximitySize(int size);
 
+	glm::ivec2 getRegionFromPos(const glm::vec3& position);
+
 	int getProximityVertexDim();
 	void getProximityVerticies(const glm::vec3& position, std::vector<glm::vec4>& verticies);
 	std::vector<unsigned> getProximityIndicies(const glm::vec3& position);
@@ -37,6 +39,7 @@ public:
 	int getRegionSize();
 	int getIndiciesPerRegion();
 	int getProximityRegionCount();
+	int getProximityWidthRegionCount();
 
 	int getWidth();
 	int getHeight();

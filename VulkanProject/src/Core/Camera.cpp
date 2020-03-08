@@ -9,12 +9,13 @@
 Camera::Camera(float aspect, float fov, const glm::vec3& position, const glm::vec3& target, float speed, float hasteSpeed)
 	: position(position), target(target), speed(speed), hasteSpeed(hasteSpeed), globalUp(0.f, 1.f, 0.f), aspect(aspect)
 {
-	this->forward = this->target - this->position;
+	this->forward = glm::normalize(this->target - this->position);
 	this->up = this->globalUp;
 	this->right = glm::cross(this->forward, this->up);
+
 	this->fov = fov;
 	this->nearPlane = 0.001f;
-	this->farPlane = 100.f;
+	this->farPlane = 1000.f;
 	this->yaw = 270;
 	this->pitch = 0;
 	this->roll = 0;

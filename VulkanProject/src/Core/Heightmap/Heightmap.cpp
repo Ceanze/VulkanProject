@@ -117,6 +117,20 @@ void Heightmap::setProximitySize(int size)
 {
 	this->proxDim = size;
 }
+glm::ivec2 Heightmap::getRegionFromPos(const glm::vec3& position)
+{
+	float regionWorldSize = (this->regionSize - 1) * this->vertDist;
+
+	float xDistance = position.x - this->origin.x;
+	float zDistance = position.z - this->origin.z;
+
+	glm::vec2 index(0);
+	// Calculate region index from position
+	index.x = static_cast<int>(xDistance / regionWorldSize);
+	index.y = static_cast<int>(zDistance / regionWorldSize);
+
+	return index;
+}
 int Heightmap::getProximityVertexDim()
 {
 	return this->proxVertDim;
@@ -157,20 +171,20 @@ void Heightmap::getProximityVerticies(const glm::vec3& position, std::vector<glm
 
 std::vector<unsigned> Heightmap::getProximityIndicies(const glm::vec3& position)
 {
-	float worldSize = (this->regionSize - 1) * this->vertDist;
+	float regionWorldSize = (this->regionSize - 1) * this->vertDist;
 
 	float xDistance = position.x - this->origin.x;
 	float zDistance = position.z - this->origin.z;
 
 	std::vector<unsigned int> data;
 	if (xDistance >= 0.f &&
-		xDistance <= this->regionWidthCount * worldSize &&
+		xDistance <= this->regionWidthCount * regionWorldSize &&
 		zDistance >= 0.f &&
-		zDistance <= this->regionWidthCount * worldSize)
+		zDistance <= this->regionWidthCount * regionWorldSize)
 	{
-		// Calculate vertex index from position
-		int xIndex = static_cast<int>(xDistance / worldSize);
-		int zIndex = static_cast<int>(zDistance / worldSize);
+		// Calculate region index from position
+		int xIndex = static_cast<int>(xDistance / regionWorldSize);
+		int zIndex = static_cast<int>(zDistance / regionWorldSize);
 
  		for (int z = -proxDim; z <= proxDim; z++)
 		{
@@ -277,6 +291,11 @@ int Heightmap::getIndiciesPerRegion()
 int Heightmap::getProximityRegionCount()
 {
 	return (1 + this->proxDim * 2) * (1 + this->proxDim * 2);
+}
+
+int Heightmap::getProximityWidthRegionCount()
+{
+	return (1 + this->proxDim * 2);
 }
 
 int Heightmap::getWidth()
