@@ -387,7 +387,7 @@ void ComputeTransferTest::record()
 void ComputeTransferTest::generateHeightmap()
 {
 	this->heightmap.setVertexDist(1.f);
-	this->heightmap.setProximitySize(50);
+	this->heightmap.setProximitySize(1);
 	this->heightmap.setMaxZ(100.f);
 	this->heightmap.setMinZ(0.f);
 

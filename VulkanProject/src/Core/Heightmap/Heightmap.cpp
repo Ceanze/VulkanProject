@@ -11,7 +11,6 @@ Heightmap::Heightmap()
 	regionWidthCount(0),
 	regionSize(2),
 	proxDim(1),
-	rawData(),
 	proxVertDim(0)
 {
 }
@@ -31,14 +30,8 @@ void Heightmap::init(const glm::vec3& origin, int regionSize, int dataWidth, int
 	const int quads = this->regionSize - 1;
 	this->indiciesPerRegion = (quads * quads) * 6;
 
-	this->heightmapWidth = dataWidth;
-	this->heightmapHeight = dataHeight;
-
 	int regionCountWidth = 1 + this->proxDim * 2;
 	this->proxVertDim = this->regionSize * regionCountWidth - regionCountWidth + 1;
-
-	int vertOffsetX = 0;
-	int vertOffsetY = 0;
 
 	int B = dataWidth;
 	int b = regionSize;
@@ -48,54 +41,26 @@ void Heightmap::init(const glm::vec3& origin, int regionSize, int dataWidth, int
 	int padY = 0;
 	padX = padY = this->regionWidthCount * (b-1) + 1 - dataWidth;
 
-	int paddedSizeX = dataWidth + padX;
-	int paddedSizeZ = dataHeight + padY;
+	this->heightmapWidth = dataWidth + padX;
+	this->heightmapHeight = dataHeight + padY;
+	this->verticies.resize(this->heightmapWidth * this->heightmapHeight);
 
-	const unsigned maxValue = 255;
-	for (int i = 0; i < paddedSizeZ; i++)
+	const unsigned maxValue = 0xFF;
+	float zDist = abs(this->maxZ - this->minZ);
+	for (int y = 0; y < this->heightmapHeight; y++)
 	{
-		for (int j = 0; j < paddedSizeX; j++)
+		for (int x = 0; x < this->heightmapWidth; x++)
 		{
 			float height = 0;
-			if (i < dataHeight && j < dataWidth)
-				height = this->minZ + ((float)data[i * dataWidth + j] / maxValue) * (abs(this->maxZ - this->minZ));
+			if (y < dataHeight && x < dataWidth)
+				height = this->minZ + ((float)data[x + y * dataWidth] / maxValue) * zDist;
 
-			float xPos = this->origin.x + j * this->vertDist;
-			float zPos = this->origin.z + i * this->vertDist;
+			float xPos = this->origin.x + x * this->vertDist;
+			float zPos = this->origin.z + y * this->vertDist;
 
-			this->verticies.push_back(glm::vec4(xPos, height, zPos, 1.0));
+			this->verticies[x + y * this->heightmapHeight] = glm::vec4(xPos, height, zPos, 1.0);
 		}
 	}
-
-	//B = dataHeight;
-	//this->regionCountZ = static_cast<int>(ceilf(((B - b) / (float)(b - 1)) + 1)); // Must be changed
-	
-	const int numQuads = regionSize - 1;
-	for (int y = 0; y < this->regionWidthCount; y++)
-	{
-		for (int x = 0; x < this->regionWidthCount; x++)
-		{
-			for (int i = vertOffsetY; i < vertOffsetY + numQuads; i++)
-			{
-				for (int j = vertOffsetX; j < vertOffsetX + numQuads; j++)
-				{
-					this->indicies.push_back(i * paddedSizeX + j);
-					this->indicies.push_back((i + 1) * paddedSizeX + j);
-					this->indicies.push_back((i + 1) * paddedSizeX + j + 1);
-					// Second triangle
-					this->indicies.push_back(i * paddedSizeX + j);
-					this->indicies.push_back((i + 1) * paddedSizeX + j + 1);
-					this->indicies.push_back(i * paddedSizeX + j + 1);
-				}
-			}
-			vertOffsetX = (vertOffsetX + numQuads) % (paddedSizeX - 1);
-		}
-		vertOffsetY += numQuads;
-	}
-
-	//size_t size = dimX * dimY * sizeof(unsigned char);
-	HeightmapRawData newRawData = { paddedSizeX, paddedSizeZ, dataWidth * dataHeight * sizeof(int), data };
-	this->rawData = newRawData;
 }
 
 void Heightmap::setMinZ(float val)
@@ -140,7 +105,7 @@ void Heightmap::getProximityVerticies(const glm::vec3& position, std::vector<glm
 	float xDistance = position.x - this->origin.x;
 	float zDistance = position.z - this->origin.z;
 
-	// Calculate region index from position
+	// Calculate vertex index from position
 	int xIndex = static_cast<int>(xDistance / this->vertDist);
 	int zIndex = static_cast<int>(zDistance / this->vertDist);
 
@@ -161,52 +126,12 @@ void Heightmap::getProximityVerticies(const glm::vec3& position, std::vector<glm
 			{
 				int xTemp = xIndex + i;
 				if (xTemp >= 0 && xTemp < this->heightmapWidth) {
-					int offset = xTemp + (zTemp)*this->heightmapWidth;
+					int offset = xTemp + zTemp*this->heightmapWidth;
 					verticies[i + j * this->proxVertDim] = this->verticies[offset];
 				}
 			}
 		}
 	}
-}
-
-std::vector<unsigned> Heightmap::getProximityIndicies(const glm::vec3& position)
-{
-	float regionWorldSize = (this->regionSize - 1) * this->vertDist;
-
-	float xDistance = position.x - this->origin.x;
-	float zDistance = position.z - this->origin.z;
-
-	std::vector<unsigned int> data;
-	if (xDistance >= 0.f &&
-		xDistance <= this->regionWidthCount * regionWorldSize &&
-		zDistance >= 0.f &&
-		zDistance <= this->regionWidthCount * regionWorldSize)
-	{
-		// Calculate region index from position
-		int xIndex = static_cast<int>(xDistance / regionWorldSize);
-		int zIndex = static_cast<int>(zDistance / regionWorldSize);
-
- 		for (int z = -proxDim; z <= proxDim; z++)
-		{
-			int zTemp = zIndex + z;
-			for (int x = -proxDim; x <= proxDim; x++)
-			{
-				int xTemp = xIndex + x;
-				if (xTemp >= 0 && xTemp < regionWidthCount && zTemp >= 0 && zTemp < regionWidthCount) {
-					// Copy over indicies of region to return vector
-					unsigned int vecOffset = data.size();
-					data.resize(data.size() + this->indiciesPerRegion);
-
-					unsigned int* vecData = data.data();
-
-					int offset = xTemp * this->indiciesPerRegion + zTemp * this->indiciesPerRegion * regionWidthCount;
-					memcpy((void*)(vecData + vecOffset), (void*)(&this->indicies[offset]), this->indiciesPerRegion * sizeof(unsigned int));
-				}
-			}
-		}
-	}
-
-	return data;
 }
 
 const std::vector<glm::vec4>& Heightmap::getVerticies()
@@ -290,7 +215,8 @@ int Heightmap::getIndiciesPerRegion()
 
 int Heightmap::getProximityRegionCount()
 {
-	return (1 + this->proxDim * 2) * (1 + this->proxDim * 2);
+	int width = getProximityWidthRegionCount();
+	return width*width;
 }
 
 int Heightmap::getProximityWidthRegionCount()
@@ -306,8 +232,4 @@ int Heightmap::getWidth()
 int Heightmap::getHeight()
 {
 	return this->heightmapHeight;
-}
-
-void Heightmap::cleanup()
-{
 }
