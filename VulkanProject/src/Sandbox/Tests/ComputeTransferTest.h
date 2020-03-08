@@ -54,6 +54,7 @@ private:
 
 private:
 	Camera* camera;
+	CommandBuffer* compCommandBuffer;
 	CommandBuffer* cmdBuffs[3];
 	CommandPool graphicsCommandPool;
 	CommandPool transferCommandPool;
@@ -65,8 +66,6 @@ private:
 	// For loading model
 	Model defaultModel;
 	Model transferModel;
-	Buffer stagingBuffer;
-	Memory stagingMemory;
 
 	Buffer bufferUniform;
 	Texture depthTexture;
@@ -85,25 +84,26 @@ private:
 	Memory vertStagingMemory;
 
 	Buffer compVertBuffer;
-	Buffer compVertBuffer2;
 	Memory compVertMemory;
 
 	Buffer indirectDrawBuffer;
 	Memory indirectDrawMemory;
-	uint32_t regionCount;
+
 	Buffer compStagingBuffer;
 	Memory compStagingMemory;
+
 	Buffer planesUBO;
 	Buffer worldDataUBO;
 	Memory compUniformMemory;
-	CommandBuffer* compCommandBuffers;
 
+	// Heightmap stuff
 	Heightmap heightmap;
 	glm::ivec2 lastRegionIndex;
 	int transferThreshold;
+	uint32_t regionCount;
 
 	// Temp compute
-	Buffer indexBufferTemp;
-	Memory indexMemoryTemp;
+	Buffer indexBuffer;
+	Memory indexMemory;
 	std::vector<glm::vec4> verticies;
 };
