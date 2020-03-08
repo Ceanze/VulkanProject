@@ -6,7 +6,7 @@
 
 void HeightmapTest::init()
 {
-	this->camera = new Camera(getWindow()->getAspectRatio(), 45.f, { 0.f, 2.f, 0.f }, { 0.f, -1.f, 0.f }, 0.8f);
+	this->camera = new Camera(getWindow()->getAspectRatio(), 45.f, { 0.f, 2.f, 0.f }, { 0.f, -1.f, 0.f }, 0.8f, 2.0f);
 	
 	this->commandPool.init(CommandPool::Queue::GRAPHICS, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
 

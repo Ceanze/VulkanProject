@@ -21,7 +21,7 @@ ComputeTest::~ComputeTest()
 
 void ComputeTest::init()
 {
-	this->camera = new Camera(getWindow()->getAspectRatio(), 45.f, { 0.f, 0.f, 1.f }, { 0.f, 0.f, 0.f }, 0.8f);
+	this->camera = new Camera(getWindow()->getAspectRatio(), 45.f, { 0.f, 0.f, 1.f }, { 0.f, 0.f, 0.f }, 0.8f, 2.0f);
 	
 	setupDescriptors();
 

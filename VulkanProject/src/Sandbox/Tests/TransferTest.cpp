@@ -12,7 +12,7 @@ void TransferTest::init()
 {
 	this->graphicsCommandPool.init(CommandPool::Queue::GRAPHICS, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
 	this->transferCommandPool.init(CommandPool::Queue::TRANSFER, 0);
-	this->camera = new Camera(getWindow()->getAspectRatio(), 45.f, { 0.f, 0.f, 1.f }, { 0.f, 0.f, 0.f }, 0.8f);
+	this->camera = new Camera(getWindow()->getAspectRatio(), 45.f, { 0.f, 0.f, 1.f }, { 0.f, 0.f, 0.f }, 0.8f, 2.0f);
 
 	this->shader.addStage(Shader::Type::VERTEX, "gltfTestVert.spv");
 	this->shader.addStage(Shader::Type::FRAGMENT, "gltfTestFrag.spv");

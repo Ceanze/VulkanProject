@@ -6,8 +6,8 @@
 
 #define FRUSTUM_SHRINK_FACTOR -5.f
 
-Camera::Camera(float aspect, float fov, const glm::vec3& position, const glm::vec3& target, float speed)
-	: position(position), target(target), speed(speed), globalUp(0.f, 1.f, 0.f), aspect(aspect)
+Camera::Camera(float aspect, float fov, const glm::vec3& position, const glm::vec3& target, float speed, float hasteSpeed)
+	: position(position), target(target), speed(speed), hasteSpeed(hasteSpeed), globalUp(0.f, 1.f, 0.f), aspect(aspect)
 {
 	this->forward = this->target - this->position;
 	this->up = this->globalUp;
@@ -53,7 +53,7 @@ void Camera::update(float dt)
 		this->position -= this->globalUp * this->speed * dt * this->speedFactor;
 
 	if (input.isKeyDown(GLFW_KEY_LEFT_SHIFT))
-		this->speedFactor = 10.f;
+		this->speedFactor = hasteSpeed;
 	else
 		this->speedFactor = 1.f;
 

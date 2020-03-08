@@ -89,7 +89,7 @@ private:
 	Buffer planesUBO;
 	Buffer worldDataUBO;
 	Memory compUniformMemory;
-	std::vector<CommandBuffer*> compCommandBuffers;
+	CommandBuffer* compCommandBuffers;
 
 	Heightmap heightmap;
 

@@ -11,7 +11,7 @@ public:
 		alignas(16) glm::vec3 point;
 	};
 public:
-	Camera(float aspect, float fov, const glm::vec3& position, const glm::vec3& target, float speed);
+	Camera(float aspect, float fov, const glm::vec3& position, const glm::vec3& target, float speed, float hasteSpeed);
 	~Camera();
 	
 	void update(float dt);
@@ -33,7 +33,7 @@ private:
 	void updatePlanes();
 	std::vector<Camera::Plane> planes;
 
-	float speed, speedFactor;
+	float speed, speedFactor, hasteSpeed;
 	float fov;
 	float nearPlane, farPlane;
 	float yaw, pitch, roll;

@@ -15,12 +15,15 @@ void ComputeTransferTest::init()
 {
 	generateHeightmap();
 
+	// Set queue usage
+	getFrame()->queueUsage(VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT);
+
 	this->regionCount = this->heightmap.getProximityRegionCount();
 
 	this->graphicsCommandPool.init(CommandPool::Queue::GRAPHICS, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
 	this->transferCommandPool.init(CommandPool::Queue::TRANSFER, 0);
 	this->compCommandPool.init(CommandPool::Queue::COMPUTE, 0);
-	this->camera = new Camera(getWindow()->getAspectRatio(), 45.f, { 0.f, 0.f, 1.f }, { 0.f, 0.f, 0.f }, 0.8f);
+	this->camera = new Camera(getWindow()->getAspectRatio(), 45.f, { 0.f, 0.f, 1.f }, { 0.f, 0.f, 0.f }, 8.0f, 2.0f);
 
 	getShaders().resize(2);
 	getPipelines().resize(2);
@@ -97,7 +100,7 @@ void ComputeTransferTest::loop(float dt)
 	// Render
 	getFrame()->beginFrame(dt);
 	record();
-	getFrame()->submitCompute(Instance::get().getComputeQueue().queue, this->compCommandBuffers.data());
+	getFrame()->submitCompute(Instance::get().getComputeQueue().queue, this->compCommandBuffers);
 	getFrame()->submit(Instance::get().getGraphicsQueue().queue, this->cmdBuffs);
 	getFrame()->endFrame();
 }
@@ -290,32 +293,29 @@ void ComputeTransferTest::setupCompute()
 
 void ComputeTransferTest::buildComputeCommandBuffer()
 {
-	this->compCommandBuffers = this->compCommandPool.createCommandBuffers(3, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
-	for (size_t i = 0; i < 3; i++)
-	{
-		this->compCommandBuffers[i]->begin(0, nullptr);
+	this->compCommandBuffers = this->compCommandPool.createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+	this->compCommandBuffers->begin(0, nullptr);
 
-		// Add memory barrier to ensure that the indirect commands have been consumed before the compute shader updates them
-		this->compCommandBuffers[i]->acquireBuffer(&this->indirectDrawBuffer, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
-			Instance::get().getGraphicsQueue().queueIndex, Instance::get().getComputeQueue().queueIndex,
-			VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+	// Add memory barrier to ensure that the indirect commands have been consumed before the compute shader updates them
+	this->compCommandBuffers->acquireBuffer(&this->indirectDrawBuffer, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
+		Instance::get().getGraphicsQueue().queueIndex, Instance::get().getComputeQueue().queueIndex,
+		VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
 
-		this->compCommandBuffers[i]->cmdBindPipeline(&getPipeline(COMP_PIPELINE));
-		std::vector<VkDescriptorSet> sets = { this->descManagerComp.getSet(0, 0) };
-		std::vector<uint32_t> offsets;
-		this->compCommandBuffers[i]->cmdBindDescriptorSets(&getPipeline(COMP_PIPELINE), 0, sets, offsets);
+	this->compCommandBuffers->cmdBindPipeline(&getPipeline(COMP_PIPELINE));
+	std::vector<VkDescriptorSet> sets = { this->descManagerComp.getSet(0, 0) };
+	std::vector<uint32_t> offsets;
+	this->compCommandBuffers->cmdBindDescriptorSets(&getPipeline(COMP_PIPELINE), 0, sets, offsets);
 
-		// Dispatch the compute job
-		// The compute shader will do the frustum culling and adjust the indirect draw calls depending on object visibility.
-		this->compCommandBuffers[i]->cmdDispatch((uint32_t)ceilf((float)this->regionCount / 16), 1, 1);
+	// Dispatch the compute job
+	// The compute shader will do the frustum culling and adjust the indirect draw calls depending on object visibility.
+	this->compCommandBuffers->cmdDispatch((uint32_t)ceilf((float)this->regionCount / 16), 1, 1);
 
-		// Add memory barrier to ensure that the compute shader has finished writing the indirect command buffer before it's consumed
-		this->compCommandBuffers[i]->releaseBuffer(&this->indirectDrawBuffer, VK_ACCESS_SHADER_WRITE_BIT,
-			Instance::get().getComputeQueue().queueIndex, Instance::get().getGraphicsQueue().queueIndex,
-			VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT);
+	// Add memory barrier to ensure that the compute shader has finished writing the indirect command buffer before it's consumed
+	this->compCommandBuffers->releaseBuffer(&this->indirectDrawBuffer, VK_ACCESS_SHADER_WRITE_BIT,
+		Instance::get().getComputeQueue().queueIndex, Instance::get().getGraphicsQueue().queueIndex,
+		VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT);
 
-		this->compCommandBuffers[i]->end();
-	}
+	this->compCommandBuffers->end();
 }
 
 void ComputeTransferTest::record()
