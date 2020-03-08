@@ -11,7 +11,7 @@
 
 #include "Threading/ThreadDispatcher.h"
 
-#define REGION_SIZE 2
+#define REGION_SIZE 16
 
 void ComputeTransferTest::init()
 {
@@ -387,7 +387,7 @@ void ComputeTransferTest::record()
 void ComputeTransferTest::generateHeightmap()
 {
 	this->heightmap.setVertexDist(1.f);
-	this->heightmap.setProximitySize(1);
+	this->heightmap.setProximitySize(3);
 	this->heightmap.setMaxZ(100.f);
 	this->heightmap.setMinZ(0.f);
 
