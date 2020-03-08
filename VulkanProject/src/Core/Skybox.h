@@ -3,7 +3,6 @@
 
 #include "Vulkan/Pipeline/Pipeline.h"
 #include "Vulkan/Pipeline/DescriptorManager.h"
-#include "Vulkan/Pipeline/RenderPass.h"
 #include "Vulkan/Buffers/Buffer.h"
 #include "Vulkan/Buffers/Memory.h"
 #include "Vulkan/Texture.h"
@@ -13,6 +12,8 @@
 
 class CommandBuffer;
 class SwapChain;
+class Camera;
+class RenderPass;
 
 class Skybox
 {
@@ -26,16 +27,17 @@ public:
 	Skybox();
 	~Skybox();
 
-	void init(const std::string& texturePath, SwapChain* swapChain, CommandPool* pool);
+	void init(float scale, const std::string& texturePath, SwapChain* swapChain, CommandPool* pool, RenderPass* renderPass);
 
-	void draw(CommandBuffer* cmdBuff);
+	void update(Camera* camera);
+	void draw(CommandBuffer* cmdBuff, uint32_t frameIndex);
 
 	void cleanup();
 
-private:
-	RenderPass renderPass;
-	Pipeline pipeline;
+	Pipeline& getPipeline();
 
+private:
+	Pipeline pipeline;
 	Shader shader;
 
 	Buffer cubeBuffer;
@@ -44,11 +46,10 @@ private:
 	// ----------- Cubemap -----------
 	Memory cubemapMemory;
 	Texture cubemapTexture;
-	Buffer cubemapStagingBuffer;
-	Memory cubemapStagingMemory;
 	Sampler cubemapSampler;
 	DescriptorManager cubemapDescManager;
 	Buffer cubemapUniformBuffer;
+	Memory uniformMemory;
 
 private:
 	// Cube verticies

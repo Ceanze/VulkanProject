@@ -1,10 +1,12 @@
 #include "jaspch.h"
 #include "Skybox.h"
 
+#include "Vulkan/Pipeline/RenderPass.h"
 #include "Vulkan/CommandPool.h"
 #include "Vulkan/CommandBuffer.h"
 #include "Vulkan/SwapChain.h"
 #include "Vulkan/Instance.h"
+#include "Core/Camera.h"
 
 #include "stb/stb_image.h"
 
@@ -17,30 +19,26 @@ Skybox::~Skybox()
 {
 }
 
-void Skybox::init(const std::string& texturePath, SwapChain* swapChain, CommandPool* pool)
+void Skybox::init(float scale, const std::string& texturePath, SwapChain* swapChain, CommandPool* pool, RenderPass* renderPass)
 {
 	for (int i = 0; i < 36; i++)
 	{
-		this->cube[i] *= 100.0f;
+		this->cube[i] *= scale;
 	}
-	// Add attachments
-	this->renderPass.addDefaultColorAttachment(swapChain->getImageFormat());
-	this->renderPass.addDefaultDepthAttachment();
 
-	RenderPass::SubpassInfo subpassInfo;
-	subpassInfo.colorAttachmentIndices = { 0 }; // One color attachment
-	subpassInfo.depthStencilAttachmentIndex = 1; // Depth attachment
-	this->renderPass.addSubpass(subpassInfo);
+	// Uniform data
+	CubemapUboData cubemapUboData;
+	cubemapUboData.proj = glm::mat4(1.0f);
+	cubemapUboData.view = glm::mat4(1.0f);
+	uint32_t cubemapUboDataSize = sizeof(CubemapUboData);
 
-	VkSubpassDependency subpassDependency = {};
-	subpassDependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-	subpassDependency.dstSubpass = 0;
-	subpassDependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-	subpassDependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-	subpassDependency.srcAccessMask = 0;
-	subpassDependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-	this->renderPass.addSubpassDependency(subpassDependency);
-	this->renderPass.init();
+	// Create the buffer and memory
+	std::vector<uint32_t> queueIndices = { findQueueIndex(VK_QUEUE_GRAPHICS_BIT, Instance::get().getPhysicalDevice()) };
+	this->cubemapUniformBuffer.init(cubemapUboDataSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, queueIndices);
+	this->uniformMemory.bindBuffer(&this->cubemapUniformBuffer);
+	this->uniformMemory.init(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+	// Transfer the data to the buffer.
+	this->uniformMemory.directTransfer(&this->cubemapUniformBuffer, (void*)& cubemapUboData, cubemapUboDataSize, 0);
 
 	std::vector<std::string> faces = {
 		"right.jpg",
@@ -67,60 +65,69 @@ void Skybox::init(const std::string& texturePath, SwapChain* swapChain, CommandP
 		JAS_INFO(" ->Loaded face: {0}", face.c_str());
 	}
 
-	// Create staging buffer.
-	uint32_t numFaces = (uint32_t)data.size();
-	uint32_t size = (uint32_t)(width * height * 4);
-	std::vector<uint32_t> queueIndices = { findQueueIndex(VK_QUEUE_GRAPHICS_BIT, Instance::get().getPhysicalDevice()) };
-	this->cubemapStagingBuffer.init(size * numFaces, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, queueIndices);
-	this->cubemapStagingMemory.bindBuffer(&this->cubemapStagingBuffer);
-	this->cubemapStagingMemory.init(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
-	// Transfer the data to the buffer.
-	for (uint32_t f = 0; f < numFaces; f++)
 	{
-		stbi_uc* img = data[f];
-		this->cubemapStagingMemory.directTransfer(&this->cubemapStagingBuffer, (void*)img, size, (Offset)f * size);
-		delete img;
-	}
+		Buffer cubemapStagingBuffer;
+		Memory cubemapStagingMemory;
 
-	// Create texture.
-	this->cubemapTexture.init((uint32_t)width, (uint32_t)height, format, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, queueIndices, VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT, numFaces);
-	this->cubemapMemory.bindTexture(&this->cubemapTexture);
-	this->cubemapMemory.init(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-	this->cubemapTexture.getImageView().init(this->cubemapTexture.getVkImage(), VK_IMAGE_VIEW_TYPE_CUBE, format, VK_IMAGE_ASPECT_COLOR_BIT, numFaces);
+		// Create staging buffer.
+		uint32_t numFaces = (uint32_t)data.size();
+		uint32_t size = (uint32_t)(width * height * 4);
+		std::vector<uint32_t> queueIndices = { findQueueIndex(VK_QUEUE_GRAPHICS_BIT, Instance::get().getPhysicalDevice()) };
+		cubemapStagingBuffer.init(size * numFaces, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, queueIndices);
+		cubemapStagingMemory.bindBuffer(&cubemapStagingBuffer);
+		cubemapStagingMemory.init(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
-	// Setup buffer copy regions for each face including all of its miplevels. In this case only 1 miplevel is used.
-	std::vector<VkBufferImageCopy> bufferCopyRegions;
-	for (uint32_t face = 0; face < numFaces; face++)
-	{
-		for (uint32_t level = 0; level < 1; level++)
+		// Transfer the data to the buffer.
+		for (uint32_t f = 0; f < numFaces; f++)
 		{
-			VkBufferImageCopy bufferCopyRegion = {};
-			bufferCopyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			bufferCopyRegion.imageSubresource.mipLevel = level;
-			bufferCopyRegion.imageSubresource.baseArrayLayer = face;
-			bufferCopyRegion.imageSubresource.layerCount = 1;
-			bufferCopyRegion.imageExtent.width = width >> level;
-			bufferCopyRegion.imageExtent.height = height >> level;
-			bufferCopyRegion.imageExtent.depth = 1;
-			bufferCopyRegion.bufferOffset = (VkDeviceSize)(face * size);
-			bufferCopyRegions.push_back(bufferCopyRegion);
+			stbi_uc* img = data[f];
+			cubemapStagingMemory.directTransfer(&cubemapStagingBuffer, (void*)img, size, (Offset)f * size);
+			delete img;
 		}
-	}
 
-	// Image barrier for optimal image (target)
-	Image::TransistionDesc desc;
-	desc.format = format;
-	desc.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	desc.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-	desc.pool = pool;
-	desc.layerCount = numFaces;
-	Image& image = this->cubemapTexture.getImage();
-	image.transistionLayout(desc);
-	image.copyBufferToImage(&this->cubemapStagingBuffer, pool, bufferCopyRegions);
-	desc.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-	desc.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-	image.transistionLayout(desc);
+		// Create texture.
+		this->cubemapTexture.init((uint32_t)width, (uint32_t)height, format, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, queueIndices, VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT, numFaces);
+		this->cubemapMemory.bindTexture(&this->cubemapTexture);
+		this->cubemapMemory.init(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+		this->cubemapTexture.getImageView().init(this->cubemapTexture.getVkImage(), VK_IMAGE_VIEW_TYPE_CUBE, format, VK_IMAGE_ASPECT_COLOR_BIT, numFaces);
+
+		// Setup buffer copy regions for each face including all of its miplevels. In this case only 1 miplevel is used.
+		std::vector<VkBufferImageCopy> bufferCopyRegions;
+		for (uint32_t face = 0; face < numFaces; face++)
+		{
+			for (uint32_t level = 0; level < 1; level++)
+			{
+				VkBufferImageCopy bufferCopyRegion = {};
+				bufferCopyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+				bufferCopyRegion.imageSubresource.mipLevel = level;
+				bufferCopyRegion.imageSubresource.baseArrayLayer = face;
+				bufferCopyRegion.imageSubresource.layerCount = 1;
+				bufferCopyRegion.imageExtent.width = width >> level;
+				bufferCopyRegion.imageExtent.height = height >> level;
+				bufferCopyRegion.imageExtent.depth = 1;
+				bufferCopyRegion.bufferOffset = (VkDeviceSize)(face * size);
+				bufferCopyRegions.push_back(bufferCopyRegion);
+			}
+		}
+
+		// Image barrier for optimal image (target)
+		Image::TransistionDesc desc;
+		desc.format = format;
+		desc.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		desc.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		desc.pool = pool;
+		desc.layerCount = numFaces;
+		Image& image = this->cubemapTexture.getImage();
+		image.transistionLayout(desc);
+		image.copyBufferToImage(&cubemapStagingBuffer, pool, bufferCopyRegions);
+		desc.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		desc.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		image.transistionLayout(desc);
+
+		// Staging buffer and memory are not used anymore, can be destroyed.
+		cubemapStagingBuffer.cleanup();
+		cubemapStagingMemory.cleanup();
+	}
 
 	// Stage and transfer cube to device
 	{
@@ -131,7 +138,7 @@ void Skybox::init(const std::string& texturePath, SwapChain* swapChain, CommandP
 		stagingMemory.init(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 		stagingMemory.directTransfer(&stagingBuffer, this->cube, sizeof(this->cube), 0);
 
-		this->cubeBuffer.init(sizeof(this->cube), VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, { Instance::get().getGraphicsQueue().queueIndex, Instance::get().getTransferQueue().queueIndex });
+		this->cubeBuffer.init(sizeof(this->cube), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, { Instance::get().getGraphicsQueue().queueIndex, Instance::get().getTransferQueue().queueIndex });
 		this->cubeMemory.bindBuffer(&this->cubeBuffer);
 		this->cubeMemory.init(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
@@ -150,10 +157,6 @@ void Skybox::init(const std::string& texturePath, SwapChain* swapChain, CommandP
 	// Create sampler
 	// TODO: This needs more control, should be compareOp=VK_COMPARE_OP_NEVER!
 	this->cubemapSampler.init(VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
-
-	// Staging buffer and memory are not used anymore, can be destroyed.
-	this->cubemapStagingBuffer.cleanup();
-	this->cubemapStagingMemory.cleanup();
 
 	// Initialize the descriptor manager.
 	DescriptorLayout descLayoutCubemap;
@@ -191,21 +194,47 @@ void Skybox::init(const std::string& texturePath, SwapChain* swapChain, CommandP
 	pipelineInfo.rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 	this->pipeline.setPipelineInfo(PipelineInfoFlag::RASTERIZATION, pipelineInfo);
 	this->pipeline.setDescriptorLayouts(this->cubemapDescManager.getLayouts());
-	this->pipeline.setGraphicsPipelineInfo(swapChain->getExtent(), &this->renderPass);
+	this->pipeline.setGraphicsPipelineInfo(swapChain->getExtent(), renderPass);
 	this->pipeline.init(Pipeline::Type::GRAPHICS, &this->shader);
-
-	// Model data (Not used for the cubemap but for the model to get the texture for reflection)
-	//for (uint32_t i = 0; i < static_cast<uint32_t>(swapChain->getNumImages()); i++)
-	//{
-	//	this->cubemapDescManager.updateImageDesc(1, 0, this->cubemapTexture.getImage().getLayout(), this->cubemapTexture.getVkImageView(), this->cubemapSampler.getSampler());
-	//	this->cubemapDescManager.updateSets({ 1 }, i);
-	//}
 }
 
-void Skybox::draw(CommandBuffer* cmdBuff)
+void Skybox::update(Camera* camera)
 {
+	CubemapUboData cubemapUboData;
+	cubemapUboData.proj = camera->getProjection();
+	cubemapUboData.view = camera->getView();
+	// Disable translation
+	cubemapUboData.view[3][0] = 0.0f;
+	cubemapUboData.view[3][1] = 0.0f;
+	cubemapUboData.view[3][2] = 0.0f;
+	this->uniformMemory.directTransfer(&this->cubemapUniformBuffer, (void*)& cubemapUboData, sizeof(cubemapUboData), 0);
+}
+
+void Skybox::draw(CommandBuffer* cmdBuff, uint32_t frameIndex)
+{
+	std::vector<VkDescriptorSet> sets = { this->cubemapDescManager.getSet(frameIndex, 0), this->cubemapDescManager.getSet(frameIndex, 1) };
+	std::vector<unsigned int> offsets;
+	cmdBuff->cmdBindPipeline(&this->pipeline);
+	cmdBuff->cmdBindDescriptorSets(&this->pipeline, 0, sets, offsets);
+	cmdBuff->cmdDraw(36, 1, 0, 0);
 }
 
 void Skybox::cleanup()
 {
+	this->cubemapSampler.cleanup();
+	this->cubemapTexture.cleanup();
+	this->cubemapMemory.cleanup();
+	this->cubemapDescManager.cleanup();
+	this->cubemapUniformBuffer.cleanup();
+	this->uniformMemory.cleanup();
+	this->cubeBuffer.cleanup();
+	this->cubeMemory.cleanup();
+
+	this->shader.cleanup();
+	this->pipeline.cleanup();
+}
+
+Pipeline& Skybox::getPipeline()
+{
+	return this->pipeline;
 }

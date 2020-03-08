@@ -11,6 +11,7 @@
 #include "Vulkan/Pipeline/PushConstants.h"
 #include "Models/Model/Model.h"
 #include "Core/Heightmap/Heightmap.h"
+#include "Core/Skybox.h"
 
 
 class ComputeTransferTest : public VKSandboxBase
@@ -106,4 +107,6 @@ private:
 	Buffer indexBuffer;
 	Memory indexMemory;
 	std::vector<glm::vec4> verticies;
+
+	Skybox skybox;
 };

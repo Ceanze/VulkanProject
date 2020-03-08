@@ -23,7 +23,7 @@ void ComputeTransferTest::init()
 	this->graphicsCommandPool.init(CommandPool::Queue::GRAPHICS, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
 	this->transferCommandPool.init(CommandPool::Queue::TRANSFER, 0);
 	this->compCommandPool.init(CommandPool::Queue::COMPUTE, 0);
-	this->camera = new Camera(getWindow()->getAspectRatio(), 45.f, { 0.f, 120.f, 10.f }, { 0.f, 0.f, 0.f }, 8.0f, 4.0f);
+	this->camera = new Camera(getWindow()->getAspectRatio(), 45.f, { 0.f, 20.f, 10.f }, { 0.f, 0.f, 0.f }, 8.0f, 4.0f);
 	generateHeightmap();
 
 	getShaders().resize(2);
@@ -77,7 +77,7 @@ void ComputeTransferTest::init()
 
 	getPipeline(MESH_PIPELINE).setDescriptorLayouts(this->descManager.getLayouts());
 	getPipeline(MESH_PIPELINE).setGraphicsPipelineInfo(getSwapChain()->getExtent(), &this->renderPass);
-	getPipeline(MESH_PIPELINE).setWireframe(true);
+	//getPipeline(MESH_PIPELINE).setWireframe(true);
 	getPipeline(MESH_PIPELINE).init(Pipeline::Type::GRAPHICS, &getShader(MESH_SHADER));
 	JAS_INFO("Created Renderer!");
 
@@ -87,6 +87,10 @@ void ComputeTransferTest::init()
 	setupCompute();
 	setupPost();
 	buildComputeCommandBuffer();
+
+	std::string pathToCubemap = "..\\assets\\Textures\\skybox\\";
+	this->skybox.init(500.0f, pathToCubemap, getSwapChain(), &this->graphicsCommandPool, &this->renderPass);
+
 	// Record primary indirect draw buffer
 	record();
 }
@@ -95,6 +99,8 @@ void ComputeTransferTest::loop(float dt)
 {
 	// Update view matrix
 	this->camera->update(dt);
+
+	this->skybox.update(this->camera);
 
 	this->memory.directTransfer(&this->bufferUniform, (void*)& this->camera->getMatrix()[0], sizeof(glm::mat4), (Offset)offsetof(UboData, vp));
 
@@ -113,6 +119,8 @@ void ComputeTransferTest::loop(float dt)
 void ComputeTransferTest::cleanup()
 {
 	ThreadDispatcher::shutdown();
+
+	this->skybox.cleanup();
 
 	this->descManagerComp.cleanup();
 
@@ -361,7 +369,11 @@ void ComputeTransferTest::record()
 		value.depthStencil = { 1.0f, 0 };
 		clearValues.push_back(value);
 		this->cmdBuffs[i]->cmdBeginRenderPass(&this->renderPass, getFramebuffers()[i].getFramebuffer(), getSwapChain()->getExtent(), clearValues, VK_SUBPASS_CONTENTS_INLINE);
+		
+		// Draw skybox
+		this->skybox.draw(this->cmdBuffs[i], i);
 
+		// Draw terrain
 		this->cmdBuffs[i]->cmdBindPipeline(&getPipeline(MESH_PIPELINE));
 
 		std::vector<VkDescriptorSet> sets = { this->descManager.getSet(i, 0) };
@@ -386,14 +398,14 @@ void ComputeTransferTest::record()
 
 void ComputeTransferTest::generateHeightmap()
 {
-	this->heightmap.setVertexDist(1.f);
-	this->heightmap.setProximitySize(3);
+	this->heightmap.setVertexDist(0.2f);
+	this->heightmap.setProximitySize(80);
 	this->heightmap.setMaxZ(100.f);
 	this->heightmap.setMinZ(0.f);
 
 	int width, height;
 	int channels;
-	std::string path = "../assets/Textures/australia.jpg";
+	std::string path = "../assets/Textures/island.png";
 	unsigned char* data = static_cast<unsigned char*>(stbi_load(path.c_str(), &width, &height, &channels, 1));
 	if (data == nullptr)
 		JAS_ERROR("Failed to load heightmap, couldn't find file!");
@@ -406,7 +418,7 @@ void ComputeTransferTest::generateHeightmap()
 
 	// Set data used for transfer
 	this->lastRegionIndex = this->heightmap.getRegionFromPos(this->camera->getPosition());
-	this->transferThreshold = 1;
+	this->transferThreshold = 10;
 
 	this->regionCount = this->heightmap.getProximityRegionCount();
 
