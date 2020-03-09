@@ -46,8 +46,8 @@ private:
 	void setupPost();
 	void setupCompute();
 
-	void buildComputeCommandBuffer();
-	void record();
+	void buildComputeCommandBuffer(uint32_t id);
+	void record(uint32_t id);
 	
 	void generateHeightmap();
 	void verticesToDevice(Buffer* buffer, const std::vector<Heightmap::Vertex>& verticies);
@@ -56,8 +56,9 @@ private:
 
 private:
 	Camera* camera;
-	CommandBuffer* compCommandBuffer;
-	CommandBuffer* cmdBuffs[3];
+	uint32_t activeBuffers;
+	std::array<CommandBuffer*, 2> compCommandBuffer;
+	std::array<std::array<CommandBuffer*, 3>, 2> cmdBuffs;
 	CommandPool graphicsCommandPool;
 	CommandPool transferCommandPool;
 

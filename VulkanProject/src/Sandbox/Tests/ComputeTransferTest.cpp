@@ -20,12 +20,12 @@ void ComputeTransferTest::init()
 	// Set queue usage
 	getFrame()->queueUsage(VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT);
 
-	ThreadDispatcher::init(1);
+	ThreadDispatcher::init(3);
 
 	this->graphicsCommandPool.init(CommandPool::Queue::GRAPHICS, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
 	this->transferCommandPool.init(CommandPool::Queue::TRANSFER, 0);
-	this->compCommandPool.init(CommandPool::Queue::COMPUTE, 0);
-	this->camera = new Camera(getWindow()->getAspectRatio(), 45.f, { 0.f, 20.f, 10.f }, { 0.f, 0.f, 0.f }, 8.0f, 4.0f);
+	this->compCommandPool.init(CommandPool::Queue::COMPUTE, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+	this->camera = new Camera(getWindow()->getAspectRatio(), 45.f, { 0.f, 20.f, 10.f }, { 0.f, 0.f, 0.f }, 30.0f, 4.0f);
 	generateHeightmap();
 
 	getShaders().resize(2);
@@ -88,13 +88,20 @@ void ComputeTransferTest::init()
 	//setupTemp();
 	setupCompute();
 	setupPost();
-	buildComputeCommandBuffer();
 
 	std::string pathToCubemap = "..\\assets\\Textures\\skybox\\";
 	this->skybox.init(700.0f, pathToCubemap, getSwapChain(), &this->graphicsCommandPool, &this->renderPass);
 
 	// Record primary indirect draw buffer
-	record();
+	for (uint32_t i = 0; i < 2; i++)
+	{
+		this->compCommandBuffer[i] = this->compCommandPool.createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+		for (uint32_t j = 0; j < getSwapChain()->getNumImages(); j++)
+			this->cmdBuffs[i][j] = this->graphicsCommandPool.createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+	}
+	buildComputeCommandBuffer(0);
+	record(0);
+	this->activeBuffers = 0;
 }
 
 void ComputeTransferTest::loop(float dt)
@@ -113,8 +120,8 @@ void ComputeTransferTest::loop(float dt)
 	
 	// Render
 	getFrame()->beginFrame(dt);
-	getFrame()->submitCompute(Instance::get().getComputeQueue().queue, this->compCommandBuffer);
-	getFrame()->submit(Instance::get().getGraphicsQueue().queue, this->cmdBuffs);
+	getFrame()->submitCompute(Instance::get().getComputeQueue().queue, this->compCommandBuffer[this->activeBuffers]);
+	getFrame()->submit(Instance::get().getGraphicsQueue().queue, this->cmdBuffs[this->activeBuffers].data());
 	getFrame()->endFrame();
 }
 
@@ -333,51 +340,47 @@ void ComputeTransferTest::setupCompute()
 	this->descManagerComp.updateSets({ 0 }, 0);
 }
 
-void ComputeTransferTest::buildComputeCommandBuffer()
+void ComputeTransferTest::buildComputeCommandBuffer(uint32_t id)
 {
 	JAS_PROFILER_FUNCTION();
 
-	this->compCommandBuffer = this->compCommandPool.createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
-	this->compCommandBuffer->begin(0, nullptr);
+	this->compCommandBuffer[id]->begin(0, nullptr);
 
 	// Add memory barrier to ensure that the indirect commands have been consumed before the compute shader updates them
-	this->compCommandBuffer->acquireBuffer(&this->indirectDrawBuffer, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
+	this->compCommandBuffer[id]->acquireBuffer(&this->indirectDrawBuffer, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
 		Instance::get().getGraphicsQueue().queueIndex, Instance::get().getComputeQueue().queueIndex,
 		VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
 
-	this->compCommandBuffer->cmdBindPipeline(&getPipeline(COMP_PIPELINE));
+	this->compCommandBuffer[id]->cmdBindPipeline(&getPipeline(COMP_PIPELINE));
 	std::vector<VkDescriptorSet> sets = { this->descManagerComp.getSet(0, 0) };
 	std::vector<uint32_t> offsets;
-	this->compCommandBuffer->cmdBindDescriptorSets(&getPipeline(COMP_PIPELINE), 0, sets, offsets);
+	this->compCommandBuffer[id]->cmdBindDescriptorSets(&getPipeline(COMP_PIPELINE), 0, sets, offsets);
 
 	// Dispatch the compute job
 	// The compute shader will do the frustum culling and adjust the indirect draw calls depending on object visibility.
-	this->compCommandBuffer->cmdDispatch((uint32_t)ceilf((float)this->regionCount / 16), 1, 1);
+	this->compCommandBuffer[id]->cmdDispatch((uint32_t)ceilf((float)this->regionCount / 16), 1, 1);
 
 	// Add memory barrier to ensure that the compute shader has finished writing the indirect command buffer before it's consumed
-	this->compCommandBuffer->releaseBuffer(&this->indirectDrawBuffer, VK_ACCESS_SHADER_WRITE_BIT,
+	this->compCommandBuffer[id]->releaseBuffer(&this->indirectDrawBuffer, VK_ACCESS_SHADER_WRITE_BIT,
 		Instance::get().getComputeQueue().queueIndex, Instance::get().getGraphicsQueue().queueIndex,
 		VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT);
 
-	this->compCommandBuffer->end();
+	this->compCommandBuffer[id]->end();
 }
 
-void ComputeTransferTest::record()
+void ComputeTransferTest::record(uint32_t id)
 {
 	JAS_PROFILER_FUNCTION();
-	for (uint32_t i = 0; i < getSwapChain()->getNumImages(); i++)
-		this->cmdBuffs[i] = this->graphicsCommandPool.createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
-
 	for (int i = 0; i < getSwapChain()->getNumImages(); i++)
 	{
 		std::string name("RecordFrame_");
 		name += std::to_string(i);
 		JAS_PROFILER_SCOPE(name);
 		// Record command buffer
-		this->cmdBuffs[i]->begin(VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT, nullptr);
+		this->cmdBuffs[id][i]->begin(VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT, nullptr);
 
 		// Acquire from compute
-		this->cmdBuffs[i]->acquireBuffer(&this->indirectDrawBuffer, VK_ACCESS_INDIRECT_COMMAND_READ_BIT,
+		this->cmdBuffs[id][i]->acquireBuffer(&this->indirectDrawBuffer, VK_ACCESS_INDIRECT_COMMAND_READ_BIT,
 			Instance::get().getComputeQueue().queueIndex, Instance::get().getGraphicsQueue().queueIndex,
 			VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT);
 
@@ -387,31 +390,31 @@ void ComputeTransferTest::record()
 		clearValues.push_back(value);
 		value.depthStencil = { 1.0f, 0 };
 		clearValues.push_back(value);
-		this->cmdBuffs[i]->cmdBeginRenderPass(&this->renderPass, getFramebuffers()[i].getFramebuffer(), getSwapChain()->getExtent(), clearValues, VK_SUBPASS_CONTENTS_INLINE);
+		this->cmdBuffs[id][i]->cmdBeginRenderPass(&this->renderPass, getFramebuffers()[i].getFramebuffer(), getSwapChain()->getExtent(), clearValues, VK_SUBPASS_CONTENTS_INLINE);
 		
 		// Draw skybox
-		this->skybox.draw(this->cmdBuffs[i], i);
+		this->skybox.draw(this->cmdBuffs[id][i], i);
 
 		// Draw terrain
-		this->cmdBuffs[i]->cmdBindPipeline(&getPipeline(MESH_PIPELINE));
+		this->cmdBuffs[id][i]->cmdBindPipeline(&getPipeline(MESH_PIPELINE));
 
 		std::vector<VkDescriptorSet> sets = { this->descManager.getSet(i, 0) };
 		std::vector<uint32_t> offsets;
 
-		this->cmdBuffs[i]->cmdBindIndexBuffer(this->indexBuffer.getBuffer(), 0, VK_INDEX_TYPE_UINT32);
-		this->cmdBuffs[i]->cmdBindDescriptorSets(&getPipeline(MESH_PIPELINE), 0, sets, offsets);
+		this->cmdBuffs[id][i]->cmdBindIndexBuffer(this->indexBuffer.getBuffer(), 0, VK_INDEX_TYPE_UINT32);
+		this->cmdBuffs[id][i]->cmdBindDescriptorSets(&getPipeline(MESH_PIPELINE), 0, sets, offsets);
 
 		//this->cmdBuffs[i]->cmdDrawIndexed(this->tempIndicies.size(), 1, 0, 0, 0);
-		this->cmdBuffs[i]->cmdDrawIndexedIndirect(this->indirectDrawBuffer.getBuffer(), 0, this->regionCount, sizeof(VkDrawIndexedIndirectCommand));
+		this->cmdBuffs[id][i]->cmdDrawIndexedIndirect(this->indirectDrawBuffer.getBuffer(), 0, this->regionCount, sizeof(VkDrawIndexedIndirectCommand));
 
-		this->cmdBuffs[i]->cmdEndRenderPass();
+		this->cmdBuffs[id][i]->cmdEndRenderPass();
 
 		// Release to transfer
-		this->cmdBuffs[i]->releaseBuffer(&this->indirectDrawBuffer, VK_ACCESS_INDIRECT_COMMAND_READ_BIT,
+		this->cmdBuffs[id][i]->releaseBuffer(&this->indirectDrawBuffer, VK_ACCESS_INDIRECT_COMMAND_READ_BIT,
 			Instance::get().getGraphicsQueue().queueIndex, Instance::get().getComputeQueue().queueIndex,
 			VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
 
-		this->cmdBuffs[i]->end();
+		this->cmdBuffs[id][i]->end();
 	}
 }
 
@@ -506,7 +509,10 @@ void ComputeTransferTest::transferVertexData()
 				activeBuffer = &this->compVertBuffer;
 			}
 
-			vkDeviceWaitIdle(Instance::get().getDevice());
+			this->activeBuffers ^= 1;
+
+			vkQueueWaitIdle(Instance::get().getGraphicsQueue().queue);
+			//vkQueueWaitIdle(Instance::get().getComputeQueue().queue);
 			VkDeviceSize vertexBufferSize = this->verticies.size() * sizeof(Heightmap::Vertex);
 			for (uint32_t i = 0; i < static_cast<uint32_t>(getSwapChain()->getNumImages()); i++)
 			{
@@ -517,8 +523,14 @@ void ComputeTransferTest::transferVertexData()
 			this->descManagerComp.updateBufferDesc(0, 1, activeBuffer->getBuffer(), 0, sizeof(Heightmap::Vertex) * this->verticies.size());
 			this->descManagerComp.updateSets({ 0 }, 0);
 
-			buildComputeCommandBuffer();
-			record();
+			uint32_t idComp = ThreadDispatcher::dispatch([&, camPos]() {
+				buildComputeCommandBuffer(this->activeBuffers);
+				});
+
+			uint32_t idGraph = ThreadDispatcher::dispatch([&, camPos]() {
+				record(this->activeBuffers);
+				});
+			ThreadDispatcher::wait({idComp, idGraph});
 			this->workIds.pop();
 		}
 	}
