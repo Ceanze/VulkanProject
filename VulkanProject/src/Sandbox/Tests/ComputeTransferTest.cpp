@@ -25,7 +25,7 @@ void ComputeTransferTest::init()
 	this->graphicsCommandPool.init(CommandPool::Queue::GRAPHICS, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
 	this->transferCommandPool.init(CommandPool::Queue::TRANSFER, 0);
 	this->compCommandPool.init(CommandPool::Queue::COMPUTE, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
-	this->camera = new Camera(getWindow()->getAspectRatio(), 45.f, { 0.f, 20.f, 10.f }, { 0.f, 0.f, 0.f }, 100.0f, 4.0f);
+	this->camera = new Camera(getWindow()->getAspectRatio(), 45.f, { 0.f, 20.f, 10.f }, { 0.f, 0.f, 0.f }, 10.0f, 4.0f);
 	generateHeightmap();
 
 	getShaders().resize(2);
@@ -71,7 +71,7 @@ void ComputeTransferTest::init()
 
 	// Transistion image
 	Image::TransistionDesc desc;
-	desc.format = VK_FORMAT_R8G8B8A8_UNORM;
+	desc.format = findDepthFormat(Instance::get().getPhysicalDevice());
 	desc.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	desc.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 	desc.pool = &this->graphicsCommandPool;
@@ -421,21 +421,21 @@ void ComputeTransferTest::record(uint32_t id)
 void ComputeTransferTest::generateHeightmap()
 {
 	JAS_PROFILER_FUNCTION();
-	this->heightmap.setVertexDist(3.0f);
+	this->heightmap.setVertexDist(1.0f);
 	this->heightmap.setProximitySize(30);
 	this->heightmap.setMaxZ(100.f);
 	this->heightmap.setMinZ(0.f);
 
 	int width, height;
 	int channels;
-	std::string path = "../assets/Textures/australia.jpg";
+	std::string path = "../assets/Textures/ireland.jpg";
 	unsigned char* data = static_cast<unsigned char*>(stbi_load(path.c_str(), &width, &height, &channels, 1));
 	if (data == nullptr)
 		JAS_ERROR("Failed to load heightmap, couldn't find file!");
 	else {
 		JAS_PROFILER_SCOPE("InitHeightmap");
 		JAS_INFO("Loaded heightmap: {} successfully!", path);
-		this->heightmap.init({ -256.f, 0.f, -256.f }, REGION_SIZE, width, height, data);
+		this->heightmap.init({ -width/2.f, 0.f, -height / 2.f }, REGION_SIZE, width, height, data);
 		JAS_INFO("Initilized heightmap successfully!");
 		delete[] data;
 	}
