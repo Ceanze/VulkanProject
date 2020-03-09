@@ -15,7 +15,7 @@ Camera::Camera(float aspect, float fov, const glm::vec3& position, const glm::ve
 
 	this->fov = fov;
 	this->nearPlane = 0.001f;
-	this->farPlane = 1000.f;
+	this->farPlane = 2000.f;
 	this->yaw = 270;
 	this->pitch = 0;
 	this->roll = 0;

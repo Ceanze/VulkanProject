@@ -91,7 +91,7 @@ void ComputeTransferTest::init()
 	buildComputeCommandBuffer();
 
 	std::string pathToCubemap = "..\\assets\\Textures\\skybox\\";
-	this->skybox.init(500.0f, pathToCubemap, getSwapChain(), &this->graphicsCommandPool, &this->renderPass);
+	this->skybox.init(700.0f, pathToCubemap, getSwapChain(), &this->graphicsCommandPool, &this->renderPass);
 
 	// Record primary indirect draw buffer
 	record();
@@ -413,8 +413,8 @@ void ComputeTransferTest::record()
 void ComputeTransferTest::generateHeightmap()
 {
 	JAS_PROFILER_FUNCTION();
-	this->heightmap.setVertexDist(0.2f);
-	this->heightmap.setProximitySize(80);
+	this->heightmap.setVertexDist(1.0f);
+	this->heightmap.setProximitySize(20);
 	this->heightmap.setMaxZ(100.f);
 	this->heightmap.setMinZ(0.f);
 
