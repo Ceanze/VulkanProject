@@ -47,18 +47,47 @@ void Heightmap::init(const glm::vec3& origin, int regionSize, int dataWidth, int
 
 	const unsigned maxValue = 0xFF;
 	float zDist = abs(this->maxZ - this->minZ);
-	for (int y = 0; y < this->heightmapHeight; y++)
+	// Generate Verticies
+	for (int z = 0; z < this->heightmapHeight; z++)
 	{
 		for (int x = 0; x < this->heightmapWidth; x++)
 		{
 			float height = 0;
-			if (y < dataHeight && x < dataWidth)
-				height = this->minZ + ((float)data[x + y * dataWidth] / maxValue) * zDist;
+			if (z < dataHeight && x < dataWidth)
+				height = this->minZ + ((float)data[x + z * dataWidth] / maxValue) * zDist;
 
 			float xPos = this->origin.x + x * this->vertDist;
-			float zPos = this->origin.z + y * this->vertDist;
+			float zPos = this->origin.z + z * this->vertDist;
 
-			this->verticies[x + y * this->heightmapHeight].position = glm::vec4(xPos, height, zPos, 1.0);
+			this->verticies[x + z * this->heightmapHeight].position = glm::vec4(xPos, height, zPos, 1.0);
+		}
+	}
+
+	// Generate Normals
+	for (int z = 0; z < this->heightmapHeight; z++)
+	{
+		for (int x = 0; x < this->heightmapWidth; x++)
+		{
+			float height = 0;
+			if (z < dataHeight && x < dataWidth)
+				height = this->minZ + ((float)data[x + z * dataWidth] / maxValue) * zDist;
+
+			float west, east, north, south;
+
+			//Get adjacent vertex height from heightmap image then calculate normals with the height
+			int offset = std::max((z - 1), 0);
+			west = this->verticies[x + offset * this->heightmapHeight].position.y;
+			
+			offset = std::min((z + 1), this->heightmapWidth - 1);
+			east = this->verticies[x + offset * this->heightmapHeight].position.y;
+
+			offset = std::max((x - 1), 0);
+			north = this->verticies[offset + z * this->heightmapHeight].position.y;
+
+			offset = std::min((x + 1), this->heightmapHeight - 1);
+			south = this->verticies[offset + z * this->heightmapHeight].position.y;
+
+			this->verticies[x + z * this->heightmapHeight].normal = glm::normalize(glm::vec3(west - east, 2.f, south - north));
 		}
 	}
 }
@@ -109,15 +138,19 @@ void Heightmap::getProximityVerticies(const glm::vec3& position, std::vector<Ver
 	int xIndex = static_cast<int>(xDistance / this->vertDist);
 	int zIndex = static_cast<int>(zDistance / this->vertDist);
 
+	// Handle both odd and even vertex count on height map
 	if (this->proxVertDim % 2 != 0) {
+		// Odd
 		xIndex -= this->proxVertDim / 2;
 		zIndex -= this->proxVertDim / 2;
 	}
 	else {
+		// Even
 		xIndex -= (this->proxVertDim / 2) - 1;
 		zIndex -= (this->proxVertDim / 2) - 1;
 	}
 
+	// Return verticies within proximity off position.
 	for (int j = 0; j < this->proxVertDim; j++)
 	{
 		int zTemp = zIndex + j;
