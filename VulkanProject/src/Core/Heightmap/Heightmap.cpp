@@ -150,21 +150,42 @@ void Heightmap::getProximityVerticies(const glm::vec3& position, std::vector<Ver
 		zIndex -= (this->proxVertDim / 2) - 1;
 	}
 
-	// Return verticies within proximity off position.
+	// Return verticies within proximity off position. {PADDED VERSION}
 	for (int j = 0; j < this->proxVertDim; j++)
 	{
 		int zTemp = zIndex + j;
-		if (zTemp >= 0 && zTemp < this->heightmapHeight) {
-			for (int i = 0; i < this->proxVertDim; i++)
-			{
-				int xTemp = xIndex + i;
-				if (xTemp >= 0 && xTemp < this->heightmapWidth) {
-					int offset = xTemp + zTemp*this->heightmapWidth;
-					verticies[i + j * this->proxVertDim] = this->verticies[offset];
-				}
+		for (int i = 0; i < this->proxVertDim; i++)
+		{
+			int xTemp = xIndex + i;
+			if ((xTemp >= 0 && xTemp < this->heightmapWidth) && (zTemp >= 0 && zTemp < this->heightmapHeight)) {
+				int offset = xTemp + zTemp*this->heightmapWidth;
+				verticies[i + j * this->proxVertDim] = this->verticies[offset];
+			}
+			else {
+				Heightmap::Vertex padVertex;
+				padVertex.position = glm::vec3(xTemp, 0.f, zTemp) * this->vertDist + this->origin;
+				padVertex.normal = glm::vec3(0.f, 1.f, 0.f);
+				verticies[i + j * this->proxVertDim] = padVertex;
 			}
 		}
 	}
+
+	//// Return verticies within proximity off position. {UNPADDED VERSION}
+	//for (int j = 0; j < this->proxVertDim; j++)
+	//{
+	//	int zTemp = zIndex + j;
+	//	if (zTemp >= 0 && zTemp < this->heightmapHeight) {
+	//		for (int i = 0; i < this->proxVertDim; i++)
+	//		{
+	//			int xTemp = xIndex + i;
+	//			if (xTemp >= 0 && xTemp < this->heightmapWidth) {
+	//				int offset = xTemp + zTemp * this->heightmapWidth;
+	//				verticies[i + j * this->proxVertDim] = this->verticies[offset];
+	//			}
+	//		}
+	//	}
+	//}
+
 }
 
 const std::vector<Heightmap::Vertex>& Heightmap::getVerticies()
