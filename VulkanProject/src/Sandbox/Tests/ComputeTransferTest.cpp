@@ -413,7 +413,7 @@ void ComputeTransferTest::record()
 void ComputeTransferTest::generateHeightmap()
 {
 	JAS_PROFILER_FUNCTION();
-	this->heightmap.setVertexDist(1.0f);
+	this->heightmap.setVertexDist(2.0f);
 	this->heightmap.setProximitySize(20);
 	this->heightmap.setMaxZ(100.f);
 	this->heightmap.setMinZ(0.f);

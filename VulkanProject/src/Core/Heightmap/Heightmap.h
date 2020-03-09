@@ -7,8 +7,8 @@ class Heightmap
 public:
 	struct Vertex
 	{
-		glm::vec4 position;
-		glm::vec4 normal;
+		alignas(16) glm::vec3 position;
+		alignas(16) glm::vec3 normal;
 	};
 public:
 	Heightmap();
