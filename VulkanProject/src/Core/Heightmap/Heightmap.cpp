@@ -167,6 +167,9 @@ std::vector<unsigned> Heightmap::generateIndicies(int proximitySize, int regionS
 	int vertOffsetX = 0;
 	int vertOffsetZ = 0;
 
+	int index = 0;
+	uint32_t size = regionCount * regionCount * numQuads * numQuads*6;
+	indexData.resize(size);
 	for (int j = 0; j < regionCount; j++)
 	{
 		for (int i = 0; i < regionCount; i++)
@@ -176,19 +179,20 @@ std::vector<unsigned> Heightmap::generateIndicies(int proximitySize, int regionS
 				for (int x = vertOffsetX; x < vertOffsetX + numQuads; x++)
 				{
 					// First triangle
-					indexData.push_back(z * proximitySize + x);
-					indexData.push_back((z + 1) * proximitySize + x);
-					indexData.push_back((z + 1) * proximitySize + x + 1);
+					indexData[index++] = (z * proximitySize + x);
+					indexData[index++] = ((z + 1) * proximitySize + x);
+					indexData[index++] = ((z + 1) * proximitySize + x + 1);
 					// Second triangle
-					indexData.push_back(z * proximitySize + x);
-					indexData.push_back((z + 1) * proximitySize + x + 1);
-					indexData.push_back(z * proximitySize + x + 1);
+					indexData[index++] = (z * proximitySize + x);
+					indexData[index++] = ((z + 1) * proximitySize + x + 1);
+					indexData[index++] = (z * proximitySize + x + 1);
 				}
 			}
 			vertOffsetX = (vertOffsetX + numQuads) % (proximitySize - 1);
 		}
 		vertOffsetZ += numQuads;
 	}
+
 
 	return indexData;
 }

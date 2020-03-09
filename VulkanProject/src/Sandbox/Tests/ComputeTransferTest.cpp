@@ -10,11 +10,13 @@
 #include "Models/ModelRenderer.h"
 
 #include "Threading/ThreadDispatcher.h"
+#include "Core/CPUProfiler.h"
 
 #define REGION_SIZE 16
 
 void ComputeTransferTest::init()
 {
+	JAS_PROFILER_FUNCTION();
 	// Set queue usage
 	getFrame()->queueUsage(VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT);
 
@@ -166,6 +168,7 @@ void ComputeTransferTest::cleanup()
 
 void ComputeTransferTest::setupPre()
 {
+	JAS_PROFILER_FUNCTION();
 	// Set 0
 	DescriptorLayout descLayout;
 	descLayout.add(new SSBO(VK_SHADER_STAGE_VERTEX_BIT, 1, nullptr)); // Vertices
@@ -178,6 +181,8 @@ void ComputeTransferTest::setupPre()
 
 void ComputeTransferTest::setupPost()
 {
+	JAS_PROFILER_FUNCTION();
+
 	// Set uniform data.
 	UboData uboData;
 	uboData.vp = this->camera->getMatrix();
@@ -191,6 +196,7 @@ void ComputeTransferTest::setupPost()
 
 	// Create index buffer
 	{
+		JAS_PROFILER_SCOPE("Create indices");
 		Buffer stagingBuffer;
 		Memory stagingMemory;
 		auto indicies = Heightmap::generateIndicies(this->heightmap.getProximityVertexDim(), REGION_SIZE);
@@ -230,7 +236,7 @@ void ComputeTransferTest::setupPost()
 
 void ComputeTransferTest::setupCompute()
 {
-
+	JAS_PROFILER_FUNCTION();
 	DescriptorLayout descLayout;
 	descLayout.add(new SSBO(VK_SHADER_STAGE_COMPUTE_BIT, 1, nullptr)); // Out
 	descLayout.add(new SSBO(VK_SHADER_STAGE_COMPUTE_BIT, 1, nullptr)); // In
@@ -260,6 +266,8 @@ void ComputeTransferTest::setupCompute()
 
 	// Copy data to device memory
 	{
+		JAS_PROFILER_SCOPE("TransferIndirectBuffer");
+
 		Buffer indirectStagingBuffer;
 		Memory indirectMemoryStagingBuffer;
 		indirectStagingBuffer.init(sizeof(VkDrawIndexedIndirectCommand) * this->regionCount, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, { Instance::get().getTransferQueue().queueIndex });
@@ -322,6 +330,8 @@ void ComputeTransferTest::setupCompute()
 
 void ComputeTransferTest::buildComputeCommandBuffer()
 {
+	JAS_PROFILER_FUNCTION();
+
 	this->compCommandBuffer = this->compCommandPool.createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 	this->compCommandBuffer->begin(0, nullptr);
 
@@ -349,11 +359,15 @@ void ComputeTransferTest::buildComputeCommandBuffer()
 
 void ComputeTransferTest::record()
 {
+	JAS_PROFILER_FUNCTION();
 	for (uint32_t i = 0; i < getSwapChain()->getNumImages(); i++)
 		this->cmdBuffs[i] = this->graphicsCommandPool.createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 
 	for (int i = 0; i < getSwapChain()->getNumImages(); i++)
 	{
+		std::string name("RecordFrame_");
+		name += std::to_string(i);
+		JAS_PROFILER_SCOPE(name);
 		// Record command buffer
 		this->cmdBuffs[i]->begin(VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT, nullptr);
 
@@ -398,6 +412,7 @@ void ComputeTransferTest::record()
 
 void ComputeTransferTest::generateHeightmap()
 {
+	JAS_PROFILER_FUNCTION();
 	this->heightmap.setVertexDist(0.2f);
 	this->heightmap.setProximitySize(80);
 	this->heightmap.setMaxZ(100.f);
@@ -410,6 +425,7 @@ void ComputeTransferTest::generateHeightmap()
 	if (data == nullptr)
 		JAS_ERROR("Failed to load heightmap, couldn't find file!");
 	else {
+		JAS_PROFILER_SCOPE("InitHeightmap");
 		JAS_INFO("Loaded heightmap: {} successfully!", path);
 		this->heightmap.init({ -256.f, 0.f, -256.f }, REGION_SIZE, width, height, data);
 		JAS_INFO("Initilized heightmap successfully!");
@@ -423,7 +439,10 @@ void ComputeTransferTest::generateHeightmap()
 	this->regionCount = this->heightmap.getProximityRegionCount();
 
 	this->verticies.resize(this->heightmap.getProximityVertexDim() * this->heightmap.getProximityVertexDim());
-	this->heightmap.getProximityVerticies(this->camera->getPosition(), this->verticies);
+	{
+		JAS_PROFILER_SCOPE("FetchVerticies");
+		this->heightmap.getProximityVerticies(this->camera->getPosition(), this->verticies);
+	}
 
 	vertStagingBuffer.init(sizeof(glm::vec4) * verticies.size(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, { Instance::get().getTransferQueue().queueIndex });
 	vertStagingMemory.bindBuffer(&vertStagingBuffer);
