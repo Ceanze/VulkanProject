@@ -5,6 +5,12 @@
 class Heightmap 
 {
 public:
+	struct Vertex
+	{
+		glm::vec4 position;
+		glm::vec4 normal;
+	};
+public:
 	Heightmap();
 	~Heightmap();
 
@@ -18,8 +24,8 @@ public:
 	glm::ivec2 getRegionFromPos(const glm::vec3& position);
 
 	int getProximityVertexDim();
-	void getProximityVerticies(const glm::vec3& position, std::vector<glm::vec4>& verticies);
-	const std::vector<glm::vec4>& getVerticies();
+	void getProximityVerticies(const glm::vec3& position, std::vector<Vertex>& verticies);
+	const std::vector<Vertex>& getVerticies();
 	const std::vector<unsigned>& getIndicies();
 	int getVerticiesSize();
 	int getIndiciesSize();
@@ -53,5 +59,5 @@ private:
 	int heightmapHeight;
 
 	std::vector<unsigned> indicies;
-	std::vector<glm::vec4> verticies;
+	std::vector<Vertex> verticies;
 };

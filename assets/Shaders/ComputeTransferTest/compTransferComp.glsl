@@ -22,9 +22,15 @@ layout(set = 0, binding = 0, std430) writeonly buffer IndirectDraws
     IndexedIndirectCommand indirectDraws[];
 };
 
+struct Vertex
+{
+    vec4 position;
+    vec4 normal;
+};
+
 layout(set = 0, binding = 1, std430) readonly buffer Vertices
 {
-    vec4 vertices[];
+    Vertex vertices[];
 };
 
 layout(set = 0, binding = 2) uniform WorldData
@@ -80,12 +86,12 @@ void main()
         // Corner positions (Approximation)
         uint vtl = x + y * loadedWidth;
         uint vbr = vtl + loadedWidth * (regWidth - 1) + regWidth - 1;
-        vec4 tl = vertices[vtl];
-        vec4 br = vertices[vbr];
+        vec4 tl = vertices[vtl].position;
+        vec4 br = vertices[vbr].position;
         uint vtr = x + y * loadedWidth + regWidth - 1;
         uint vbl = vtl + loadedWidth * (regWidth - 1);
-        vec4 tr = vertices[vtr];
-        vec4 bl = vertices[vbl];
+        vec4 tr = vertices[vtr].position;
+        vec4 bl = vertices[vbl].position;
         // vec4 tr = tl + vec4(float(regWidth) - 1.0, 0.0, 0.0, 0.0);
         // vec4 bl = br - vec4(float(regWidth) - 1.0, 0.0, 0.0, 0.0);
 

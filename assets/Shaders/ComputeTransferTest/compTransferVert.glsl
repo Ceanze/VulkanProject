@@ -3,9 +3,15 @@
 
 layout(location = 0) out vec4 fragPos;
 
+struct Vertex
+{
+    vec4 position;
+    vec4 normal;
+};
+
 layout(set = 0, binding = 0, std430) readonly buffer Positions
 {
-    vec4 inPosition[];
+    Vertex inPosition[];
 };
 
 layout(set=0, binding = 1) uniform Camera
@@ -14,6 +20,6 @@ layout(set=0, binding = 1) uniform Camera
 };
 
 void main() {
-    fragPos = vec4(inPosition[gl_VertexIndex].xyz, 1.0);;
+    fragPos = vec4(inPosition[gl_VertexIndex].position.xyz, 1.0);;
     gl_Position = vp * fragPos;
 } 

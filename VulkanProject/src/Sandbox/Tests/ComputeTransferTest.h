@@ -49,7 +49,7 @@ private:
 	void record();
 	
 	void generateHeightmap();
-	void verticesToDevice(Buffer* buffer, const std::vector<glm::vec4>& verticies);
+	void verticesToDevice(Buffer* buffer, const std::vector<Heightmap::Vertex>& verticies);
 
 	void transferVertexData();
 
@@ -106,7 +106,7 @@ private:
 	// Temp compute
 	Buffer indexBuffer;
 	Memory indexMemory;
-	std::vector<glm::vec4> verticies;
+	std::vector<Heightmap::Vertex> verticies;
 
 	Skybox skybox;
 };

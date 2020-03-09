@@ -152,11 +152,11 @@ void HeightmapTest::updateBufferDescs()
 {
 	// Initilize buffer and memory for heightmap and camera
 	const std::vector<unsigned>& indicies = this->heightmap.getIndicies();
-	const std::vector<glm::vec4>& verticies = this->heightmap.getVerticies();
+	const std::vector<Heightmap::Vertex>& verticies = this->heightmap.getVerticies();
 
 	std::vector<uint32_t> queueIndices = { findQueueIndex(VK_QUEUE_GRAPHICS_BIT, Instance::get().getPhysicalDevice()) };
 
-	VkDeviceSize sizeHM = verticies.size() * sizeof(glm::vec4);
+	VkDeviceSize sizeHM = verticies.size() * sizeof(Heightmap::Vertex);
 	VkDeviceSize sizeIndex = indicies.size() * sizeof(unsigned int);
 	this->stagingBuffer.init(sizeHM, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, queueIndices);
 	this->heightBuffer.init(sizeHM, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, queueIndices);

@@ -58,7 +58,7 @@ void Heightmap::init(const glm::vec3& origin, int regionSize, int dataWidth, int
 			float xPos = this->origin.x + x * this->vertDist;
 			float zPos = this->origin.z + y * this->vertDist;
 
-			this->verticies[x + y * this->heightmapHeight] = glm::vec4(xPos, height, zPos, 1.0);
+			this->verticies[x + y * this->heightmapHeight].position = glm::vec4(xPos, height, zPos, 1.0);
 		}
 	}
 }
@@ -100,7 +100,7 @@ int Heightmap::getProximityVertexDim()
 {
 	return this->proxVertDim;
 }
-void Heightmap::getProximityVerticies(const glm::vec3& position, std::vector<glm::vec4>& verticies)
+void Heightmap::getProximityVerticies(const glm::vec3& position, std::vector<Vertex>& verticies)
 {
 	float xDistance = position.x - this->origin.x;
 	float zDistance = position.z - this->origin.z;
@@ -134,7 +134,7 @@ void Heightmap::getProximityVerticies(const glm::vec3& position, std::vector<glm
 	}
 }
 
-const std::vector<glm::vec4>& Heightmap::getVerticies()
+const std::vector<Heightmap::Vertex>& Heightmap::getVerticies()
 {
 	return this->verticies;
 }

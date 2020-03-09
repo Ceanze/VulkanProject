@@ -225,7 +225,7 @@ void ComputeTransferTest::setupPost()
 	this->memory.directTransfer(&this->bufferUniform, (void*)& uboData, uniformBufferSize, 0);
 
 	// Update descriptor
-	VkDeviceSize vertexBufferSize = this->verticies.size() * sizeof(glm::vec4);
+	VkDeviceSize vertexBufferSize = this->verticies.size() * sizeof(Heightmap::Vertex);
 	for (uint32_t i = 0; i < static_cast<uint32_t>(getSwapChain()->getNumImages()); i++)
 	{
 		this->descManager.updateBufferDesc(0, 0, this->compVertBuffer.getBuffer(), 0, vertexBufferSize);
@@ -254,7 +254,7 @@ void ComputeTransferTest::setupCompute()
 
 	// Verticies
 	std::vector<uint32_t> queueIndices = { findQueueIndex(VK_QUEUE_COMPUTE_BIT, Instance::get().getPhysicalDevice()) };
-	this->compVertBuffer.init(sizeof(glm::vec4) * this->verticies.size(), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, queueIndices);
+	this->compVertBuffer.init(sizeof(Heightmap::Vertex) * this->verticies.size(), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, queueIndices);
 	this->compVertMemory.bindBuffer(&this->compVertBuffer);
 	this->compVertMemory.init(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
@@ -316,13 +316,13 @@ void ComputeTransferTest::setupCompute()
 	this->compUniformMemory.directTransfer(&this->worldDataUBO, &tempData, sizeof(WorldData), 0);
 
 	queueIndices = { findQueueIndex(VK_QUEUE_TRANSFER_BIT, Instance::get().getPhysicalDevice()) };
-	this->compStagingBuffer.init(sizeof(glm::vec4) * this->verticies.size(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, queueIndices);
+	this->compStagingBuffer.init(sizeof(Heightmap::Vertex) * this->verticies.size(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, queueIndices);
 	this->compStagingMemory.bindBuffer(&this->compStagingBuffer);
 	this->compStagingMemory.init(VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 
 	// Update descriptor
 	this->descManagerComp.updateBufferDesc(0, 0, this->indirectDrawBuffer.getBuffer(), 0, sizeof(VkDrawIndexedIndirectCommand) * this->regionCount);
-	this->descManagerComp.updateBufferDesc(0, 1, this->compVertBuffer.getBuffer(), 0, sizeof(glm::vec4) * this->verticies.size());
+	this->descManagerComp.updateBufferDesc(0, 1, this->compVertBuffer.getBuffer(), 0, sizeof(Heightmap::Vertex) * this->verticies.size());
 	this->descManagerComp.updateBufferDesc(0, 2, this->worldDataUBO.getBuffer(), 0, sizeof(WorldData));
 	this->descManagerComp.updateBufferDesc(0, 3, this->planesUBO.getBuffer(), 0, sizeof(Camera::Plane) * 6);
 	this->descManagerComp.updateSets({ 0 }, 0);
@@ -444,15 +444,15 @@ void ComputeTransferTest::generateHeightmap()
 		this->heightmap.getProximityVerticies(this->camera->getPosition(), this->verticies);
 	}
 
-	vertStagingBuffer.init(sizeof(glm::vec4) * verticies.size(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, { Instance::get().getTransferQueue().queueIndex });
+	vertStagingBuffer.init(sizeof(Heightmap::Vertex) * verticies.size(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, { Instance::get().getTransferQueue().queueIndex });
 	vertStagingMemory.bindBuffer(&vertStagingBuffer);
 	vertStagingMemory.init(VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 
 }
 
-void ComputeTransferTest::verticesToDevice(Buffer* buffer, const std::vector<glm::vec4>& verticies)
+void ComputeTransferTest::verticesToDevice(Buffer* buffer, const std::vector<Heightmap::Vertex>& verticies)
 {
-	vertStagingMemory.directTransfer(&vertStagingBuffer, verticies.data(), verticies.size() * sizeof(glm::vec4), 0);
+	vertStagingMemory.directTransfer(&vertStagingBuffer, verticies.data(), verticies.size() * sizeof(Heightmap::Vertex), 0);
 
 	CommandBuffer* cbuff = this->transferCommandPool.beginSingleTimeCommand();
 
@@ -460,7 +460,7 @@ void ComputeTransferTest::verticesToDevice(Buffer* buffer, const std::vector<glm
 	VkBufferCopy region = {};
 	region.srcOffset = 0;
 	region.dstOffset = 0;
-	region.size = verticies.size() * sizeof(glm::vec4);
+	region.size = verticies.size() * sizeof(Heightmap::Vertex);
 	cbuff->cmdCopyBuffer(vertStagingBuffer.getBuffer(), buffer->getBuffer(), 1, &region);
 
 	this->transferCommandPool.endSingleTimeCommand(cbuff);
