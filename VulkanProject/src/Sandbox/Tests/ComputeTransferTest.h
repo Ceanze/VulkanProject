@@ -13,6 +13,7 @@
 #include "Core/Heightmap/Heightmap.h"
 #include "Core/Skybox.h"
 
+#include <queue>
 
 class ComputeTransferTest : public VKSandboxBase
 {
@@ -84,7 +85,10 @@ private:
 	Buffer vertStagingBuffer;
 	Memory vertStagingMemory;
 
+	std::queue<uint32_t> workIds;
+	Buffer* compVertInactiveBuffer;
 	Buffer compVertBuffer;
+	Buffer compVertBuffer2;
 	Memory compVertMemory;
 
 	Buffer indirectDrawBuffer;

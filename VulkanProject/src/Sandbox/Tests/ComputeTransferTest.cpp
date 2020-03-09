@@ -136,6 +136,7 @@ void ComputeTransferTest::cleanup()
 	this->compStagingMemory.cleanup();
 
 	this->compVertBuffer.cleanup();
+	this->compVertBuffer2.cleanup();
 	this->compVertMemory.cleanup();
 
 	this->indirectDrawBuffer.cleanup();
@@ -255,7 +256,9 @@ void ComputeTransferTest::setupCompute()
 	// Verticies
 	std::vector<uint32_t> queueIndices = { findQueueIndex(VK_QUEUE_COMPUTE_BIT, Instance::get().getPhysicalDevice()) };
 	this->compVertBuffer.init(sizeof(Heightmap::Vertex) * this->verticies.size(), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, queueIndices);
+	this->compVertBuffer2.init(sizeof(Heightmap::Vertex) * this->verticies.size(), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, queueIndices);
 	this->compVertMemory.bindBuffer(&this->compVertBuffer);
+	this->compVertMemory.bindBuffer(&this->compVertBuffer2);
 	this->compVertMemory.init(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
 	// Indirect draw buffer
@@ -299,7 +302,9 @@ void ComputeTransferTest::setupCompute()
 		indirectStagingBuffer.cleanup();
 		indirectMemoryStagingBuffer.cleanup();
 	}
+
 	verticesToDevice(&this->compVertBuffer, this->verticies);
+	this->compVertInactiveBuffer = &this->compVertBuffer2;
 
 	// Uniforms in compute
 	this->worldDataUBO.init(sizeof(WorldData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, queueIndices);
@@ -413,7 +418,7 @@ void ComputeTransferTest::record()
 void ComputeTransferTest::generateHeightmap()
 {
 	JAS_PROFILER_FUNCTION();
-	this->heightmap.setVertexDist(1.0f);
+	this->heightmap.setVertexDist(0.2f);
 	this->heightmap.setProximitySize(20);
 	this->heightmap.setMaxZ(100.f);
 	this->heightmap.setMinZ(0.f);
@@ -475,10 +480,46 @@ void ComputeTransferTest::transferVertexData()
 		if (ThreadDispatcher::finished()) {
 			this->lastRegionIndex = currRegion;
 			// Transfer proximity verticies to device
-			ThreadDispatcher::dispatch([&, camPos]() {
+			uint32_t id = ThreadDispatcher::dispatch([&, camPos]() {
 				this->heightmap.getProximityVerticies(camPos, this->verticies);
-				verticesToDevice(&this->compVertBuffer, this->verticies);
+				verticesToDevice(this->compVertInactiveBuffer, this->verticies);
 			});
+
+			this->workIds.push(id);
+		}
+	}
+
+	if (!this->workIds.empty())
+	{
+		uint32_t id = this->workIds.front();
+		if (ThreadDispatcher::finished(id))
+		{
+			Buffer* activeBuffer = nullptr;
+			if (this->compVertInactiveBuffer == &this->compVertBuffer2)
+			{
+				this->compVertInactiveBuffer = &this->compVertBuffer;
+				activeBuffer = &this->compVertBuffer2;
+			}
+			else
+			{
+				this->compVertInactiveBuffer = &this->compVertBuffer2;
+				activeBuffer = &this->compVertBuffer;
+			}
+
+			vkDeviceWaitIdle(Instance::get().getDevice());
+			VkDeviceSize vertexBufferSize = this->verticies.size() * sizeof(Heightmap::Vertex);
+			for (uint32_t i = 0; i < static_cast<uint32_t>(getSwapChain()->getNumImages()); i++)
+			{
+				this->descManager.updateBufferDesc(0, 0, activeBuffer->getBuffer(), 0, vertexBufferSize);
+				this->descManager.updateSets({ 0 }, i);
+			}
+
+			this->descManagerComp.updateBufferDesc(0, 1, activeBuffer->getBuffer(), 0, sizeof(Heightmap::Vertex) * this->verticies.size());
+			this->descManagerComp.updateSets({ 0 }, 0);
+
+			buildComputeCommandBuffer();
+			record();
+			this->workIds.pop();
 		}
 	}
 }
