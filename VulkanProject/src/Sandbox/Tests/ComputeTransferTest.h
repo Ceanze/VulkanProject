@@ -25,8 +25,17 @@ public:
 private:
 	const int MESH_SHADER = 0;
 	const int COMP_SHADER = 1;
+	const int COMP_INDEX_SHADER = 2;
 	const int MESH_PIPELINE = 0;
 	const int COMP_PIPELINE = 1;
+	const int COMP_INDEX_PIPELINE = 2;
+
+	struct ComputeIndexConfig {
+		uint32_t regionCount;  // Number of regions in width for proximity
+		uint32_t regionSize;   // Number of vertices in width for one region.
+		uint32_t proximitySize;
+		uint32_t pad2;
+	};
 
 	struct UboData
 	{
@@ -45,8 +54,10 @@ private:
 	void setupPre();
 	void setupPost();
 	void setupCompute();
+	void setupComputeIndex();
 
 	void buildComputeCommandBuffer(uint32_t id);
+	void buildComputeIndexCommandBuffer();
 	void record(uint32_t id);
 	
 	void generateHeightmap();
@@ -57,6 +68,7 @@ private:
 private:
 	Camera* camera;
 	uint32_t activeBuffers;
+	CommandBuffer* compIndexCommandBuffer;
 	std::array<CommandBuffer*, 2> compCommandBuffer;
 	std::array<std::array<CommandBuffer*, 3>, 2> cmdBuffs;
 	CommandPool graphicsCommandPool;
@@ -81,6 +93,7 @@ private:
 
 	// Compute
 	DescriptorManager descManagerComp;
+	DescriptorManager descManagerCompIndex;
 	CommandPool compCommandPool;
 
 	Buffer vertStagingBuffer;
@@ -113,5 +126,9 @@ private:
 	Memory indexMemory;
 	std::vector<Heightmap::Vertex> verticies;
 
+	// Compute Index
+	Buffer indexBufferCompute;
+	Buffer configBuffer;
+	
 	Skybox skybox;
 };

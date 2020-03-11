@@ -29,6 +29,7 @@ public:
 	const std::vector<unsigned>& getIndicies();
 	int getVerticiesSize();
 	int getIndiciesSize();
+	int getProximityIndiciesSize();
 	
 	static std::vector<unsigned> generateIndicies(int proximitySize, int regionSize);
 

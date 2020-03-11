@@ -13,6 +13,7 @@
 #include "Core/CPUProfiler.h"
 
 #define REGION_SIZE 16
+#define INDEX_GPU
 
 void ComputeTransferTest::init()
 {
@@ -28,8 +29,13 @@ void ComputeTransferTest::init()
 	this->camera = new Camera(getWindow()->getAspectRatio(), 45.f, { 0.f, 20.f, 10.f }, { 0.f, 0.f, 0.f }, 10.0f, 4.0f);
 	generateHeightmap();
 
+#ifdef INDEX_GPU
+	getShaders().resize(3);
+	getPipelines().resize(3);
+#else
 	getShaders().resize(2);
 	getPipelines().resize(2);
+#endif
 
 	getShader(MESH_SHADER).addStage(Shader::Type::VERTEX, "ComputeTransferTest\\compTransferVert.spv");
 	getShader(MESH_SHADER).addStage(Shader::Type::FRAGMENT, "ComputeTransferTest\\compTransferFrag.spv");
@@ -87,6 +93,9 @@ void ComputeTransferTest::init()
 
 	//setupTemp();
 	setupCompute();
+#ifdef INDEX_GPU
+	setupComputeIndex();
+#endif
 	setupPost();
 
 	std::string pathToCubemap = "..\\assets\\Textures\\skybox\\";
@@ -100,6 +109,9 @@ void ComputeTransferTest::init()
 			this->cmdBuffs[i][j] = this->graphicsCommandPool.createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 	}
 	buildComputeCommandBuffer(0);
+#ifdef INDEX_GPU
+	buildComputeIndexCommandBuffer();
+#endif
 	record(0);
 	this->activeBuffers = 0;
 }
@@ -149,7 +161,13 @@ void ComputeTransferTest::cleanup()
 	this->indirectDrawBuffer.cleanup();
 	this->indirectDrawMemory.cleanup();
 
+#ifndef INDEX_GPU
 	this->indexBuffer.cleanup();
+#else
+	this->descManagerCompIndex.cleanup();
+	this->indexBufferCompute.cleanup();
+	this->configBuffer.cleanup();
+#endif
 	this->indexMemory.cleanup();
 
 	this->planesUBO.cleanup();
@@ -203,6 +221,7 @@ void ComputeTransferTest::setupPost()
 	this->memory.init(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
 	// Create index buffer
+#ifndef INDEX_GPU
 	{
 		JAS_PROFILER_SCOPE("Create indices");
 		Buffer stagingBuffer;
@@ -229,9 +248,11 @@ void ComputeTransferTest::setupPost()
 		stagingBuffer.cleanup();
 		stagingMemory.cleanup();
 	}
+#endif
 	// Transfer the data to the buffer.
 	this->memory.directTransfer(&this->bufferUniform, (void*)& uboData, uniformBufferSize, 0);
 
+	uint32_t indexBufferSize = sizeof(unsigned) * this->heightmap.getProximityIndiciesSize();
 	// Update descriptor
 	VkDeviceSize vertexBufferSize = this->verticies.size() * sizeof(Heightmap::Vertex);
 	for (uint32_t i = 0; i < static_cast<uint32_t>(getSwapChain()->getNumImages()); i++)
@@ -240,6 +261,21 @@ void ComputeTransferTest::setupPost()
 		this->descManager.updateBufferDesc(0, 1, this->bufferUniform.getBuffer(), 0, uniformBufferSize);
 		this->descManager.updateSets({ 0 }, i);
 	}
+
+#ifdef INDEX_GPU	
+	ComputeIndexConfig cfg;
+
+	cfg.regionCount = this->heightmap.getProximityWidthRegionCount();
+	cfg.regionSize = REGION_SIZE;
+	cfg.proximitySize = this->heightmap.getProximityVertexDim();
+	cfg.pad2 = 0;
+
+	this->memory.directTransfer(&this->configBuffer, &cfg, sizeof(ComputeIndexConfig), 0);
+	// Update descriptor for compute index
+	this->descManagerCompIndex.updateBufferDesc(0, 0, this->indexBufferCompute.getBuffer(), 0, indexBufferSize);
+	this->descManagerCompIndex.updateBufferDesc(0, 1, this->configBuffer.getBuffer(), 0, sizeof(ComputeIndexConfig));
+	this->descManagerCompIndex.updateSets({ 0 }, 0);
+#endif
 }
 
 void ComputeTransferTest::setupCompute()
@@ -340,6 +376,35 @@ void ComputeTransferTest::setupCompute()
 	this->descManagerComp.updateSets({ 0 }, 0);
 }
 
+void ComputeTransferTest::setupComputeIndex()
+{
+	JAS_PROFILER_FUNCTION();
+	DescriptorLayout descLayout;
+	descLayout.add(new SSBO(VK_SHADER_STAGE_COMPUTE_BIT, 1, nullptr)); // Out
+	descLayout.add(new UBO(VK_SHADER_STAGE_COMPUTE_BIT, 1, nullptr)); // Out
+	descLayout.init();
+	this->descManagerCompIndex.addLayout(descLayout);
+	this->descManagerCompIndex.init(1);
+
+	getShader(COMP_INDEX_SHADER).addStage(Shader::Type::COMPUTE, "ComputeTransferTest\\compTransferIndex.spv");
+	getShader(COMP_INDEX_SHADER).init();
+
+	getPipeline(COMP_INDEX_PIPELINE).setDescriptorLayouts(this->descManagerCompIndex.getLayouts());
+	getPipeline(COMP_INDEX_PIPELINE).init(Pipeline::Type::COMPUTE, &getShader(COMP_INDEX_SHADER));
+	
+	// Indicies
+	std::vector<uint32_t> queueIndices = { findQueueIndex(VK_QUEUE_COMPUTE_BIT, Instance::get().getPhysicalDevice()), findQueueIndex(VK_QUEUE_GRAPHICS_BIT, Instance::get().getPhysicalDevice()) };
+	uint32_t indexBufferSize = sizeof(unsigned) * this->heightmap.getProximityIndiciesSize();
+	this->indexBufferCompute.init(indexBufferSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, queueIndices);
+	this->indexMemory.bindBuffer(&this->indexBufferCompute);
+#ifdef INDEX_GPU
+	this->indexMemory.init(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+#endif
+	// Config
+	this->configBuffer.init(sizeof(ComputeIndexConfig), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, queueIndices);
+	this->memory.bindBuffer(&this->configBuffer);
+}
+
 void ComputeTransferTest::buildComputeCommandBuffer(uint32_t id)
 {
 	JAS_PROFILER_FUNCTION();
@@ -366,6 +431,34 @@ void ComputeTransferTest::buildComputeCommandBuffer(uint32_t id)
 		VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT);
 
 	this->compCommandBuffer[id]->end();
+}
+
+void ComputeTransferTest::buildComputeIndexCommandBuffer()
+{
+	this->compIndexCommandBuffer = this->compCommandPool.createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+	this->compIndexCommandBuffer->begin(0, nullptr);
+	
+	this->compIndexCommandBuffer->cmdBindPipeline(&getPipeline(COMP_INDEX_PIPELINE));
+	std::vector<VkDescriptorSet> sets = { this->descManagerCompIndex.getSet(0, 0) };
+	std::vector<uint32_t> offsets;
+	this->compIndexCommandBuffer->cmdBindDescriptorSets(&getPipeline(COMP_INDEX_PIPELINE), 0, sets, offsets);
+
+	// Dispatch the compute job
+	// The compute shader will do the frustum culling and adjust the indirect draw calls depending on object visibility.
+	this->compIndexCommandBuffer->cmdDispatch((uint32_t)ceilf((float)this->heightmap.getProximityRegionCount() / 16), 1, 1);
+
+	this->compIndexCommandBuffer->end();
+
+	VkQueue compQueue = Instance::get().getComputeQueue().queue;
+	VkSubmitInfo computeSubmitInfo = { };
+	std::array<VkCommandBuffer, 1> buff = { this->compIndexCommandBuffer->getCommandBuffer() };
+	computeSubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	computeSubmitInfo.commandBufferCount = buff.size();
+	computeSubmitInfo.pCommandBuffers = buff.data();
+	computeSubmitInfo.signalSemaphoreCount = 0;
+	computeSubmitInfo.pSignalSemaphores = nullptr;
+
+	ERROR_CHECK(vkQueueSubmit(compQueue, 1, &computeSubmitInfo, VK_NULL_HANDLE), "Failed to submit compute queue!");
 }
 
 void ComputeTransferTest::record(uint32_t id)
@@ -400,8 +493,11 @@ void ComputeTransferTest::record(uint32_t id)
 
 		std::vector<VkDescriptorSet> sets = { this->descManager.getSet(i, 0) };
 		std::vector<uint32_t> offsets;
-
+#ifndef INDEX_GPU
 		this->cmdBuffs[id][i]->cmdBindIndexBuffer(this->indexBuffer.getBuffer(), 0, VK_INDEX_TYPE_UINT32);
+#else
+		this->cmdBuffs[id][i]->cmdBindIndexBuffer(this->indexBufferCompute.getBuffer(), 0, VK_INDEX_TYPE_UINT32);
+#endif
 		this->cmdBuffs[id][i]->cmdBindDescriptorSets(&getPipeline(MESH_PIPELINE), 0, sets, offsets);
 
 		//this->cmdBuffs[i]->cmdDrawIndexed(this->tempIndicies.size(), 1, 0, 0, 0);
@@ -422,7 +518,7 @@ void ComputeTransferTest::generateHeightmap()
 {
 	JAS_PROFILER_FUNCTION();
 	this->heightmap.setVertexDist(1.0f);
-	this->heightmap.setProximitySize(30);
+	this->heightmap.setProximitySize(60);
 	this->heightmap.setMaxZ(100.f);
 	this->heightmap.setMinZ(0.f);
 

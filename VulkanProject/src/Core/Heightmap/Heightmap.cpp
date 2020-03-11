@@ -208,6 +208,16 @@ int Heightmap::getIndiciesSize()
 	return this->indicies.size();
 }
 
+int Heightmap::getProximityIndiciesSize()
+{
+	const int numQuads = this->regionSize - 1;
+	int B = this->proxVertDim;
+	int b = this->regionSize;
+	int regionCount = static_cast<int>(ceilf(((B - 1) / (float)(b - 1))));
+	uint32_t size = regionCount * regionCount * numQuads * numQuads * 6;
+	return size;
+}
+
 std::vector<unsigned> Heightmap::generateIndicies(int proximitySize, int regionSize)
 {
 	std::vector<unsigned> indexData;
