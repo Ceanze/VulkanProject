@@ -55,6 +55,7 @@ public:
 
 private:
 	VulkanProfiler();
+	void saveResults(std::string filePath);
 	std::string getTimeUnitName();
 
 	VkQueryPool timestampQueryPool;

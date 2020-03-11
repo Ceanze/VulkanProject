@@ -5,6 +5,7 @@
 #include "CommandBuffer.h"
 
 #include <imgui.h>
+#include <fstream>
 
 VulkanProfiler& VulkanProfiler::get()
 {
@@ -25,6 +26,8 @@ void VulkanProfiler::init(uint32_t plotDataCount, float updateFreq, VulkanProfil
 
 void VulkanProfiler::cleanup()
 {
+	saveResults("GPUresults.json");
+
 	if (this->timestampQueryPool != VK_NULL_HANDLE)
 		vkDestroyQueryPool(Instance::get().getDevice(), this->timestampQueryPool, nullptr);
 
@@ -33,6 +36,13 @@ void VulkanProfiler::cleanup()
 
 	if (this->computePipelineStatPool != VK_NULL_HANDLE)
 		vkDestroyQueryPool(Instance::get().getDevice(), this->computePipelineStatPool, nullptr);
+
+	this->averages.clear();
+	this->plotResults.clear();
+	this->timestamps.clear();
+	this->graphicsPipelineStat.clear();
+	this->graphicsPipelineStatNames.clear();
+	this->computePipelineStat.clear();
 }
 
 void VulkanProfiler::render(float dt)
@@ -281,6 +291,40 @@ VulkanProfiler::VulkanProfiler()
 	plotDataCount(0), timeSinceUpdate(0.0f), updateFreq(0), graphicsPipelineStatPool(VK_NULL_HANDLE),
 	computePipelineStatPool(VK_NULL_HANDLE), timeUnit(TimeUnit::MILLI)
 {
+}
+
+void VulkanProfiler::saveResults(std::string filePath)
+{
+	//((r.second.second - r.second.first) * timestampPeriod) / (uint32_t)this->timeUnit;
+	float timestampPeriod = Instance::get().getPhysicalDeviceProperties().limits.timestampPeriod;
+
+	std::ofstream file(filePath);
+	file.open(filePath);
+	file << "{\"otherData\": {}, \"displayTimeUnit\": \"ms\", \"traceEvents\": [";
+
+	uint32_t i = 0;
+	for (auto& res : this->results)
+	{
+		if (i > 0) file << ",";
+
+		std::string name = "test " + i;
+		std::replace(name.begin(), name.end(), '"', '\'');
+
+		file << "{";
+		file << "\"name\": \"" << name << "\",";
+		file << "\"cat\": \"function\",";
+		file << "\"ph\": \"X\",";
+		file << "\"pid\": 0,";
+		file << "\"tid\": " << i << ",";
+		file << "\"ts\": " << (res.second.first * timestampPeriod) / (uint32_t)this->timeUnit << ",";
+		file << "\"dur\": " << ((res.second.second - res.second.first) * timestampPeriod) / (uint32_t)this->timeUnit;
+		file << "}";
+		
+		i++;
+	}
+
+	file << "]" << std::endl << "}";
+	file.close();
 }
 
 std::string VulkanProfiler::getTimeUnitName()
