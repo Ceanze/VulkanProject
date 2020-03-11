@@ -101,6 +101,7 @@ void Window::mouseCallback(GLFWwindow* window, double xpos, double ypos)
 		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
 		// Send cursor offset from centre of window
 		input.updateCursor(xpos - (double)width * 0.5, ypos - (double)height * 0.5);
+
 	}
 	else
 		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);

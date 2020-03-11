@@ -16,7 +16,7 @@
 void CubemapTest::init()
 {
 	this->graphicsCommandPool.init(CommandPool::Queue::GRAPHICS, 0);
-	this->camera = new Camera(getWindow()->getAspectRatio(), 45.f, { 0.f, 0.f, 5.f }, { 0.f, 0.f, 0.f }, 0.8f);
+	this->camera = new Camera(getWindow()->getAspectRatio(), 45.f, { 0.f, 0.f, 5.f }, { 0.f, 0.f, 0.f }, 0.8f, 2.0f);
 
 	// TODO: Set this to 2!!
 	getShaders().resize(2);

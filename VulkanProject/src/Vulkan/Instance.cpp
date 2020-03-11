@@ -54,6 +54,7 @@ void Instance::init(Window* window)
 	deviceFeatures.fillModeNonSolid = VK_TRUE;
 	deviceFeatures.logicOp = VK_TRUE;
 	deviceFeatures.pipelineStatisticsQuery = VK_TRUE;
+	deviceFeatures.multiDrawIndirect = VK_TRUE;
 
 	this->createInstance();
 	this->setupDebugMessenger();

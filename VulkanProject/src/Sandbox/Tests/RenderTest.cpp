@@ -12,7 +12,7 @@ void RenderTest::init()
 {
 	this->graphicsCommandPool.init(CommandPool::Queue::GRAPHICS, 0);
 	this->transferCommandPool.init(CommandPool::Queue::TRANSFER, 0);
-	this->camera = new Camera(getWindow()->getAspectRatio(), 45.f, { 0.f, 0.f, 1.f }, { 0.f, 0.f, 0.f }, 0.8f);
+	this->camera = new Camera(getWindow()->getAspectRatio(), 45.f, { 0.f, 0.f, 1.f }, { 0.f, 0.f, 0.f }, 0.8f, 2.0f);
 
 	this->shader.addStage(Shader::Type::VERTEX, "testVertex.spv");
 	this->shader.addStage(Shader::Type::FRAGMENT, "testFragment.spv");

@@ -5,12 +5,11 @@
 class Heightmap 
 {
 public:
-	struct HeightmapRawData {
-		int dimX, dimY;
-		size_t size;
-		unsigned char* data;
+	struct Vertex
+	{
+		alignas(16) glm::vec3 position;
+		alignas(16) glm::vec3 normal;
 	};
-
 public:
 	Heightmap();
 	~Heightmap();
@@ -22,18 +21,26 @@ public:
 	void setVertexDist(float value);
 	void setProximitySize(int size);
 
+	glm::ivec2 getRegionFromPos(const glm::vec3& position);
+
 	int getProximityVertexDim();
-	void getProximityVerticies(const glm::vec3& position, std::vector<glm::vec4>& verticies);
-	std::vector<unsigned> getProximityIndicies(const glm::vec3& position);
-	const std::vector<glm::vec4>& getVerticies();
+	void getProximityVerticies(const glm::vec3& position, std::vector<Vertex>& verticies);
+	const std::vector<Vertex>& getVerticies();
 	const std::vector<unsigned>& getIndicies();
+	int getVerticiesSize();
+	int getIndiciesSize();
 	
 	static std::vector<unsigned> generateIndicies(int proximitySize, int regionSize);
 
+	int getRegionCount();
+	int getRegionWidthCount();
 	int getRegionSize();
 	int getIndiciesPerRegion();
+	int getProximityRegionCount();
+	int getProximityWidthRegionCount();
 
-	void cleanup();
+	int getWidth();
+	int getHeight();
 
 private:
 	glm::vec3 origin;
@@ -42,8 +49,8 @@ private:
 	int proxVertDim;
 	int indiciesPerRegion;
 	int regionSize;
-	int regionCountX;
-	int regionCountZ;
+	int regionCount;
+	int regionWidthCount;
 
 	float minZ;
 	float maxZ;
@@ -52,7 +59,5 @@ private:
 	int heightmapHeight;
 
 	std::vector<unsigned> indicies;
-	std::vector<glm::vec4> verticies;
-
-	HeightmapRawData rawData;
+	std::vector<Vertex> verticies;
 };

@@ -29,7 +29,7 @@ void Renderer::init()
 
 	this->window.init(1280, 720, "Vulkan Project", false);
 
-	this->camera = new Camera(this->window.getAspectRatio(), 45.f, { 0.f, 0.f, 1.f }, { 0.f, 0.f, 0.f }, 0.8f);
+	this->camera = new Camera(this->window.getAspectRatio(), 45.f, { 0.f, 0.f, 1.f }, { 0.f, 0.f, 0.f }, 0.8f, 2.0f);
 
 	Instance::get().init(&this->window);
 	this->swapChain.init(this->window.getWidth(), this->window.getHeight());

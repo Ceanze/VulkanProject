@@ -11,7 +11,7 @@
 void GLTFTest::init()
 {
 	this->graphicsCommandPool.init(CommandPool::Queue::GRAPHICS, 0);
-	this->camera = new Camera(getWindow()->getAspectRatio(), 45.f, { 0.f, 0.f, 5.f }, { 0.f, 0.f, 0.f }, 0.8f);
+	this->camera = new Camera(getWindow()->getAspectRatio(), 45.f, { 0.f, 0.f, 5.f }, { 0.f, 0.f, 0.f }, 0.8f, 2.0f);
 
 	this->shader.addStage(Shader::Type::VERTEX, "gltfTestVert.spv");
 	this->shader.addStage(Shader::Type::FRAGMENT, "gltfTestFrag.spv");

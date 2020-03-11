@@ -6,7 +6,7 @@
 
 void HeightmapTest::init()
 {
-	this->camera = new Camera(getWindow()->getAspectRatio(), 45.f, { 0.f, 2.f, 0.f }, { 0.f, -1.f, 0.f }, 0.8f);
+	this->camera = new Camera(getWindow()->getAspectRatio(), 45.f, { 0.f, 2.f, 0.f }, { 0.f, -1.f, 0.f }, 0.8f, 2.0f);
 	
 	this->commandPool.init(CommandPool::Queue::GRAPHICS, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
 
@@ -77,11 +77,9 @@ void HeightmapTest::loop(float dt)
 	ImGui::Text("This is a height map of Australia! Careful of the Macropods!");
 	ImGui::End();
 
-	std::vector<unsigned int>& indexData =  this->heightmap.getProximityIndicies(this->camera->getPosition());
-	std::vector<glm::vec4> vert;
-	int proxSize = this->heightmap.getProximityVertexDim();
-	vert.resize(proxSize* proxSize, glm::vec4(-1.f));
-	this->heightmap.getProximityVerticies(this->camera->getPosition(), vert);
+	// TODO: This does not work anymore!
+	std::vector<unsigned int> indexData;// = this->heightmap.getProximityIndicies(this->camera->getPosition());
+	
 	int i =	getFrame()->getCurrentImageIndex();
 
 	cmdBuffs[i]->begin(0, nullptr);
@@ -112,8 +110,6 @@ void HeightmapTest::loop(float dt)
 
 void HeightmapTest::cleanup()
 {
-	this->heightmap.cleanup();
-
 	this->depthTexture.cleanup();
 	// Compute
 	this->stagingBuffer.cleanup();
@@ -156,11 +152,11 @@ void HeightmapTest::updateBufferDescs()
 {
 	// Initilize buffer and memory for heightmap and camera
 	const std::vector<unsigned>& indicies = this->heightmap.getIndicies();
-	const std::vector<glm::vec4>& verticies = this->heightmap.getVerticies();
+	const std::vector<Heightmap::Vertex>& verticies = this->heightmap.getVerticies();
 
 	std::vector<uint32_t> queueIndices = { findQueueIndex(VK_QUEUE_GRAPHICS_BIT, Instance::get().getPhysicalDevice()) };
 
-	VkDeviceSize sizeHM = verticies.size() * sizeof(glm::vec4);
+	VkDeviceSize sizeHM = verticies.size() * sizeof(Heightmap::Vertex);
 	VkDeviceSize sizeIndex = indicies.size() * sizeof(unsigned int);
 	this->stagingBuffer.init(sizeHM, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, queueIndices);
 	this->heightBuffer.init(sizeHM, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, queueIndices);

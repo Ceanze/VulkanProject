@@ -4,6 +4,7 @@
 #include "Pipeline/RenderPass.h"
 #include "Pipeline/Pipeline.h"
 #include "Pipeline/PushConstants.h"
+#include "Buffers/Buffer.h"
 
 CommandBuffer::CommandBuffer() :
 	pool(VK_NULL_HANDLE), buffer(VK_NULL_HANDLE)
@@ -108,6 +109,11 @@ void CommandBuffer::cmdDrawIndexed(uint32_t indexCount, uint32_t instanceCount, 
 	vkCmdDrawIndexed(this->buffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
 }
 
+void CommandBuffer::cmdDrawIndexedIndirect(VkBuffer buffer, VkDeviceSize offset, uint32_t drawCount, uint32_t stride)
+{
+	vkCmdDrawIndexedIndirect(this->buffer, buffer, offset, drawCount, stride);
+}
+
 void CommandBuffer::cmdMemoryBarrier(VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask, VkDependencyFlags dependencyFlag, std::vector<VkMemoryBarrier> barriers)
 {
 	vkCmdPipelineBarrier(
@@ -190,4 +196,32 @@ void CommandBuffer::cmdBeginQuery(VkQueryPool queryPool, uint32_t query, VkQuery
 void CommandBuffer::cmdEndQuery(VkQueryPool queryPool, uint32_t query)
 {
 	vkCmdEndQuery(this->buffer, queryPool, query);
+}
+
+void CommandBuffer::acquireBuffer(Buffer* buffer, VkAccessFlags dstAccessMask, uint32_t srcQueue, uint32_t dstQueue, VkPipelineStageFlagBits srcStage, VkPipelineStageFlagBits dstStage)
+{
+	VkBufferMemoryBarrier bufferBarrier = {};
+	bufferBarrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+	bufferBarrier.buffer = buffer->getBuffer();
+	bufferBarrier.size = buffer->getSize();
+	bufferBarrier.srcAccessMask = 0;
+	bufferBarrier.dstAccessMask = dstAccessMask;
+	bufferBarrier.srcQueueFamilyIndex = srcQueue;
+	bufferBarrier.dstQueueFamilyIndex = dstQueue;
+
+	cmdBufferMemoryBarrier(srcStage, dstStage, 0, { bufferBarrier });
+}
+
+void CommandBuffer::releaseBuffer(Buffer* buffer, VkAccessFlags srcAccessMask, uint32_t srcQueue, uint32_t dstQueue, VkPipelineStageFlagBits srcStage, VkPipelineStageFlagBits dstStage)
+{
+	VkBufferMemoryBarrier bufferBarrier = {};
+	bufferBarrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+	bufferBarrier.buffer = buffer->getBuffer();
+	bufferBarrier.size = buffer->getSize();
+	bufferBarrier.srcAccessMask = srcAccessMask;
+	bufferBarrier.dstAccessMask = 0;
+	bufferBarrier.srcQueueFamilyIndex = srcQueue;
+	bufferBarrier.dstQueueFamilyIndex = dstQueue;
+
+	cmdBufferMemoryBarrier(srcStage, dstStage, 0, { bufferBarrier });
 }
