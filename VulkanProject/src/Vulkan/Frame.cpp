@@ -72,9 +72,8 @@ void Frame::submit(VkQueue queue, CommandBuffer** commandBuffers)
 	vkResetFences(Instance::get().getDevice(), 1, &this->inFlightFences[this->currentFrame]);
 	ERROR_CHECK(vkQueueSubmit(queue, 1, &submitInfo, this->inFlightFences[this->currentFrame]), "Failed to sumbit commandbuffer!");
 
-	if (this->imageIndex == 0) {
-		VulkanProfiler::get().getAllQueries();
-	}
+	VulkanProfiler::get().getBufferTimestamps(commandBuffers[this->imageIndex]);
+
 }
 
 void Frame::submitCompute(VkQueue queue, CommandBuffer* commandBuffer)
@@ -96,6 +95,9 @@ void Frame::submitCompute(VkQueue queue, CommandBuffer* commandBuffer)
 	computeSubmitInfo.pSignalSemaphores = &this->computeSemaphores;
 
 	ERROR_CHECK(vkQueueSubmit(queue, 1, &computeSubmitInfo, VK_NULL_HANDLE), "Failed to submit compute queue!");
+
+	VulkanProfiler::get().getBufferTimestamps(commandBuffer);
+	//VulkanProfiler::get().getAllQueries();
 }
 
 bool Frame::beginFrame(float dt)

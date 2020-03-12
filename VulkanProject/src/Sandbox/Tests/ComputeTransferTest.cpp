@@ -10,9 +10,10 @@
 #include "Models/ModelRenderer.h"
 
 #include "Threading/ThreadDispatcher.h"
+#include "Vulkan/VulkanProfiler.h"
 #include "Core/CPUProfiler.h"
 
-#define REGION_SIZE 16
+#define REGION_SIZE 4
 
 void ComputeTransferTest::init()
 {
@@ -99,6 +100,14 @@ void ComputeTransferTest::init()
 		for (uint32_t j = 0; j < getSwapChain()->getNumImages(); j++)
 			this->cmdBuffs[i][j] = this->graphicsCommandPool.createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 	}
+
+	// -------- PROFILER -----------
+	VulkanProfiler::get().init(60, 60, VulkanProfiler::TimeUnit::MICRO);
+	VulkanProfiler::get().createTimestamps(9);
+	VulkanProfiler::get().addIndexedTimestamps("Compute test", 2, this->compCommandBuffer.data());
+	VulkanProfiler::get().addIndexedTimestamps("Render test", 6, this->cmdBuffs.data()->data());
+
+
 	buildComputeCommandBuffer(0);
 	record(0);
 	this->activeBuffers = 0;
@@ -128,6 +137,7 @@ void ComputeTransferTest::loop(float dt)
 void ComputeTransferTest::cleanup()
 {
 	ThreadDispatcher::shutdown();
+	VulkanProfiler::get().cleanup();
 
 	this->skybox.cleanup();
 
@@ -345,6 +355,7 @@ void ComputeTransferTest::buildComputeCommandBuffer(uint32_t id)
 	JAS_PROFILER_FUNCTION();
 
 	this->compCommandBuffer[id]->begin(0, nullptr);
+	VulkanProfiler::get().resetBufferTimestamps(this->compCommandBuffer[id]);
 
 	// Add memory barrier to ensure that the indirect commands have been consumed before the compute shader updates them
 	this->compCommandBuffer[id]->acquireBuffer(&this->indirectDrawBuffer, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
@@ -358,7 +369,9 @@ void ComputeTransferTest::buildComputeCommandBuffer(uint32_t id)
 
 	// Dispatch the compute job
 	// The compute shader will do the frustum culling and adjust the indirect draw calls depending on object visibility.
+	VulkanProfiler::get().startIndexedTimestamp("Compute test", this->compCommandBuffer[id], VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, id);
 	this->compCommandBuffer[id]->cmdDispatch((uint32_t)ceilf((float)this->regionCount / 16), 1, 1);
+	VulkanProfiler::get().endIndexedTimestamp("Compute test", this->compCommandBuffer[id], VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, id);
 
 	// Add memory barrier to ensure that the compute shader has finished writing the indirect command buffer before it's consumed
 	this->compCommandBuffer[id]->releaseBuffer(&this->indirectDrawBuffer, VK_ACCESS_SHADER_WRITE_BIT,
@@ -378,6 +391,7 @@ void ComputeTransferTest::record(uint32_t id)
 		JAS_PROFILER_SCOPE(name);
 		// Record command buffer
 		this->cmdBuffs[id][i]->begin(VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT, nullptr);
+		VulkanProfiler::get().resetBufferTimestamps(this->cmdBuffs[id][i]);
 
 		// Acquire from compute
 		this->cmdBuffs[id][i]->acquireBuffer(&this->indirectDrawBuffer, VK_ACCESS_INDIRECT_COMMAND_READ_BIT,
@@ -405,7 +419,9 @@ void ComputeTransferTest::record(uint32_t id)
 		this->cmdBuffs[id][i]->cmdBindDescriptorSets(&getPipeline(MESH_PIPELINE), 0, sets, offsets);
 
 		//this->cmdBuffs[i]->cmdDrawIndexed(this->tempIndicies.size(), 1, 0, 0, 0);
+		VulkanProfiler::get().startIndexedTimestamp("Render test", this->cmdBuffs[id][i], VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, id * 3 + i);
 		this->cmdBuffs[id][i]->cmdDrawIndexedIndirect(this->indirectDrawBuffer.getBuffer(), 0, this->regionCount, sizeof(VkDrawIndexedIndirectCommand));
+		VulkanProfiler::get().endIndexedTimestamp("Render test", this->cmdBuffs[id][i], VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, id * 3 + i);
 
 		this->cmdBuffs[id][i]->cmdEndRenderPass();
 
