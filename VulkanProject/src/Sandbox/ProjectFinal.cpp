@@ -261,7 +261,7 @@ void ProjectFinal::setupMemories()
 {
 	this->memories[MEMORY_HOST_VISIBLE].init(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 	this->memories[MEMORY_DEVICE_LOCAL].init(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-	this->memories[MEMORY_TEXTURE].init(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	//this->memories[MEMORY_TEXTURE].init(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT); Can not be done here
 }
 
 void ProjectFinal::setupDescManagers()
