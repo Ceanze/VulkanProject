@@ -58,20 +58,6 @@ void ProjectFinal::cleanup()
 	for (auto& pool : this->graphicsPools)
 		pool.cleanup();
 
-	//for (auto& buffers : this->graphicsSecondary)
-	//	for (auto& buffer : buffers.second)
-	//		buffer->cleanup();
-
-	//for (auto& buffers : this->computeSecondary)
-	//	for (auto& buffer : buffers.second)
-	//		buffer->cleanup();
-
-	//for (auto& buffer : this->graphicsPrimary)
-	//	buffer->cleanup();
-
-	//for (auto& buffer : this->computePrimary)
-	//	buffer->cleanup();
-
 	for (auto& pool : this->computePools)
 		pool.cleanup();
 
@@ -83,7 +69,6 @@ void ProjectFinal::cleanup()
 
 	for (auto& memory : this->memories)
 		memory.second.cleanup();
-
 
 	this->depthTexture.cleanup();
 	this->renderPass.cleanup();
@@ -399,7 +384,7 @@ void ProjectFinal::transferInitalData()
 
 		stagingMemory.directTransfer(&stagingBuffer, indirectData.data(), indirectData.size(), 0);
 
-		CommandBuffer* cbuff = this->transferPools[MAIN_THREAD].beginSingleTimeCommand();
+		CommandBuffer* cbuff = this->graphicsPools[MAIN_THREAD].beginSingleTimeCommand();
 
 		// Copy vertex data.
 		VkBufferCopy region = {};
@@ -411,7 +396,7 @@ void ProjectFinal::transferInitalData()
 		cbuff->releaseBuffer(&this->buffers[BUFFER_INDIRECT_DRAW], VK_ACCESS_TRANSFER_READ_BIT, Instance::get().getGraphicsQueue().queueIndex, Instance::get().getComputeQueue().queueIndex,
 			VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT);
 
-		this->transferPools[MAIN_THREAD].endSingleTimeCommand(cbuff);
+		this->graphicsPools[MAIN_THREAD].endSingleTimeCommand(cbuff);
 
 		stagingBuffer.cleanup();
 		stagingMemory.cleanup();
