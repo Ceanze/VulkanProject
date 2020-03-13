@@ -11,6 +11,8 @@
 
 void ProjectFinal::init()
 {
+	getFrame()->queueUsage(VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT);
+
 	// Initalize with maximum available threads
 	ThreadDispatcher::init(2);
 	ThreadManager::init(static_cast<uint32_t>(std::thread::hardware_concurrency()));
