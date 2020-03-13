@@ -47,6 +47,8 @@ void ProjectFinal::loop(float dt)
 
 void ProjectFinal::cleanup()
 {
+	vkDeviceWaitIdle(Instance::get().getDevice());
+
 	ThreadDispatcher::shutdown();
 	ThreadManager::cleanup();
 
@@ -55,6 +57,20 @@ void ProjectFinal::cleanup()
 
 	for (auto& pool : this->graphicsPools)
 		pool.cleanup();
+
+	//for (auto& buffers : this->graphicsSecondary)
+	//	for (auto& buffer : buffers.second)
+	//		buffer->cleanup();
+
+	//for (auto& buffers : this->computeSecondary)
+	//	for (auto& buffer : buffers.second)
+	//		buffer->cleanup();
+
+	//for (auto& buffer : this->graphicsPrimary)
+	//	buffer->cleanup();
+
+	//for (auto& buffer : this->computePrimary)
+	//	buffer->cleanup();
 
 	for (auto& pool : this->computePools)
 		pool.cleanup();
@@ -68,10 +84,16 @@ void ProjectFinal::cleanup()
 	for (auto& memory : this->memories)
 		memory.second.cleanup();
 
+
 	this->depthTexture.cleanup();
 	this->renderPass.cleanup();
 	this->skybox.cleanup();
 	this->vertices.clear();
+
+	for (auto& pipeline : getPipelines())
+		pipeline.cleanup();
+	for (auto& shader : getShaders())
+		shader.cleanup();
 
 	delete this->camera;
 }
