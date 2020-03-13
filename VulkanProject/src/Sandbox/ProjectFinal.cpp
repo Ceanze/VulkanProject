@@ -52,8 +52,6 @@ void ProjectFinal::loop(float dt)
 
 void ProjectFinal::cleanup()
 {
-	vkDeviceWaitIdle(Instance::get().getDevice());
-
 	ThreadDispatcher::shutdown();
 	ThreadManager::cleanup();
 
@@ -420,7 +418,7 @@ void ProjectFinal::transferInitalData()
 	// Send inital data to GPU
 	verticesToDevice(&this->buffers[BUFFER_VERTICES], this->vertices);
 	this->compVertInactiveBuffer = &this->buffers[BUFFER_VERTICES_2];
-	vkDeviceWaitIdle(Instance::get().getDevice());
+	
 	// Submit generate indicies work to GPU once
 	{
 		ComputeIndexConfig cfg;

@@ -79,14 +79,6 @@ void Frame::submit(VkQueue queue, CommandBuffer** commandBuffers)
 
 void Frame::submitCompute(VkQueue queue, CommandBuffer* commandBuffer)
 {
-	vkQueueWaitIdle(Instance::get().getGraphicsQueue().queue);
-
-	// Submit compute shader for frustum culling
-
-	// Wait for fence to ensure that compute buffer writes have finished
-	//vkWaitForFences(Instance::get().getDevice(), 1, &this->inFlightFences[this->currentFrame], VK_TRUE, UINT64_MAX);
-	//vkResetFences(Instance::get().getDevice(), 1, &this->computeFence);
-
 	VkSubmitInfo computeSubmitInfo = { };
 	std::array<VkCommandBuffer, 1> buff = { commandBuffer->getCommandBuffer() };
 	computeSubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
