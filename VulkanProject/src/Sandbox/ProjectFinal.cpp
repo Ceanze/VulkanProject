@@ -437,7 +437,7 @@ void ProjectFinal::transferToDevice(Buffer* buffer, Buffer* stagingBuffer, Memor
 
 void ProjectFinal::verticesToDevice(Buffer* buffer, const std::vector<Heightmap::Vertex>& verticies)
 {
-	transferToDevice(buffer, &this->buffers[BUFFER_VERT_STAGING], &this->memories[MEMORY_HOST_VISIBLE], vertices.data(), vertices.size());
+	transferToDevice(buffer, &this->buffers[BUFFER_VERT_STAGING], &this->memories[MEMORY_HOST_VISIBLE], vertices.data(), vertices.size()*sizeof(Heightmap::Vertex));
 }
 
 void ProjectFinal::secRecordFrustum(uint32_t frameIndex, CommandBuffer* buffer, VkCommandBufferInheritanceInfo inheritanceInfo)
