@@ -23,6 +23,7 @@ public:
 	void cleanup();
 	Queue getQueueFamily() const { return this->queueFamily; }
 	QueueVK getQueue() const;
+	VkCommandPool getCommandPool() const { return this->pool; };
 
 	CommandBuffer* beginSingleTimeCommand();
 	void endSingleTimeCommand(CommandBuffer* buffer);

@@ -154,8 +154,8 @@ void ThreadingTest::cleanup()
 
 void ThreadingTest::prepareBuffers()
 {
-	this->numThreads = this->threadManager.getMaxNumConcurrentThreads() - 1;
-	this->threadManager.init(this->numThreads, getSwapChain()->getNumImages());
+	//this->numThreads = this->threadManager.getMaxNumConcurrentThreads() - 1;
+	//this->threadManager.init(this->numThreads, getSwapChain()->getNumImages());
 
 	// Utils function for random numbers.
 	std::srand((unsigned int)std::time(NULL));
@@ -215,7 +215,7 @@ void ThreadingTest::prepareBuffers()
 		for (uint32_t t = 0; t < this->numThreads; t++)
 		{
 			// Add work to a specific thread, the thread has a queue which it will go through.
-			this->threadManager.addWork(t, f, [=] { recordThread(t, f, inheritanceInfo, this->currentModel); });
+			//this->threadManager.addWork(t, f, [=] { recordThread(t, f, inheritanceInfo, this->currentModel); });
 		}
 	}
 
@@ -345,14 +345,14 @@ void ThreadingTest::updateBuffers(uint32_t frameIndex, float dt)
 
 			objCount += this->threadData[t].objects.size();
 
-			inheritanceInfo.framebuffer = getFramebuffers()[0].getFramebuffer();
-			this->threadManager.addWork(t, 0, [=] { recordThread(t, 0, inheritanceInfo, currentModel); });
+			//inheritanceInfo.framebuffer = getFramebuffers()[0].getFramebuffer();
+			//this->threadManager.addWork(t, 0, [=] { recordThread(t, 0, inheritanceInfo, currentModel); });
 
-			inheritanceInfo.framebuffer = getFramebuffers()[1].getFramebuffer();
-			this->threadManager.addWork(t, 1, [=] { recordThread(t, 1, inheritanceInfo, currentModel); });
+			//inheritanceInfo.framebuffer = getFramebuffers()[1].getFramebuffer();
+			//this->threadManager.addWork(t, 1, [=] { recordThread(t, 1, inheritanceInfo, currentModel); });
 
-			inheritanceInfo.framebuffer = getFramebuffers()[2].getFramebuffer();
-			this->threadManager.addWork(t, 2, [=] { recordThread(t, 2, inheritanceInfo, currentModel); });
+			//inheritanceInfo.framebuffer = getFramebuffers()[2].getFramebuffer();
+			//this->threadManager.addWork(t, 2, [=] { recordThread(t, 2, inheritanceInfo, currentModel); });
 		}
 	}
 
@@ -363,7 +363,7 @@ void ThreadingTest::updateBuffers(uint32_t frameIndex, float dt)
 	else if (keyWasPressed2)
 	{
 		keyWasPressed2 = false;
-		transferWorkID = this->threadManager.addWorkTrace(0, 0, [=] { transferBuffer(); });
+		//transferWorkID = this->threadManager.addWorkTrace(0, 0, [=] { transferBuffer(); });
 	}
 
 	if (transferWorkID > 0)

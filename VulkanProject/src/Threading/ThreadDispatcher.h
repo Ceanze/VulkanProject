@@ -30,6 +30,8 @@ public:
 	static void clearFinished();
 	static void shutdown();
 
+	static uint32_t threadCount();
+
 	// Delete functions to be extra sure
 	ThreadDispatcher(const ThreadDispatcher& other) = delete;
 	ThreadDispatcher(ThreadDispatcher&& other) = delete;

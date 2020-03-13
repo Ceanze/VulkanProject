@@ -6,6 +6,7 @@ class PushConstants;
 class RenderPass;
 class Pipeline;
 class Buffer;
+class CommandPool;
 
 class CommandBuffer
 {
@@ -13,9 +14,10 @@ public:
 	CommandBuffer();
 	~CommandBuffer();
 
-	void init(VkCommandPool pool);
+	void init(CommandPool* pool);
 	void cleanup();
 	VkCommandBuffer getCommandBuffer() const { return this->buffer; }
+	CommandPool* getCommandPool() const { return this->pool; }
 	void setCommandBuffer(VkCommandBuffer buffer);
 	void createCommandBuffer(VkCommandBufferLevel level);
 	
@@ -57,6 +59,6 @@ public:
 
 private:
 
-	VkCommandPool pool;
+	CommandPool* pool;
 	VkCommandBuffer buffer;
 };

@@ -112,6 +112,7 @@
     <ClInclude Include="src\Models\GLTFLoader.h" />
     <ClInclude Include="src\Models\ModelRenderer.h" />
     <ClInclude Include="src\Models\Model\Model.h" />
+    <ClInclude Include="src\Sandbox\ProjectFinal.h" />
     <ClInclude Include="src\Sandbox\SandboxManager.h" />
     <ClInclude Include="src\Sandbox\Tests\ComputeTest\ComputeTest.h" />
     <ClInclude Include="src\Sandbox\Tests\ComputeTransferTest.h" />
@@ -120,7 +121,6 @@
     <ClInclude Include="src\Sandbox\Tests\NoThreadingTest.h" />
     <ClInclude Include="src\Sandbox\Tests\HeightmapTest.h" />
     <ClInclude Include="src\Sandbox\Tests\RenderTest.h" />
-    <ClInclude Include="src\Sandbox\Tests\ThreadingTest.h" />
     <ClInclude Include="src\Sandbox\Tests\TransferTest.h" />
     <ClInclude Include="src\Sandbox\VKSandboxBase.h" />
     <ClInclude Include="src\Threading\ThreadDispatcher.h" />
@@ -162,6 +162,7 @@
     <ClCompile Include="src\Models\GLTFLoader.cpp" />
     <ClCompile Include="src\Models\ModelRenderer.cpp" />
     <ClCompile Include="src\Models\Model\Model.cpp" />
+    <ClCompile Include="src\Sandbox\ProjectFinal.cpp" />
     <ClCompile Include="src\Sandbox\SandboxManager.cpp" />
     <ClCompile Include="src\Sandbox\Tests\ComputeTest\ComputeTest.cpp" />
     <ClCompile Include="src\Sandbox\Tests\ComputeTransferTest.cpp" />
@@ -170,7 +171,6 @@
     <ClCompile Include="src\Sandbox\Tests\HeightmapTest.cpp" />
     <ClCompile Include="src\Sandbox\Tests\NoThreadingTest.cpp" />
     <ClCompile Include="src\Sandbox\Tests\RenderTest.cpp" />
-    <ClCompile Include="src\Sandbox\Tests\ThreadingTest.cpp" />
     <ClCompile Include="src\Sandbox\Tests\TransferTest.cpp" />
     <ClCompile Include="src\Sandbox\VKSandboxBase.cpp" />
     <ClCompile Include="src\Threading\ThreadDispatcher.cpp" />

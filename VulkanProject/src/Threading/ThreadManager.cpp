@@ -1,91 +1,80 @@
 #include "jaspch.h"
 #include "ThreadManager.h"
 
-ThreadManager::ThreadManager()
-{
-}
+std::vector<ThreadManager::Thread*> ThreadManager::threads;
 
-ThreadManager::~ThreadManager()
-{
-	// Delete all threads
-	for (Thread* thread : this->threads)
-		delete thread;
-	
-	// Clear thread pool
-	this->threads.clear();
-}
-
-uint32_t ThreadManager::getMaxNumConcurrentThreads()
-{
-	return static_cast<uint32_t>(std::thread::hardware_concurrency());
-}
-
-void ThreadManager::init(uint32_t numThreads, uint32_t numQueues)
+void ThreadManager::init(uint32_t numThreads)
 {
 	for (uint32_t t = 0; t < numThreads; t++)
-		this->threads.push_back(new Thread(numQueues));
+		threads.push_back(new Thread());
 }
 
-void ThreadManager::addWork(uint32_t threadIndex, uint32_t queueIndex, std::function<void(void)> work)
+void ThreadManager::cleanup()
 {
-	this->threads[threadIndex]->addWork(0, queueIndex, std::move(work));
+	// Delete all threads
+	for (Thread* thread : threads)
+		delete thread;
+
+	// Clear thread pool
+	threads.clear();
 }
 
-ThreadManager::WorkID ThreadManager::addWorkTrace(uint32_t threadIndex, uint32_t queueIndex, std::function<void(void)> work)
+void ThreadManager::addWork(uint32_t threadIndex, std::function<void(void)> work)
 {
-	static WorkID currentId = 1; // Max works in parallel = UINT32_MAX - 1
+	threads[threadIndex]->addWork(0, std::move(work));
+}
+
+uint32_t ThreadManager::addWorkTrace(uint32_t threadIndex, std::function<void(void)> work)
+{
+	static uint32_t currentId = 1; // Max works in parallel = UINT32_MAX - 1
 	if (currentId == 0)
 		currentId++;
 
-	this->threads[threadIndex]->addWork(currentId, queueIndex, std::move(work));
+	threads[threadIndex]->addWork(currentId, std::move(work));
 	return currentId++;
 }
 
 void ThreadManager::wait()
 {
 	// Wait for all threads to finish.
-	for (Thread* thread : this->threads)
-		for (uint32_t q = 0; q < thread->getNumQueues(); q++)
-			thread->wait(q);
+	for (Thread* thread : threads)
+		thread->wait();
 }
 
-bool ThreadManager::isQueueEmpty(uint32_t queueIndex)
+bool ThreadManager::isQueueEmpty()
 {
 	bool ret = true;
-	for (Thread* thread : this->threads)
-		if (thread->isQueueEmpty(queueIndex) == false)
+	for (Thread* thread : threads)
+		if (thread->isQueueEmpty() == false)
 			ret = false;
 	return ret;
 }
 
-bool ThreadManager::isWorkFinished(WorkID id)
+bool ThreadManager::isWorkFinished(uint32_t id)
 {
 	bool ret = false;
-	for (size_t t = 0; t < this->threads.size(); t++)
+	for (size_t t = 0; t < threads.size(); t++)
 	{
-		ret |= this->threads[t]->isWorkFinished(id);
+		ret |= threads[t]->isWorkFinished(id);
 	}
 	return ret;
 }
 
-bool ThreadManager::isWorkFinished(WorkID id, uint32_t threadID)
+bool ThreadManager::isWorkFinished(uint32_t id, uint32_t threadID)
 {
-	return this->threads[threadID]->isWorkFinished(id);
+	return threads[threadID]->isWorkFinished(id);
 }
 
-ThreadManager::Thread::Thread(uint32_t numQueues)
+ThreadManager::Thread::Thread()
 {
 	this->worker = std::thread(&ThreadManager::Thread::threadLoop, this);
-	this->queues.resize(numQueues);
-	this->currentQueue = 0;
 }
 
 ThreadManager::Thread::~Thread()
 {
 	if (this->worker.joinable())
 	{
-		for(uint32_t q = 0; q < this->queues.size(); q++)
-			wait(q);
+		wait();
 		
 		// Lock mutex to be able to change destroying to true.
 		std::unique_lock<std::mutex> lock(this->mutex);
@@ -97,26 +86,26 @@ ThreadManager::Thread::~Thread()
 	}
 }
 
-void ThreadManager::Thread::addWork(ThreadManager::WorkID id, uint32_t queueIndex, std::function<void(void)> work)
+void ThreadManager::Thread::addWork(uint32_t id, std::function<void(void)> work)
 {
 	std::lock_guard<std::mutex> lock(this->mutex);
-	this->queues[queueIndex].push({ id, std::move(work) });
+	this->queue.push({ id, std::move(work) });
 	this->condition.notify_one();
 }
 
-void ThreadManager::Thread::wait(uint32_t queueIndex)
+void ThreadManager::Thread::wait()
 {
 	std::unique_lock<std::mutex> lock(this->mutex);
-	this->condition.wait(lock, [this, queueIndex]() { return this->queues[queueIndex].empty(); });
+	this->condition.wait(lock, [this]() { return this->queue.empty(); });
 }
 
-bool ThreadManager::Thread::isQueueEmpty(uint32_t queueIndex)
+bool ThreadManager::Thread::isQueueEmpty()
 {
 	std::lock_guard<std::mutex> lock(this->mutex);
-	return this->queues[queueIndex].empty();
+	return this->queue.empty();
 }
 
-bool ThreadManager::Thread::isWorkFinished(WorkID id)
+bool ThreadManager::Thread::isWorkFinished(uint32_t id)
 {
 	std::lock_guard<std::mutex> lck(this->mutex);
 	auto it = std::find(this->worksDone.begin(), this->worksDone.end(), id);
@@ -131,7 +120,7 @@ bool ThreadManager::Thread::isWorkFinished(WorkID id)
 
 uint32_t ThreadManager::Thread::getNumQueues() const
 {
-	return (uint32_t)this->queues.size();
+	return (uint32_t)this->queue.size();
 }
 
 void ThreadManager::Thread::threadLoop()
@@ -144,9 +133,8 @@ void ThreadManager::Thread::threadLoop()
 			std::unique_lock<std::mutex> lock(this->mutex);
 			this->condition.wait(lock, [this] {
 				bool ret = false;
-				for (auto q : this->queues)
-					if (!q.empty())
-						ret = true;
+				if (!this->queue.empty())
+					ret = true;
 				return ret || destroying;
 			});
 			if (destroying)
@@ -154,29 +142,20 @@ void ThreadManager::Thread::threadLoop()
 				break;
 			}
 
-
-			for (uint32_t q = 0; q < this->queues.size(); q++)
-			{
-				auto& queue = this->queues[this->currentQueue];
-				if (queue.empty())
-					this->currentQueue = (this->currentQueue + 1) % this->queues.size();
-				else break;
-			}
-			work = this->queues[this->currentQueue].front().second;
+			work = this->queue.front().second;
 		}
 
 		work();
 
 		{
-			// Lock mutex to be able to accessthe queue.
+			// Lock mutex to be able to access the queue.
 			std::lock_guard<std::mutex> lock(this->mutex);
-			auto& currentQueue = this->queues[this->currentQueue];
+			auto& currentQueue = this->queue;
 			auto workId = currentQueue.front().first;
 			if (workId != 0)
 				this->worksDone.push_back(workId);
 			currentQueue.pop();
 			this->condition.notify_one();
-			this->currentQueue = (this->currentQueue + 1) % this->queues.size();
 		}
 	}
 }

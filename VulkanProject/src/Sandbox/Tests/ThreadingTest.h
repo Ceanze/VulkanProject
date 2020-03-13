@@ -16,6 +16,8 @@
 class ThreadingTest : public VKSandboxBase
 {
 public:
+	~ThreadingTest() = default;
+
 	void init() override;
 	void loop(float dt) override;
 	void cleanup() override;

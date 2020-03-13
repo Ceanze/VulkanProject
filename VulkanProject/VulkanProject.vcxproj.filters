@@ -75,9 +75,6 @@
     <ClInclude Include="src\Sandbox\Tests\RenderTest.h">
       <Filter>Sandbox\Tests</Filter>
     </ClInclude>
-    <ClInclude Include="src\Sandbox\Tests\ThreadingTest.h">
-      <Filter>Sandbox\Tests</Filter>
-    </ClInclude>
     <ClInclude Include="src\Sandbox\Tests\TransferTest.h">
       <Filter>Sandbox\Tests</Filter>
     </ClInclude>
@@ -167,6 +164,7 @@
     <ClInclude Include="src\Sandbox\Tests\ComputeTransferTest.h" />
     <ClInclude Include="src\Threading\ThreadDispatcher.h" />
     <ClInclude Include="src\Core\Skybox.h" />
+    <ClInclude Include="src\Sandbox\ProjectFinal.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Core\CPUProfiler.cpp">
@@ -206,9 +204,6 @@
       <Filter>Sandbox\Tests</Filter>
     </ClCompile>
     <ClCompile Include="src\Sandbox\Tests\RenderTest.cpp">
-      <Filter>Sandbox\Tests</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Sandbox\Tests\ThreadingTest.cpp">
       <Filter>Sandbox\Tests</Filter>
     </ClCompile>
     <ClCompile Include="src\Sandbox\Tests\TransferTest.cpp">
@@ -292,5 +287,6 @@
     <ClCompile Include="src\Sandbox\Tests\ComputeTransferTest.cpp" />
     <ClCompile Include="src\Threading\ThreadDispatcher.cpp" />
     <ClCompile Include="src\Core\Skybox.cpp" />
+    <ClCompile Include="src\Sandbox\ProjectFinal.cpp" />
   </ItemGroup>
 </Project>

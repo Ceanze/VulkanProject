@@ -87,10 +87,6 @@ private:
 	Memory memory; // Holds uniform data
 	Memory imageMemory; // Holds depth texture
 
-	std::thread* thread;
-	std::mutex mutex;
-	bool isTransferDone;
-
 	// Compute
 	DescriptorManager descManagerComp;
 	DescriptorManager descManagerCompIndex;

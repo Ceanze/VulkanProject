@@ -1,5 +1,6 @@
 #include "jaspch.h"
 #include "CommandBuffer.h"
+#include "CommandPool.h"
 #include "Vulkan/Instance.h"
 #include "Pipeline/RenderPass.h"
 #include "Pipeline/Pipeline.h"
@@ -15,7 +16,7 @@ CommandBuffer::~CommandBuffer()
 {
 }
 
-void CommandBuffer::init(VkCommandPool pool)
+void CommandBuffer::init(CommandPool* pool)
 {
 	this->pool = pool;
 }
@@ -34,7 +35,7 @@ void CommandBuffer::createCommandBuffer(VkCommandBufferLevel level)
 {
 	VkCommandBufferAllocateInfo allocInfo = {};
 	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	allocInfo.commandPool = this->pool;
+	allocInfo.commandPool = this->pool->getCommandPool();
 	allocInfo.level = level;
 	allocInfo.commandBufferCount = 1;
 	allocInfo.pNext = nullptr;

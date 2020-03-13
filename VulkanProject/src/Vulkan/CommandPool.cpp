@@ -81,7 +81,7 @@ void CommandPool::endSingleTimeCommand(CommandBuffer* buffer)
 CommandBuffer* CommandPool::createCommandBuffer(VkCommandBufferLevel level)
 {
 	CommandBuffer* b = new CommandBuffer();
-	b->init(this->pool);
+	b->init(this);
 	b->createCommandBuffer(level);
 	buffers.push_back(b);
 	return b;
@@ -103,7 +103,7 @@ std::vector<CommandBuffer*> CommandPool::createCommandBuffers(uint32_t count, Vk
 	std::vector<CommandBuffer*> b(count);
 	for (size_t i = 0; i < count; i++) {
 		b[i] = new CommandBuffer;
-		b[i]->init(this->pool);
+		b[i]->init(this);
 		b[i]->setCommandBuffer(vkBuffers[i]);
 		buffers.push_back(b[i]);
 	}

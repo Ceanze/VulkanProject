@@ -12,56 +12,50 @@
 class ThreadManager
 {
 public:
-	typedef uint32_t WorkID;
-
-public:
-	ThreadManager();
-	~ThreadManager();
-
-	// Get the maximum number of concurrent thread the CPU can handle.
-	static uint32_t getMaxNumConcurrentThreads();
-
 	// Start new threads.
-	void init(uint32_t numThreads, uint32_t numQueues);
+	static void init(uint32_t numThreads);
+	static void cleanup();
 		
 	// Add work to a specific thread.
-	void addWork(uint32_t threadIndex, uint32_t queueIndex, std::function<void(void)> work);
-	WorkID addWorkTrace(uint32_t threadIndex, uint32_t queueIndex, std::function<void(void)> work);
+	static void addWork(uint32_t threadIndex, std::function<void(void)> work);
+	static uint32_t addWorkTrace(uint32_t threadIndex, std::function<void(void)> work);
 
 	// Wait for all threads to have no work left.
-	void wait();
+	static void wait();
 
-	bool isQueueEmpty(uint32_t queueIndex);
-	bool isWorkFinished(WorkID id);
-	bool isWorkFinished(WorkID id, uint32_t threadID);
+	static uint32_t threadCount() { return threads.size(); };
+	static bool isQueueEmpty();
+	static bool isWorkFinished(uint32_t id);
+	static bool isWorkFinished(uint32_t id, uint32_t threadID);
 
 private:
+	ThreadManager() = delete;
+	~ThreadManager() = default;
 	struct Thread
 	{
-		Thread(uint32_t numQueues);
+		Thread();
 		~Thread();
 
-		void addWork(ThreadManager::WorkID id, uint32_t queueIndex, std::function<void(void)> work);
+		void addWork(uint32_t id, std::function<void(void)> work);
 
 		// Wait for the thread to be done with the queue.
-		void wait(uint32_t queueIndex);
+		void wait();
 
-		bool isQueueEmpty(uint32_t queueIndex);
-		bool isWorkFinished(WorkID id);
+		bool isQueueEmpty();
+		bool isWorkFinished(uint32_t id);
 
 		uint32_t getNumQueues() const;
 
 	private:
 		void threadLoop();
 
-		uint32_t currentQueue;
 		bool destroying = false;
 		std::thread worker;
 		std::mutex mutex;
-		std::vector<WorkID> worksDone;
-		std::vector<std::queue<std::pair<ThreadManager::WorkID, std::function<void(void)>>>> queues;
+		std::vector<uint32_t> worksDone;
+		std::queue<std::pair<uint32_t, std::function<void(void)>>> queue;
 		std::condition_variable condition;
 	};
 
-	std::vector<Thread*> threads;
+	static std::vector<Thread*> threads;
 };

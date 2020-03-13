@@ -112,6 +112,11 @@ void ThreadDispatcher::shutdown()
 	clearFinished();
 }
 
+uint32_t ThreadDispatcher::threadCount()
+{
+	return threads.size();
+}
+
 void ThreadDispatcher::threadLoop()
 {
 	std::unique_lock<std::mutex> lock(mutex);
