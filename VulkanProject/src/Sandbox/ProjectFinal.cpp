@@ -87,10 +87,10 @@ void ProjectFinal::cleanup()
 
 void ProjectFinal::setupHeightmap()
 {
-	this->regionSize = 16;
+	this->regionSize = 8;
 
 	this->heightmap.setVertexDist(1.0f);
-	this->heightmap.setProximitySize(60);
+	this->heightmap.setProximitySize(2);
 	this->heightmap.setMaxZ(100.f);
 	this->heightmap.setMinZ(0.f);
 
@@ -311,7 +311,6 @@ void ProjectFinal::setupCommandPools()
 
 void ProjectFinal::setupShaders()
 {
-
 	// Graphics
 	getShader(PIPELINE_GRAPHICS).addStage(Shader::Type::VERTEX, "ComputeTransferTest\\compTransferVert.spv");
 	getShader(PIPELINE_GRAPHICS).addStage(Shader::Type::FRAGMENT, "ComputeTransferTest\\compTransferFrag.spv");
@@ -437,7 +436,7 @@ void ProjectFinal::transferToDevice(Buffer* buffer, Buffer* stagingBuffer, Memor
 
 void ProjectFinal::verticesToDevice(Buffer* buffer, const std::vector<Heightmap::Vertex>& verticies)
 {
-	transferToDevice(buffer, &this->buffers[BUFFER_VERT_STAGING], &this->memories[MEMORY_HOST_VISIBLE], vertices.data(), vertices.size());
+	transferToDevice(buffer, &this->buffers[BUFFER_VERT_STAGING], &this->memories[MEMORY_HOST_VISIBLE], vertices.data(), vertices.size() * sizeof(Heightmap::Vertex));
 }
 
 void ProjectFinal::secRecordFrustum(uint32_t frameIndex, CommandBuffer* buffer, VkCommandBufferInheritanceInfo inheritanceInfo)
