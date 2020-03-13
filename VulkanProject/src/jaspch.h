@@ -10,6 +10,7 @@
 #include <sstream>
 #include <chrono>
 #include <random>
+#include <queue>
 
 // Vulkan
 #include <vulkan/vulkan.h>

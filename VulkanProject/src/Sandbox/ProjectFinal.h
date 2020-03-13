@@ -94,6 +94,7 @@ private:
 	void setupGraphicsPipeline();
 
 	void transferInitalData();
+	void transferVertexData();
 
 	void transferToDevice(Buffer* buffer, Buffer* stagingBuffer, Memory* stagingMemory, void* data, uint32_t size);
 	void verticesToDevice(Buffer* buffer, const std::vector<Heightmap::Vertex>& verticies);
@@ -127,6 +128,10 @@ private:
 	uint32_t	transferThreshold;
 	uint32_t	regionCount;
 	uint32_t	regionSize;
+
+	// Vertex transfer
+	std::queue<uint32_t> workIds;
+	Buffer* compVertInactiveBuffer;
 
 	std::vector<Heightmap::Vertex> vertices;
 

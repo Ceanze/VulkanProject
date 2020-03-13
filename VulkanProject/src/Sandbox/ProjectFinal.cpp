@@ -38,6 +38,9 @@ void ProjectFinal::loop(float dt)
 
 	this->memories[MEMORY_HOST_VISIBLE].directTransfer(&this->buffers[BUFFER_CAMERA], (void*)&this->camera->getMatrix()[0], this->buffers[BUFFER_CAMERA].getSize(), 0);
 	this->memories[MEMORY_HOST_VISIBLE].directTransfer(&this->buffers[BUFFER_PLANES], (void*)this->camera->getPlanes().data(), this->buffers[BUFFER_PLANES].getSize(), 0);
+	
+	// Transfer vertex data when proximity changes
+	transferVertexData();
 
 	// Render
 	getFrame()->beginFrame(dt);
@@ -87,10 +90,10 @@ void ProjectFinal::cleanup()
 
 void ProjectFinal::setupHeightmap()
 {
-	this->regionSize = 8;
+	this->regionSize = 16;
 
 	this->heightmap.setVertexDist(1.0f);
-	this->heightmap.setProximitySize(2);
+	this->heightmap.setProximitySize(30);
 	this->heightmap.setMaxZ(100.f);
 	this->heightmap.setMinZ(0.f);
 
@@ -109,7 +112,7 @@ void ProjectFinal::setupHeightmap()
 
 	// Set data used for transfer
 	this->lastRegionIndex = this->heightmap.getRegionFromPos(this->camera->getPosition());
-	this->transferThreshold = 10;
+	this->transferThreshold = 5;
 
 	this->regionCount = this->heightmap.getProximityRegionCount();
 
@@ -415,6 +418,95 @@ void ProjectFinal::transferInitalData()
 
 	// Send inital data to GPU
 	verticesToDevice(&this->buffers[BUFFER_VERTICES], this->vertices);
+	this->compVertInactiveBuffer = &this->buffers[BUFFER_VERTICES_2];
+	vkDeviceWaitIdle(Instance::get().getDevice());
+	// Submit generate indicies work to GPU once
+	{
+		ComputeIndexConfig cfg;
+		cfg.regionCount = this->heightmap.getProximityWidthRegionCount();
+		cfg.regionSize = this->regionSize;
+		cfg.proximitySize = this->heightmap.getProximityVertexDim();
+		cfg.pad2 = 0;
+		this->memories[MEMORY_HOST_VISIBLE].directTransfer(&this->buffers[BUFFER_CONFIG], &cfg, sizeof(ComputeIndexConfig), 0);
+
+		CommandBuffer* cmdBuff = this->computePools[MAIN_THREAD].createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+		cmdBuff->begin(0, nullptr);
+
+		cmdBuff->cmdBindPipeline(&getPipeline(PIPELINE_INDEX));
+		std::vector<VkDescriptorSet> sets = { this->descManagers[PIPELINE_INDEX].getSet({ 0 }, 0) };
+		std::vector<uint32_t> offsets;
+		cmdBuff->cmdBindDescriptorSets(&getPipeline(PIPELINE_INDEX), 0, sets, offsets);
+
+		// Dispatch the compute job
+		// The compute shader will do the frustum culling and adjust the indirect draw calls depending on object visibility.
+		cmdBuff->cmdDispatch((uint32_t)ceilf((float)this->heightmap.getProximityRegionCount() / 16), 1, 1);
+
+		cmdBuff->end();
+
+		VkQueue compQueue = Instance::get().getComputeQueue().queue;
+		VkSubmitInfo computeSubmitInfo = { };
+		std::array<VkCommandBuffer, 1> buff = { cmdBuff->getCommandBuffer() };
+		computeSubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		computeSubmitInfo.commandBufferCount = buff.size();
+		computeSubmitInfo.pCommandBuffers = buff.data();
+		computeSubmitInfo.signalSemaphoreCount = 0;
+		computeSubmitInfo.pSignalSemaphores = nullptr;
+
+		ERROR_CHECK(vkQueueSubmit(compQueue, 1, &computeSubmitInfo, VK_NULL_HANDLE), "Failed to submit compute queue!");
+	}
+}
+
+void ProjectFinal::transferVertexData()
+{
+	glm::vec3 camPos = this->camera->getPosition();
+	glm::ivec2 currRegion = this->heightmap.getRegionFromPos(camPos);
+	glm::ivec2 diff = this->lastRegionIndex - currRegion;
+	if (abs(diff.x) > this->transferThreshold || abs(diff.y) > this->transferThreshold) {
+		if (ThreadDispatcher::finished()) {
+			this->lastRegionIndex = currRegion;
+			// Transfer proximity verticies to device
+			uint32_t id = ThreadDispatcher::dispatch([&, camPos]() {
+				this->heightmap.getProximityVerticies(camPos, this->vertices);
+				verticesToDevice(this->compVertInactiveBuffer, this->vertices);
+			});
+
+
+			this->workIds.push(id);
+		}
+	}
+
+	if (!this->workIds.empty())
+	{
+		uint32_t id = this->workIds.front();
+		if (ThreadDispatcher::finished(id))
+		{
+			Buffer* activeBuffer = nullptr;
+			if (this->compVertInactiveBuffer == &this->buffers[BUFFER_VERTICES_2])
+			{
+				this->compVertInactiveBuffer = &this->buffers[BUFFER_VERTICES];
+				activeBuffer = &this->buffers[BUFFER_VERTICES_2];
+			}
+			else
+			{
+				this->compVertInactiveBuffer = &this->buffers[BUFFER_VERTICES_2];
+				activeBuffer = &this->buffers[BUFFER_VERTICES];
+			}
+
+			vkQueueWaitIdle(Instance::get().getGraphicsQueue().queue);
+			vkQueueWaitIdle(Instance::get().getComputeQueue().queue);
+			VkDeviceSize vertexBufferSize = this->vertices.size() * sizeof(Heightmap::Vertex);
+			for (uint32_t i = 0; i < static_cast<uint32_t>(getSwapChain()->getNumImages()); i++)
+			{
+				this->descManagers[PIPELINE_GRAPHICS].updateBufferDesc(0, 0, activeBuffer->getBuffer(), 0, vertexBufferSize);
+				this->descManagers[PIPELINE_GRAPHICS].updateSets({ 0 }, i);
+
+				this->descManagers[PIPELINE_FRUSTUM].updateBufferDesc(0, 1, activeBuffer->getBuffer(), 0, vertexBufferSize);
+				this->descManagers[PIPELINE_FRUSTUM].updateSets({ 0 }, i);
+			}
+
+			this->workIds.pop();
+		}
+	}
 }
 
 
