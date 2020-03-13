@@ -31,6 +31,7 @@ private:
 	enum MemoryType {
 		MEMORY_DEVICE_LOCAL,
 		MEMORY_HOST_VISIBLE,
+		MEMORY_VERT_STAGING,
 		MEMORY_TEXTURE
 	};
 

@@ -230,7 +230,7 @@ void ProjectFinal::setupBuffers()
 	
 		// Vert staging
 		this->buffers[BUFFER_VERT_STAGING].init(sizeof(Heightmap::Vertex) * this->vertices.size(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, { Instance::get().getTransferQueue().queueIndex });
-		this->memories[MEMORY_HOST_VISIBLE].bindBuffer(&this->buffers[BUFFER_VERT_STAGING]);
+		this->memories[MEMORY_VERT_STAGING].bindBuffer(&this->buffers[BUFFER_VERT_STAGING]);
 	}
 
 	// Index generation
@@ -251,6 +251,7 @@ void ProjectFinal::setupMemories()
 {
 	this->memories[MEMORY_HOST_VISIBLE].init(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 	this->memories[MEMORY_DEVICE_LOCAL].init(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	this->memories[MEMORY_VERT_STAGING].init(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 	//this->memories[MEMORY_TEXTURE].init(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT); Can not be done here
 }
 
@@ -528,7 +529,7 @@ void ProjectFinal::transferToDevice(Buffer* buffer, Buffer* stagingBuffer, Memor
 
 void ProjectFinal::verticesToDevice(Buffer* buffer, const std::vector<Heightmap::Vertex>& verticies)
 {
-	transferToDevice(buffer, &this->buffers[BUFFER_VERT_STAGING], &this->memories[MEMORY_HOST_VISIBLE], vertices.data(), vertices.size() * sizeof(Heightmap::Vertex));
+	transferToDevice(buffer, &this->buffers[BUFFER_VERT_STAGING], &this->memories[MEMORY_VERT_STAGING], vertices.data(), vertices.size() * sizeof(Heightmap::Vertex));
 }
 
 void ProjectFinal::secRecordFrustum(uint32_t frameIndex, CommandBuffer* buffer, VkCommandBufferInheritanceInfo inheritanceInfo)
