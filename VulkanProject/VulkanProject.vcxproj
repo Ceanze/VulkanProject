@@ -113,6 +113,7 @@
     <ClInclude Include="src\Models\ModelRenderer.h" />
     <ClInclude Include="src\Models\Model\Model.h" />
     <ClInclude Include="src\Sandbox\ProjectFinal.h" />
+    <ClInclude Include="src\Sandbox\ProjectFinalNaive.h" />
     <ClInclude Include="src\Sandbox\SandboxManager.h" />
     <ClInclude Include="src\Sandbox\Tests\ComputeTest\ComputeTest.h" />
     <ClInclude Include="src\Sandbox\Tests\ComputeTransferTest.h" />
@@ -163,6 +164,7 @@
     <ClCompile Include="src\Models\ModelRenderer.cpp" />
     <ClCompile Include="src\Models\Model\Model.cpp" />
     <ClCompile Include="src\Sandbox\ProjectFinal.cpp" />
+    <ClCompile Include="src\Sandbox\ProjectFinalNaive.cpp" />
     <ClCompile Include="src\Sandbox\SandboxManager.cpp" />
     <ClCompile Include="src\Sandbox\Tests\ComputeTest\ComputeTest.cpp" />
     <ClCompile Include="src\Sandbox\Tests\ComputeTransferTest.cpp" />

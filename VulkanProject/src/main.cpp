@@ -14,6 +14,7 @@
 #include "Sandbox/Tests/CubemapTest.h"
 #include "Sandbox/Tests/ComputeTransferTest.h"
 #include "Sandbox/ProjectFinal.h"
+#include "Sandbox/ProjectFinalNaive.h"
 
 #include "Core/CPUProfiler.h"
 

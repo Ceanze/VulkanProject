@@ -1,5 +1,5 @@
 #include "jaspch.h"
-#include "ProjectFinal.h"
+#include "ProjectFinalNaive.h"
 
 #include <stb/stb_image.h>
 
@@ -9,9 +9,9 @@
 
 #define MAIN_THREAD 0
 
-void ProjectFinal::init()
+void ProjectFinalNaive::init()
 {
-	getFrame()->queueUsage(VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT);
+	getFrame()->queueUsage(VK_QUEUE_GRAPHICS_BIT);
 
 	// Initalize with maximum available threads
 	ThreadDispatcher::init(2);
@@ -29,7 +29,7 @@ void ProjectFinal::init()
 	transferInitalData();
 }
 
-void ProjectFinal::loop(float dt)
+void ProjectFinalNaive::loop(float dt)
 {
 	// Update view matrix
 	this->camera->update(dt);
@@ -38,19 +38,19 @@ void ProjectFinal::loop(float dt)
 
 	this->memories[MEMORY_HOST_VISIBLE].directTransfer(&this->buffers[BUFFER_CAMERA], (void*)&this->camera->getMatrix()[0], this->buffers[BUFFER_CAMERA].getSize(), 0);
 	this->memories[MEMORY_HOST_VISIBLE].directTransfer(&this->buffers[BUFFER_PLANES], (void*)this->camera->getPlanes().data(), this->buffers[BUFFER_PLANES].getSize(), 0);
-	
+
 	// Transfer vertex data when proximity changes
 	transferVertexData();
 
 	// Render
 	getFrame()->beginFrame(dt);
 	record(getFrame()->getCurrentImageIndex());
-	getFrame()->submitCompute(Instance::get().getComputeQueue().queue, this->computePrimary[getFrame()->getCurrentImageIndex()]);
+	//getFrame()->submitCompute(Instance::get().getComputeQueue().queue, this->computePrimary[getFrame()->getCurrentImageIndex()]);
 	getFrame()->submit(Instance::get().getGraphicsQueue().queue, this->graphicsPrimary.data());
 	getFrame()->endFrame();
 }
 
-void ProjectFinal::cleanup()
+void ProjectFinalNaive::cleanup()
 {
 	ThreadDispatcher::shutdown();
 	ThreadManager::cleanup();
@@ -61,11 +61,11 @@ void ProjectFinal::cleanup()
 	for (auto& pool : this->graphicsPools)
 		pool.cleanup();
 
-	for (auto& pool : this->computePools)
-		pool.cleanup();
+	//for (auto& pool : this->computePools)
+	//	pool.cleanup();
 
-	for (auto& pool : this->transferPools)
-		pool.cleanup();
+	//for (auto& pool : this->transferPools)
+	//	pool.cleanup();
 
 	for (auto& buffer : this->buffers)
 		buffer.second.cleanup();
@@ -86,7 +86,7 @@ void ProjectFinal::cleanup()
 	delete this->camera;
 }
 
-void ProjectFinal::setupHeightmap()
+void ProjectFinalNaive::setupHeightmap()
 {
 	this->regionSize = 16;
 
@@ -104,7 +104,6 @@ void ProjectFinal::setupHeightmap()
 		JAS_ERROR("Failed to load heightmap, couldn't find file!");
 	else {
 		JAS_INFO("Loaded heightmap: {} successfully!", path);
-		
 		this->heightmap.init({ -(width / 2.f) * scale, 0.f, -(height / 2.f) * scale }, this->regionSize, width, height, data);
 		JAS_INFO("Initilized heightmap successfully!");
 		delete[] data;
@@ -120,7 +119,7 @@ void ProjectFinal::setupHeightmap()
 	this->heightmap.getProximityVerticies(this->camera->getPosition(), this->vertices);
 }
 
-void ProjectFinal::setupDescLayouts()
+void ProjectFinalNaive::setupDescLayouts()
 {
 	// Graphics: Set 0
 	{
@@ -156,7 +155,7 @@ void ProjectFinal::setupDescLayouts()
 
 }
 
-void ProjectFinal::setupGeneral()
+void ProjectFinalNaive::setupGeneral()
 {
 	getShaders().resize(PIPELINE_COUNT);
 	getPipelines().resize(PIPELINE_COUNT);
@@ -199,7 +198,7 @@ void ProjectFinal::setupGeneral()
 	}
 }
 
-void ProjectFinal::setupBuffers()
+void ProjectFinalNaive::setupBuffers()
 {
 	// Graphics buffers
 	{
@@ -211,7 +210,7 @@ void ProjectFinal::setupBuffers()
 	// Frustum buffers
 	{
 		// Planes and world data
-		std::vector<uint32_t> queueIndices = { Instance::get().getComputeQueue().queueIndex };
+		std::vector<uint32_t> queueIndices = { Instance::get().getGraphicsQueue().queueIndex };
 		this->buffers[BUFFER_PLANES].init(sizeof(Camera::Plane) * 6, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, queueIndices);
 		this->buffers[BUFFER_WORLD_DATA].init(sizeof(WorldData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, queueIndices);
 		this->memories[MEMORY_HOST_VISIBLE].bindBuffer(&this->buffers[BUFFER_PLANES]);
@@ -219,24 +218,24 @@ void ProjectFinal::setupBuffers()
 
 		// Indirect draw data
 		this->buffers[BUFFER_INDIRECT_DRAW].init(sizeof(VkDrawIndexedIndirectCommand) * this->regionCount, VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-			{ Instance::get().getGraphicsQueue().queueIndex/*, Instance::get().getComputeQueue().queueIndex, Instance::get().getTransferQueue().queueIndex*/ });
+			{ Instance::get().getGraphicsQueue().queueIndex });
 		this->memories[MEMORY_DEVICE_LOCAL].bindBuffer(&this->buffers[BUFFER_INDIRECT_DRAW]);
-	
+
 		// Compute vertex data
 		this->buffers[BUFFER_VERTICES].init(sizeof(Heightmap::Vertex) * this->vertices.size(), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, queueIndices);
 		this->buffers[BUFFER_VERTICES_2].init(sizeof(Heightmap::Vertex) * this->vertices.size(), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, queueIndices);
 		this->memories[MEMORY_DEVICE_LOCAL].bindBuffer(&this->buffers[BUFFER_VERTICES]);
 		this->memories[MEMORY_DEVICE_LOCAL].bindBuffer(&this->buffers[BUFFER_VERTICES_2]);
-	
+
 		// Vert staging
-		this->buffers[BUFFER_VERT_STAGING].init(sizeof(Heightmap::Vertex) * this->vertices.size(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, { Instance::get().getTransferQueue().queueIndex });
+		this->buffers[BUFFER_VERT_STAGING].init(sizeof(Heightmap::Vertex) * this->vertices.size(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, { Instance::get().getGraphicsQueue().queueIndex });
 		this->memories[MEMORY_VERT_STAGING].bindBuffer(&this->buffers[BUFFER_VERT_STAGING]);
 	}
 
 	// Index generation
 	{
 		// Index buffer
-		std::vector<uint32_t> queueIndices = { Instance::get().getComputeQueue().queueIndex, Instance::get().getGraphicsQueue().queueIndex };
+		std::vector<uint32_t> queueIndices = { Instance::get().getGraphicsQueue().queueIndex };
 		uint32_t indexBufferSize = sizeof(unsigned) * this->heightmap.getProximityIndiciesSize();
 		this->buffers[BUFFER_INDEX].init(indexBufferSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, queueIndices);
 		this->memories[MEMORY_DEVICE_LOCAL].bindBuffer(&this->buffers[BUFFER_INDEX]);
@@ -247,7 +246,7 @@ void ProjectFinal::setupBuffers()
 	}
 }
 
-void ProjectFinal::setupMemories()
+void ProjectFinalNaive::setupMemories()
 {
 	this->memories[MEMORY_HOST_VISIBLE].init(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 	this->memories[MEMORY_DEVICE_LOCAL].init(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
@@ -255,7 +254,7 @@ void ProjectFinal::setupMemories()
 	//this->memories[MEMORY_TEXTURE].init(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT); Can not be done here
 }
 
-void ProjectFinal::setupDescManagers()
+void ProjectFinalNaive::setupDescManagers()
 {
 	// Graphics
 	for (size_t i = 0; i < getSwapChain()->getNumImages(); i++) {
@@ -279,10 +278,10 @@ void ProjectFinal::setupDescManagers()
 	this->descManagers[PIPELINE_INDEX].updateSets({ 0 }, 0);
 }
 
-void ProjectFinal::setupCommandBuffers()
+void ProjectFinalNaive::setupCommandBuffers()
 {
 	this->graphicsPrimary = this->graphicsPools[MAIN_THREAD].createCommandBuffers(getSwapChain()->getNumImages(), VK_COMMAND_BUFFER_LEVEL_PRIMARY);
-	this->computePrimary = this->computePools[MAIN_THREAD].createCommandBuffers(getSwapChain()->getNumImages(), VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+	//this->computePrimary = this->computePools[MAIN_THREAD].createCommandBuffers(getSwapChain()->getNumImages(), VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 
 	for (size_t i = 0; i < getSwapChain()->getNumImages(); i++) {
 		for (size_t j = 1; j < FUNC_COUNT_GRAPHICS + 1u; j++)
@@ -290,30 +289,31 @@ void ProjectFinal::setupCommandBuffers()
 	}
 
 	for (size_t i = 0; i < getSwapChain()->getNumImages(); i++) {
-		for (size_t j = 1; j < FUNC_COUNT_COMPUTE + 1u; j++)
-			this->computeSecondary[i].push_back(this->computePools[j % ThreadManager::threadCount()].createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_SECONDARY));
+		for (size_t j = 0; j < FUNC_COUNT_COMPUTE; j++)
+			this->computeSecondary[i].push_back(this->graphicsPools[(j + FUNC_COUNT_GRAPHICS + 1u) % ThreadManager::threadCount()].createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_SECONDARY));
 	}
+	this->transferBuffer = this->graphicsPools[MAIN_THREAD].createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_SECONDARY);
 }
 
-void ProjectFinal::setupCommandPools()
+void ProjectFinalNaive::setupCommandPools()
 {
 	// Graphics
-	this->graphicsPools.resize(std::min(1u + FUNC_COUNT_GRAPHICS, ThreadManager::threadCount()));
+	this->graphicsPools.resize(std::min(1u + FUNC_COUNT_GRAPHICS + FUNC_COUNT_COMPUTE, ThreadManager::threadCount()));
 	for (auto& pool : this->graphicsPools)
 		pool.init(CommandPool::Queue::GRAPHICS, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
-	
-	// Compute
-	this->computePools.resize(std::min(1u + FUNC_COUNT_COMPUTE, ThreadManager::threadCount()));
-	for (auto& pool : this->computePools)
-		pool.init(CommandPool::Queue::COMPUTE, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
 
-	// Transfer
-	this->transferPools.resize(1);
-	for (auto& pool : this->transferPools)
-		pool.init(CommandPool::Queue::TRANSFER, 0);
+	// Compute
+	//this->computePools.resize(std::min(1u + FUNC_COUNT_COMPUTE, ThreadManager::threadCount()));
+	//for (auto& pool : this->computePools)
+	//	pool.init(CommandPool::Queue::COMPUTE, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+
+	//// Transfer
+	//this->transferPools.resize(1);
+	//for (auto& pool : this->transferPools)
+	//	pool.init(CommandPool::Queue::TRANSFER, 0);
 }
 
-void ProjectFinal::setupShaders()
+void ProjectFinalNaive::setupShaders()
 {
 	// Graphics
 	getShader(PIPELINE_GRAPHICS).addStage(Shader::Type::VERTEX, "ComputeTransferTest\\compTransferVert.spv");
@@ -330,20 +330,20 @@ void ProjectFinal::setupShaders()
 	getShader(PIPELINE_INDEX).init();
 }
 
-void ProjectFinal::setupFrustumPipeline()
+void ProjectFinalNaive::setupFrustumPipeline()
 {
 
 	getPipeline(PIPELINE_FRUSTUM).setDescriptorLayouts(this->descManagers[PIPELINE_FRUSTUM].getLayouts());
 	getPipeline(PIPELINE_FRUSTUM).init(Pipeline::Type::COMPUTE, &getShader(PIPELINE_FRUSTUM));
 }
 
-void ProjectFinal::setupIndexPipeline()
+void ProjectFinalNaive::setupIndexPipeline()
 {
 	getPipeline(PIPELINE_INDEX).setDescriptorLayouts(this->descManagers[PIPELINE_INDEX].getLayouts());
 	getPipeline(PIPELINE_INDEX).init(Pipeline::Type::COMPUTE, &getShader(PIPELINE_INDEX));
 }
 
-void ProjectFinal::setupGraphicsPipeline()
+void ProjectFinalNaive::setupGraphicsPipeline()
 {
 	this->renderPass.addDefaultColorAttachment(getSwapChain()->getImageFormat());
 	this->renderPass.addDefaultDepthAttachment();
@@ -369,13 +369,13 @@ void ProjectFinal::setupGraphicsPipeline()
 	getPipeline(PIPELINE_GRAPHICS).init(Pipeline::Type::GRAPHICS, &getShader(PIPELINE_GRAPHICS));
 }
 
-void ProjectFinal::transferInitalData()
+void ProjectFinalNaive::transferInitalData()
 {
 	// Set inital indirect draw data
 	{
 		Buffer stagingBuffer;
 		Memory stagingMemory;
-		stagingBuffer.init(sizeof(VkDrawIndexedIndirectCommand) * this->regionCount, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, { Instance::get().getTransferQueue().queueIndex });
+		stagingBuffer.init(sizeof(VkDrawIndexedIndirectCommand) * this->regionCount, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, { Instance::get().getGraphicsQueue().queueIndex });
 		stagingMemory.bindBuffer(&stagingBuffer);
 		stagingMemory.init(VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 		std::vector<VkDrawIndexedIndirectCommand> indirectData(this->regionCount);
@@ -398,8 +398,8 @@ void ProjectFinal::transferInitalData()
 		region.size = indirectData.size();
 		cbuff->cmdCopyBuffer(stagingBuffer.getBuffer(), this->buffers[BUFFER_INDIRECT_DRAW].getBuffer(), 1, &region);
 
-		cbuff->releaseBuffer(&this->buffers[BUFFER_INDIRECT_DRAW], VK_ACCESS_TRANSFER_READ_BIT, Instance::get().getGraphicsQueue().queueIndex, Instance::get().getComputeQueue().queueIndex,
-			VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT);
+	/*	cbuff->releaseBuffer(&this->buffers[BUFFER_INDIRECT_DRAW], VK_ACCESS_TRANSFER_READ_BIT, Instance::get().getGraphicsQueue().queueIndex, Instance::get().getComputeQueue().queueIndex,
+			VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT);*/
 
 		this->graphicsPools[MAIN_THREAD].endSingleTimeCommand(cbuff);
 
@@ -420,7 +420,7 @@ void ProjectFinal::transferInitalData()
 	// Send inital data to GPU
 	verticesToDevice(&this->buffers[BUFFER_VERTICES], this->vertices);
 	this->compVertInactiveBuffer = &this->buffers[BUFFER_VERTICES_2];
-	
+
 	// Submit generate indicies work to GPU once
 	{
 		ComputeIndexConfig cfg;
@@ -430,7 +430,7 @@ void ProjectFinal::transferInitalData()
 		cfg.pad2 = 0;
 		this->memories[MEMORY_HOST_VISIBLE].directTransfer(&this->buffers[BUFFER_CONFIG], &cfg, sizeof(ComputeIndexConfig), 0);
 
-		CommandBuffer* cmdBuff = this->computePools[MAIN_THREAD].createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+		CommandBuffer* cmdBuff = this->graphicsPools[MAIN_THREAD].createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 		cmdBuff->begin(0, nullptr);
 
 		cmdBuff->cmdBindPipeline(&getPipeline(PIPELINE_INDEX));
@@ -444,7 +444,7 @@ void ProjectFinal::transferInitalData()
 
 		cmdBuff->end();
 
-		VkQueue compQueue = Instance::get().getComputeQueue().queue;
+		VkQueue graphQueue = Instance::get().getGraphicsQueue().queue;
 		VkSubmitInfo computeSubmitInfo = { };
 		std::array<VkCommandBuffer, 1> buff = { cmdBuff->getCommandBuffer() };
 		computeSubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -453,11 +453,11 @@ void ProjectFinal::transferInitalData()
 		computeSubmitInfo.signalSemaphoreCount = 0;
 		computeSubmitInfo.pSignalSemaphores = nullptr;
 
-		ERROR_CHECK(vkQueueSubmit(compQueue, 1, &computeSubmitInfo, VK_NULL_HANDLE), "Failed to submit compute queue!");
+		ERROR_CHECK(vkQueueSubmit(graphQueue, 1, &computeSubmitInfo, VK_NULL_HANDLE), "Failed to submit compute queue!");
 	}
 }
 
-void ProjectFinal::transferVertexData()
+void ProjectFinalNaive::transferVertexData()
 {
 	glm::vec3 camPos = this->camera->getPosition();
 	glm::ivec2 currRegion = this->heightmap.getRegionFromPos(camPos);
@@ -470,7 +470,6 @@ void ProjectFinal::transferVertexData()
 				this->heightmap.getProximityVerticies(camPos, this->vertices);
 				verticesToDevice(this->compVertInactiveBuffer, this->vertices);
 			});
-
 
 			this->workIds.push(id);
 		}
@@ -494,7 +493,7 @@ void ProjectFinal::transferVertexData()
 			}
 
 			vkQueueWaitIdle(Instance::get().getGraphicsQueue().queue);
-			vkQueueWaitIdle(Instance::get().getComputeQueue().queue);
+			//vkQueueWaitIdle(Instance::get().getComputeQueue().queue);
 			VkDeviceSize vertexBufferSize = this->vertices.size() * sizeof(Heightmap::Vertex);
 			for (uint32_t i = 0; i < static_cast<uint32_t>(getSwapChain()->getNumImages()); i++)
 			{
@@ -511,11 +510,14 @@ void ProjectFinal::transferVertexData()
 }
 
 
-void ProjectFinal::transferToDevice(Buffer* buffer, Buffer* stagingBuffer, Memory* stagingMemory, void* data, uint32_t size)
+void ProjectFinalNaive::transferToDevice(Buffer* buffer, Buffer* stagingBuffer, Memory* stagingMemory, void* data, uint32_t size)
 {
 	stagingMemory->directTransfer(stagingBuffer, data, size, 0);
 
-	CommandBuffer* cbuff = this->transferPools[MAIN_THREAD].beginSingleTimeCommand();
+	CommandBuffer* cbuff = this->transferBuffer;
+	VkCommandBufferInheritanceInfo inheritInfo = {};
+	inheritInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
+	cbuff->begin(0, &inheritInfo);
 
 	// Copy vertex data.
 	VkBufferCopy region = {};
@@ -524,15 +526,16 @@ void ProjectFinal::transferToDevice(Buffer* buffer, Buffer* stagingBuffer, Memor
 	region.size = size;
 	cbuff->cmdCopyBuffer(stagingBuffer->getBuffer(), buffer->getBuffer(), 1, &region);
 
-	this->transferPools[MAIN_THREAD].endSingleTimeCommand(cbuff);
+	cbuff->end();
+	transferUpdated = true;
 }
 
-void ProjectFinal::verticesToDevice(Buffer* buffer, const std::vector<Heightmap::Vertex>& verticies)
+void ProjectFinalNaive::verticesToDevice(Buffer* buffer, const std::vector<Heightmap::Vertex>& verticies)
 {
 	transferToDevice(buffer, &this->buffers[BUFFER_VERT_STAGING], &this->memories[MEMORY_VERT_STAGING], vertices.data(), vertices.size() * sizeof(Heightmap::Vertex));
 }
 
-void ProjectFinal::secRecordFrustum(uint32_t frameIndex, CommandBuffer* buffer, VkCommandBufferInheritanceInfo inheritanceInfo)
+void ProjectFinalNaive::secRecordFrustum(uint32_t frameIndex, CommandBuffer* buffer, VkCommandBufferInheritanceInfo inheritanceInfo)
 {
 	buffer->begin(0, &inheritanceInfo);
 	buffer->cmdBindPipeline(&getPipeline(PIPELINE_FRUSTUM));
@@ -543,14 +546,14 @@ void ProjectFinal::secRecordFrustum(uint32_t frameIndex, CommandBuffer* buffer, 
 	buffer->end();
 }
 
-void ProjectFinal::secRecordSkybox(uint32_t frameIndex, CommandBuffer* buffer, VkCommandBufferInheritanceInfo inheritanceInfo)
+void ProjectFinalNaive::secRecordSkybox(uint32_t frameIndex, CommandBuffer* buffer, VkCommandBufferInheritanceInfo inheritanceInfo)
 {
 	buffer->begin(VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, &inheritanceInfo);
 	this->skybox.draw(buffer, frameIndex);
 	buffer->end();
 }
 
-void ProjectFinal::secRecordHeightmap(uint32_t frameIndex, CommandBuffer* buffer, VkCommandBufferInheritanceInfo inheritanceInfo)
+void ProjectFinalNaive::secRecordHeightmap(uint32_t frameIndex, CommandBuffer* buffer, VkCommandBufferInheritanceInfo inheritanceInfo)
 {
 	buffer->begin(VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, &inheritanceInfo);
 	buffer->cmdBindPipeline(&getPipeline(PIPELINE_GRAPHICS));
@@ -562,7 +565,7 @@ void ProjectFinal::secRecordHeightmap(uint32_t frameIndex, CommandBuffer* buffer
 	buffer->end();
 }
 
-void ProjectFinal::record(uint32_t frameIndex)
+void ProjectFinalNaive::record(uint32_t frameIndex)
 {
 	uint32_t threadIndex = 0;
 	uint32_t secondaryBuffer = 0;
@@ -599,9 +602,9 @@ void ProjectFinal::record(uint32_t frameIndex)
 	buffer = this->graphicsPrimary[frameIndex];
 	buffer->begin(0, nullptr);
 
-	buffer->acquireBuffer(&this->buffers[BUFFER_INDIRECT_DRAW], VK_ACCESS_INDIRECT_COMMAND_READ_BIT,
-		Instance::get().getComputeQueue().queueIndex, Instance::get().getGraphicsQueue().queueIndex,
-		VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT);
+	//buffer->acquireBuffer(&this->buffers[BUFFER_INDIRECT_DRAW], VK_ACCESS_INDIRECT_COMMAND_READ_BIT,
+	//	Instance::get().getComputeQueue().queueIndex, Instance::get().getGraphicsQueue().queueIndex,
+	//	VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT);
 
 	std::vector<VkClearValue> clearValues = {};
 	VkClearValue value;
@@ -609,36 +612,51 @@ void ProjectFinal::record(uint32_t frameIndex)
 	clearValues.push_back(value);
 	value.depthStencil = { 1.0f, 0 };
 	clearValues.push_back(value);
-	buffer->cmdBeginRenderPass(&this->renderPass, getFramebuffers()[frameIndex].getFramebuffer(), getSwapChain()->getExtent(), clearValues, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+
+	// Compute
 	std::vector<VkCommandBuffer> vkCommands;
+	for (size_t i = 0; i < this->computeSecondary[frameIndex].size(); i++)
+		vkCommands.push_back(this->computeSecondary[frameIndex][i]->getCommandBuffer());
+
+	if (transferUpdated) {
+		vkCommands.push_back(this->transferBuffer->getCommandBuffer());
+		transferUpdated = false;
+	}
+	
+	ThreadManager::wait(); // wait for seconday command buffer to be recorded
+	buffer->cmdExecuteCommands(vkCommands.size(), vkCommands.data());
+
+	// Graphics
+	buffer->cmdBeginRenderPass(&this->renderPass, getFramebuffers()[frameIndex].getFramebuffer(), getSwapChain()->getExtent(), clearValues, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+	vkCommands.clear();
 	for (size_t i = 0; i < this->graphicsSecondary[frameIndex].size(); i++)
 		vkCommands.push_back(this->graphicsSecondary[frameIndex][i]->getCommandBuffer());
-	ThreadManager::wait();
+	
 	buffer->cmdExecuteCommands(vkCommands.size(), vkCommands.data());
 	buffer->cmdEndRenderPass();
 
-	buffer->releaseBuffer(&this->buffers[BUFFER_INDIRECT_DRAW], VK_ACCESS_INDIRECT_COMMAND_READ_BIT,
-		Instance::get().getGraphicsQueue().queueIndex, Instance::get().getComputeQueue().queueIndex,
-		VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+	//buffer->releaseBuffer(&this->buffers[BUFFER_INDIRECT_DRAW], VK_ACCESS_INDIRECT_COMMAND_READ_BIT,
+	//	Instance::get().getGraphicsQueue().queueIndex, Instance::get().getComputeQueue().queueIndex,
+	//	VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
 
 	buffer->end();
 
 	// Compute
-	buffer = this->computePrimary[frameIndex];
-	buffer->begin(0, nullptr);
+	//buffer = this->computePrimary[frameIndex];
+	//buffer->begin(0, nullptr);
 
-	buffer->acquireBuffer(&this->buffers[BUFFER_INDIRECT_DRAW], VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
-		Instance::get().getGraphicsQueue().queueIndex, Instance::get().getComputeQueue().queueIndex,
-		VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+	//buffer->acquireBuffer(&this->buffers[BUFFER_INDIRECT_DRAW], VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
+	//	Instance::get().getGraphicsQueue().queueIndex, Instance::get().getComputeQueue().queueIndex,
+	//	VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
 
-	vkCommands.clear();
-	for (size_t i = 0; i < this->computeSecondary[frameIndex].size(); i++)
-		vkCommands.push_back(this->computeSecondary[frameIndex][i]->getCommandBuffer());
-	buffer->cmdExecuteCommands(vkCommands.size(), vkCommands.data());
+	//vkCommands.clear();
+	//for (size_t i = 0; i < this->computeSecondary[frameIndex].size(); i++)
+	//	vkCommands.push_back(this->computeSecondary[frameIndex][i]->getCommandBuffer());
+	//buffer->cmdExecuteCommands(vkCommands.size(), vkCommands.data());
 
-	buffer->releaseBuffer(&this->buffers[BUFFER_INDIRECT_DRAW], VK_ACCESS_SHADER_WRITE_BIT,
-		Instance::get().getComputeQueue().queueIndex, Instance::get().getGraphicsQueue().queueIndex,
-		VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT);
+	//buffer->releaseBuffer(&this->buffers[BUFFER_INDIRECT_DRAW], VK_ACCESS_SHADER_WRITE_BIT,
+	//	Instance::get().getComputeQueue().queueIndex, Instance::get().getGraphicsQueue().queueIndex,
+	//	VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT);
 
-	buffer->end();
+	//buffer->end();
 }
