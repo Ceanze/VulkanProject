@@ -42,7 +42,6 @@ void Frame::cleanup()
 
 void Frame::submit(VkQueue queue, CommandBuffer** commandBuffers)
 {
-	VulkanProfiler::get().render(this->dt);
 
 	this->imgui->end();
 	this->imgui->render();
@@ -125,6 +124,8 @@ bool Frame::beginFrame(float dt)
 	this->imagesInFlight[this->imageIndex] = this->inFlightFences[this->currentFrame];
 
 	this->imgui->begin(this->imageIndex, 0.016f);
+
+	VulkanProfiler::get().render(this->dt);
 
 	return true;
 }
