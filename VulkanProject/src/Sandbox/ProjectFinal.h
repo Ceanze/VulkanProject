@@ -4,7 +4,7 @@
 #include "Vulkan/Buffers/Buffer.h"
 #include "Vulkan/Buffers/Memory.h"
 #include "Core/Skybox.h"
-#include "Core/Heightmap/Heightmap.h"
+#include "Core/Heightmap/HeightmapGen.h"
 #include "Vulkan/Texture.h"
 #include "Vulkan/Pipeline/DescriptorManager.h"
 #include "Vulkan/Pipeline/RenderPass.h"
@@ -98,7 +98,7 @@ private:
 	void transferVertexData();
 
 	void transferToDevice(Buffer* buffer, Buffer* stagingBuffer, Memory* stagingMemory, void* data, uint32_t size);
-	void verticesToDevice(Buffer* buffer, const std::vector<Heightmap::Vertex>& verticies);
+	void verticesToDevice(Buffer* buffer, const std::vector<HeightmapGen::Vertex>& verticies);
 
 	void secRecordFrustum(uint32_t frameIndex, CommandBuffer* buffer, VkCommandBufferInheritanceInfo inheritanceInfo);
 	void secRecordSkybox(uint32_t frameIndex, CommandBuffer* buffer,VkCommandBufferInheritanceInfo inheritanceInfo);
@@ -124,17 +124,17 @@ private:
 	Camera* camera;
 
 	// Heightmap
-	Heightmap	heightmap;
-	glm::ivec2	lastRegionIndex;
-	uint32_t	transferThreshold;
-	uint32_t	regionCount;
-	uint32_t	regionSize;
+	HeightmapGen	heightmap;
+	glm::ivec2		lastRegionIndex;
+	uint32_t		transferThreshold;
+	uint32_t		regionCount;
+	uint32_t		regionSize;
 
 	// Vertex transfer
 	std::queue<uint32_t> workIds;
 	Buffer* compVertInactiveBuffer;
 
-	std::vector<Heightmap::Vertex> vertices;
+	std::vector<HeightmapGen::Vertex> vertices;
 
 	Texture depthTexture;
 	RenderPass renderPass;

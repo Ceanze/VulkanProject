@@ -16,7 +16,7 @@ void ProjectFinal::init()
 	// Initalize with maximum available threads
 	ThreadDispatcher::init(2);
 	ThreadManager::init(static_cast<uint32_t>(std::thread::hardware_concurrency()));
-	this->camera = new Camera(getWindow()->getAspectRatio(), 45.f, { 0.f, 20.f, 10.f }, { 0.f, 0.f, 0.f }, 10.0f, 4.0f);
+	this->camera = new Camera(getWindow()->getAspectRatio(), 45.f, { 0.f, 20.f, 10.f }, { 0.f, 0.f, 0.f }, 40.0f, 4.0f);
 
 	setupHeightmap();
 	setupDescLayouts();
@@ -91,8 +91,8 @@ void ProjectFinal::setupHeightmap()
 	this->regionSize = 16;
 
 	this->heightmap.setVertexDist(1.0f);
-	this->heightmap.setProximitySize(30);
-	this->heightmap.setMaxZ(100.f);
+	this->heightmap.setProximitySize(60);
+	this->heightmap.setMaxZ(40.f);
 	this->heightmap.setMinZ(0.f);
 
 	int width, height;
@@ -110,7 +110,7 @@ void ProjectFinal::setupHeightmap()
 
 	// Set data used for transfer
 	this->lastRegionIndex = this->heightmap.getRegionFromPos(this->camera->getPosition());
-	this->transferThreshold = 5;
+	this->transferThreshold = 10;
 
 	this->regionCount = this->heightmap.getProximityRegionCount();
 
@@ -221,13 +221,13 @@ void ProjectFinal::setupBuffers()
 		this->memories[MEMORY_DEVICE_LOCAL].bindBuffer(&this->buffers[BUFFER_INDIRECT_DRAW]);
 	
 		// Compute vertex data
-		this->buffers[BUFFER_VERTICES].init(sizeof(Heightmap::Vertex) * this->vertices.size(), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, queueIndices);
-		this->buffers[BUFFER_VERTICES_2].init(sizeof(Heightmap::Vertex) * this->vertices.size(), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, queueIndices);
+		this->buffers[BUFFER_VERTICES].init(sizeof(HeightmapGen::Vertex) * this->vertices.size(), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, queueIndices);
+		this->buffers[BUFFER_VERTICES_2].init(sizeof(HeightmapGen::Vertex) * this->vertices.size(), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, queueIndices);
 		this->memories[MEMORY_DEVICE_LOCAL].bindBuffer(&this->buffers[BUFFER_VERTICES]);
 		this->memories[MEMORY_DEVICE_LOCAL].bindBuffer(&this->buffers[BUFFER_VERTICES_2]);
 	
 		// Vert staging
-		this->buffers[BUFFER_VERT_STAGING].init(sizeof(Heightmap::Vertex) * this->vertices.size(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, { Instance::get().getTransferQueue().queueIndex });
+		this->buffers[BUFFER_VERT_STAGING].init(sizeof(HeightmapGen::Vertex) * this->vertices.size(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, { Instance::get().getTransferQueue().queueIndex });
 		this->memories[MEMORY_VERT_STAGING].bindBuffer(&this->buffers[BUFFER_VERT_STAGING]);
 	}
 
@@ -468,8 +468,6 @@ void ProjectFinal::transferVertexData()
 				this->heightmap.getProximityVerticies(camPos, this->vertices);
 				verticesToDevice(this->compVertInactiveBuffer, this->vertices);
 			});
-
-
 			this->workIds.push(id);
 		}
 	}
@@ -493,7 +491,7 @@ void ProjectFinal::transferVertexData()
 
 			vkQueueWaitIdle(Instance::get().getGraphicsQueue().queue);
 			vkQueueWaitIdle(Instance::get().getComputeQueue().queue);
-			VkDeviceSize vertexBufferSize = this->vertices.size() * sizeof(Heightmap::Vertex);
+			VkDeviceSize vertexBufferSize = this->vertices.size() * sizeof(HeightmapGen::Vertex);
 			for (uint32_t i = 0; i < static_cast<uint32_t>(getSwapChain()->getNumImages()); i++)
 			{
 				this->descManagers[PIPELINE_GRAPHICS].updateBufferDesc(0, 0, activeBuffer->getBuffer(), 0, vertexBufferSize);
@@ -525,9 +523,9 @@ void ProjectFinal::transferToDevice(Buffer* buffer, Buffer* stagingBuffer, Memor
 	this->transferPools[MAIN_THREAD].endSingleTimeCommand(cbuff);
 }
 
-void ProjectFinal::verticesToDevice(Buffer* buffer, const std::vector<Heightmap::Vertex>& verticies)
+void ProjectFinal::verticesToDevice(Buffer* buffer, const std::vector<HeightmapGen::Vertex>& verticies)
 {
-	transferToDevice(buffer, &this->buffers[BUFFER_VERT_STAGING], &this->memories[MEMORY_VERT_STAGING], vertices.data(), vertices.size() * sizeof(Heightmap::Vertex));
+	transferToDevice(buffer, &this->buffers[BUFFER_VERT_STAGING], &this->memories[MEMORY_VERT_STAGING], vertices.data(), vertices.size() * sizeof(HeightmapGen::Vertex));
 }
 
 void ProjectFinal::secRecordFrustum(uint32_t frameIndex, CommandBuffer* buffer, VkCommandBufferInheritanceInfo inheritanceInfo)

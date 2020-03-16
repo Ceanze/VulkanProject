@@ -165,6 +165,7 @@
     <ClInclude Include="src\Threading\ThreadDispatcher.h" />
     <ClInclude Include="src\Core\Skybox.h" />
     <ClInclude Include="src\Sandbox\ProjectFinal.h" />
+    <ClInclude Include="src\Core\Heightmap\HeightmapGen.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Core\CPUProfiler.cpp">
@@ -288,5 +289,6 @@
     <ClCompile Include="src\Threading\ThreadDispatcher.cpp" />
     <ClCompile Include="src\Core\Skybox.cpp" />
     <ClCompile Include="src\Sandbox\ProjectFinal.cpp" />
+    <ClCompile Include="src\Core\Heightmap\HeightmapGen.cpp" />
   </ItemGroup>
 </Project>
