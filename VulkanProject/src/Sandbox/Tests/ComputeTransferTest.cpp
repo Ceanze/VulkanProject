@@ -111,7 +111,7 @@ void ComputeTransferTest::init()
 	}
 
 	// -------- PROFILER -----------
-	VulkanProfiler::get().init(60, 60, VulkanProfiler::TimeUnit::MICRO);
+	VulkanProfiler::get().init(nullptr, 60, 60, VulkanProfiler::TimeUnit::MICRO);
 	VulkanProfiler::get().createTimestamps(9);
 	VulkanProfiler::get().addIndexedTimestamps("Compute test", 2, this->compCommandBuffer.data());
 	VulkanProfiler::get().addIndexedTimestamps("Render test", 6, this->cmdBuffs.data()->data());

@@ -4,6 +4,7 @@
 #include "jaspch.h"
 
 class CommandBuffer;
+class CommandPool;
 
 //typedef std::pair<uint64_t, uint64_t> Timestamp;
 
@@ -12,10 +13,11 @@ class VulkanProfiler
 public:
 	struct Timestamp
 	{
-		Timestamp() : start(0), end(0), buffer(nullptr) {};
+		Timestamp() : start(0), end(0), buffer(nullptr), average(0) {};
 		Timestamp(uint64_t start, uint64_t end, CommandBuffer* buffer) : start(start), end(end), buffer(buffer) {};
 		uint64_t start;
 		uint64_t end;
+		float average;
 		CommandBuffer* buffer;
 	};
 
@@ -31,8 +33,10 @@ public:
 	VulkanProfiler(VulkanProfiler& other) = delete;
 	~VulkanProfiler();
 
-	void init(uint32_t plotDataCount, float updateFreq, TimeUnit timeUnit);
+	void init(CommandPool* pool, uint32_t plotDataCount, float updateFreq, TimeUnit timeUnit);
 	void cleanup();
+
+	const std::unordered_map<std::string, std::vector<Timestamp>>& getResults();
 
 	// Render results using ImGui
 	void render(float dt);
@@ -45,6 +49,7 @@ public:
 	// Creates timestamp group of several timestamps, great when having multiple buffers
 	void addIndexedTimestamps(std::string name, uint32_t count);
 	void addIndexedTimestamps(std::string name, uint32_t count, CommandBuffer** buffers);
+	void setTimestampBuffer(std::string name, uint32_t index, CommandBuffer* buffer);
 
 	// Starts a measured timestamp, returns a timestamp object to keep track of the current timestamp
 	void startTimestamp(std::string name, CommandBuffer* commandBuffer, VkPipelineStageFlagBits pipelineStage);
@@ -59,7 +64,6 @@ public:
 	void endComputePipelineStat(CommandBuffer* commandBuffer);
 
 	// Should be called after a submit has been done to guarantee to retrive correct timestamps (function does sync). Function also resets all timestamps
-	void getTimestamps();
 	void getBufferTimestamps(CommandBuffer* buffer);
 	void getPipelineStats();
 	void getAllQueries();
@@ -75,6 +79,7 @@ public:
 private:
 	VulkanProfiler();
 	void saveResults(std::string filePath);
+	void setupTimers(CommandPool* pool);
 	std::string getTimeUnitName();
 
 	VkQueryPool timestampQueryPool;
@@ -88,9 +93,14 @@ private:
 	float updateFreq;
 	TimeUnit timeUnit;
 	std::unordered_map<std::string, std::vector<float>> plotResults;
-	std::unordered_map<std::string, Timestamp> results;
-	std::unordered_map<std::string, Timestamp> timestamps;
+	std::unordered_map<std::string, std::vector<Timestamp>> results;
+	std::unordered_map<std::string, std::vector<Timestamp>> timestamps;
 	std::unordered_map<std::string, float> averages;
+	std::unordered_map<std::string, float> maxTime;
+
+	uint64_t startTimeCPU;
+	uint64_t startTimeGPU;
+
 
 	std::vector<uint64_t> graphicsPipelineStat;
 	std::vector<uint64_t> computePipelineStat;

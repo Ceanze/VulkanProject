@@ -1,5 +1,7 @@
 #include "jaspch.h"
 #include "CPUProfiler.h"
+#include "Core/Input.h"
+#include "Vulkan/VulkanProfiler.h"
 
 // Code modifed from: https://github.com/TheCherno/Hazel
 
@@ -20,19 +22,18 @@ InstrumentationTimer::~InstrumentationTimer()
 void InstrumentationTimer::start()
 {
 	if (this->active)
-		this->startTime = std::chrono::high_resolution_clock::now();
+		this->startTime = std::chrono::time_point_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now()).time_since_epoch().count();
 }
 
 void InstrumentationTimer::stop()
 {
 	if (this->active)
 	{
-		this->endTime = std::chrono::high_resolution_clock::now();
-		long long start = std::chrono::time_point_cast<std::chrono::microseconds>(this->startTime).time_since_epoch().count();
-		long long end = std::chrono::time_point_cast<std::chrono::microseconds>(this->endTime).time_since_epoch().count();
+		long long start = this->startTime;
+		long long end = std::chrono::time_point_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now()).time_since_epoch().count();
 
 		size_t tid = std::hash<std::thread::id>{}(std::this_thread::get_id());
-		Instrumentation::get().write({ this->name, start, end, tid });
+		Instrumentation::get().write({ this->name, (uint64_t)start, (uint64_t)end, tid });
 	}
 }
 
@@ -66,6 +67,11 @@ void Instrumentation::beginSession(const std::string& name, const std::string& f
 
 void Instrumentation::write(ProfileData data)
 {
+	if (data.pid == 0) {
+		data.start -= this->startTime;
+		data.end -= this->startTime;
+	}
+
 	std::lock_guard<std::mutex> lock(this->mutex);
 	if (this->counter++ > 0) this->file << ",";
 
@@ -76,13 +82,47 @@ void Instrumentation::write(ProfileData data)
 	this->file << "\"name\": \"" << name << "\",";
 	this->file << "\"cat\": \"function\",";
 	this->file << "\"ph\": \"X\",";
-	this->file << "\"pid\": 0,";
+	this->file << "\"pid\": " << data.pid << ",";
 	this->file << "\"tid\": " << data.tid << ",";
 	this->file << "\"ts\": " << data.start << ",";
 	this->file << "\"dur\": " << (data.end - data.start);
 	this->file << "}";
 
 	this->file.flush();
+}
+
+void Instrumentation::setStartTime(uint64_t time)
+{
+	this->startTime = time;
+}
+
+void Instrumentation::toggleSample(int key, uint32_t frameCount)
+{
+	static uint32_t frameCounter = 0;
+	static bool keyWasPressed = false;
+	if (Input::get().isKeyDown(key))
+		keyWasPressed = true;
+	else if (keyWasPressed)
+	{
+		keyWasPressed = false;
+		frameCounter = 0;
+		Instrumentation::g_runProfilingSample = true;
+	}
+	if (Instrumentation::g_runProfilingSample)
+	{
+		frameCounter++;
+		if (frameCounter > frameCount)
+		{
+			Instrumentation::g_runProfilingSample = false;
+			auto& results = VulkanProfiler::get().getResults();
+
+			for (auto& res : results) {
+				for (uint32_t i = 0; i < res.second.size(); i++) {
+					write({ res.first + std::to_string(i), res.second[i].start, res.second[i].end, 0, 1 });
+				}
+			}
+		}
+	}
 }
 
 void Instrumentation::endSession()

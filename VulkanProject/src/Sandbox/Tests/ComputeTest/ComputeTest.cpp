@@ -37,7 +37,7 @@ void ComputeTest::init()
 
 	initFramebuffers(&this->renderPass, VK_NULL_HANDLE);
 
-	VulkanProfiler::get().init(60, 60, VulkanProfiler::TimeUnit::MILLI);
+	VulkanProfiler::get().init(nullptr, 60, 60, VulkanProfiler::TimeUnit::MILLI);
 	VulkanProfiler::get().createGraphicsPipelineStats();
 	VulkanProfiler::get().createComputePipelineStats();
 	VulkanProfiler::get().createTimestamps(4);
