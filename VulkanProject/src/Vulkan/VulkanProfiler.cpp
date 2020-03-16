@@ -287,9 +287,9 @@ void VulkanProfiler::getBufferTimestamps(CommandBuffer* buffer)
 			if (timestamp.second[i].buffer == buffer) {
 				VkResult res = vkGetQueryPoolResults(instance.getDevice(), this->timestampQueryPool, timestamp.second[i].start,
 					(uint32_t)timestampCount, (uint32_t)(poolResults.size() * sizeof(uint64_t)), poolResults.data(),
-					sizeof(uint64_t), VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT);
+					sizeof(uint64_t), VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT);
 
-				if (poolResults.back() > 0) {
+				if (res == VK_SUCCESS) {
 					this->results[timestamp.first][i].start = glm::bitfieldExtract<uint64_t>(poolResults[0], 0, timestampValidBits);
 					this->results[timestamp.first][i].end = glm::bitfieldExtract<uint64_t>(poolResults[1], 0, timestampValidBits);
 
