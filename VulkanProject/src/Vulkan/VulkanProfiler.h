@@ -13,8 +13,9 @@ class VulkanProfiler
 public:
 	struct Timestamp
 	{
-		Timestamp() : start(0), end(0), buffer(nullptr), average(0) {};
+		Timestamp() : start(0), end(0), buffer(nullptr), average(0), id(0) {};
 		Timestamp(uint64_t start, uint64_t end, CommandBuffer* buffer) : start(start), end(end), buffer(buffer) {};
+		uint16_t id;
 		uint64_t start;
 		uint64_t end;
 		float average;
@@ -100,7 +101,7 @@ private:
 
 	uint64_t startTimeCPU;
 	uint64_t startTimeGPU;
-
+	std::unordered_map<std::string, std::vector<Timestamp>> timeResults;
 
 	std::vector<uint64_t> graphicsPipelineStat;
 	std::vector<uint64_t> computePipelineStat;

@@ -50,7 +50,7 @@ void VulkanProfiler::cleanup()
 
 const std::unordered_map<std::string, std::vector<VulkanProfiler::Timestamp>>& VulkanProfiler::getResults()
 {
-	return this->results;
+	return this->timeResults;
 }
 
 void VulkanProfiler::render(float dt)
@@ -275,7 +275,7 @@ void VulkanProfiler::endGraphicsPipelineStat(CommandBuffer* commandBuffer)
 void VulkanProfiler::getBufferTimestamps(CommandBuffer* buffer)
 {
 	Instance& instance = Instance::get();
-	float timestampPeriod = instance.getPhysicalDeviceProperties().limits.timestampPeriod;
+	double timestampPeriod = instance.getPhysicalDeviceProperties().limits.timestampPeriod;
 	uint32_t timestampValidBits = instance.getQueueProperties(instance.getGraphicsQueue().queueIndex).timestampValidBits;
 
 	// Get the timestamps that we will get
@@ -289,12 +289,18 @@ void VulkanProfiler::getBufferTimestamps(CommandBuffer* buffer)
 					(uint32_t)timestampCount, (uint32_t)(poolResults.size() * sizeof(uint64_t)), poolResults.data(),
 					sizeof(uint64_t), VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT);
 
-				if (res == VK_SUCCESS) {
+				if (poolResults.back() > 0) {
 					this->results[timestamp.first][i].start = glm::bitfieldExtract<uint64_t>(poolResults[0], 0, timestampValidBits);
 					this->results[timestamp.first][i].end = glm::bitfieldExtract<uint64_t>(poolResults[1], 0, timestampValidBits);
 
-					this->results[timestamp.first][i].start = (((this->results[timestamp.first][i].start - this->startTimeGPU) * timestampPeriod) / (uint32_t)this->timeUnit);
-					this->results[timestamp.first][i].end = (((this->results[timestamp.first][i].end - this->startTimeGPU) * timestampPeriod) / (uint32_t)this->timeUnit);
+					this->results[timestamp.first][i].start = (((this->results[timestamp.first][i].start - this->startTimeGPU) * timestampPeriod) / (uint64_t)this->timeUnit);
+					this->results[timestamp.first][i].end = (((this->results[timestamp.first][i].end - this->startTimeGPU) * timestampPeriod) / (uint64_t)this->timeUnit);
+					this->results[timestamp.first][i].id = i;
+
+					if (this->timeResults[timestamp.first].size() == this->plotDataCount) {
+						this->timeResults[timestamp.first].erase(this->timeResults[timestamp.first].begin());
+					}
+					this->timeResults[timestamp.first].push_back(this->results[timestamp.first][i]);
 
 					//auto it = this->startTimes.find(timestamp.first);
 					//if (it == this->startTimes.end()) {

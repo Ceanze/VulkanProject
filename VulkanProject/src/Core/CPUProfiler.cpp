@@ -78,7 +78,7 @@ void Instrumentation::write(ProfileData data)
 	std::string name = data.name;
 	std::replace(name.begin(), name.end(), '"', '\'');
 
-	this->file << "{";
+	this->file << "\n{";
 	this->file << "\"name\": \"" << name << "\",";
 	this->file << "\"cat\": \"function\",";
 	this->file << "\"ph\": \"X\",";
@@ -118,7 +118,7 @@ void Instrumentation::toggleSample(int key, uint32_t frameCount)
 
 			for (auto& res : results) {
 				for (uint32_t i = 0; i < res.second.size(); i++) {
-					write({ res.first + std::to_string(i), res.second[i].start, res.second[i].end, 0, 1 });
+					write({ res.first + std::to_string(res.second[i].id), res.second[i].start, res.second[i].end, 0, 1 });
 				}
 			}
 		}

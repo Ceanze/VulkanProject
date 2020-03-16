@@ -44,15 +44,24 @@ void ProjectFinal::init()
 
 void ProjectFinal::loop(float dt)
 {
-	JAS_PROFILER_TOGGLE_SAMPLE(GLFW_KEY_R, 10);
+	JAS_PROFILER_SAMPLE_FUNCTION();
 
 	// Update view matrix
-	this->camera->update(dt);
+	{
+		JAS_PROFILER_SAMPLE_SCOPE("Update skybox & camera");
+		this->camera->update(dt);
 
-	this->skybox.update(this->camera);
+		this->skybox.update(this->camera);
+	}
 
-	this->memories[MEMORY_HOST_VISIBLE].directTransfer(&this->buffers[BUFFER_CAMERA], (void*)&this->camera->getMatrix()[0], this->buffers[BUFFER_CAMERA].getSize(), 0);
-	this->memories[MEMORY_HOST_VISIBLE].directTransfer(&this->buffers[BUFFER_PLANES], (void*)this->camera->getPlanes().data(), this->buffers[BUFFER_PLANES].getSize(), 0);
+	{
+		JAS_PROFILER_SAMPLE_SCOPE("Camera transfer");
+		this->memories[MEMORY_HOST_VISIBLE].directTransfer(&this->buffers[BUFFER_CAMERA], (void*)&this->camera->getMatrix()[0], this->buffers[BUFFER_CAMERA].getSize(), 0);
+	}
+	{
+		JAS_PROFILER_SAMPLE_SCOPE("Planes transfer");
+		this->memories[MEMORY_HOST_VISIBLE].directTransfer(&this->buffers[BUFFER_PLANES], (void*)this->camera->getPlanes().data(), this->buffers[BUFFER_PLANES].getSize(), 0);
+	}
 	
 	// Transfer vertex data when proximity changes
 	transferVertexData();
@@ -63,6 +72,8 @@ void ProjectFinal::loop(float dt)
 	getFrame()->submitCompute(Instance::get().getComputeQueue().queue, this->computePrimary[getFrame()->getCurrentImageIndex()]);
 	getFrame()->submit(Instance::get().getGraphicsQueue().queue, this->graphicsPrimary.data());
 	getFrame()->endFrame();
+
+	JAS_PROFILER_TOGGLE_SAMPLE(GLFW_KEY_R, 10);
 }
 
 void ProjectFinal::cleanup()
@@ -475,6 +486,7 @@ void ProjectFinal::transferInitalData()
 
 void ProjectFinal::transferVertexData()
 {
+	JAS_PROFILER_SAMPLE_SCOPE("Transfer vertex data check");
 	glm::vec3 camPos = this->camera->getPosition();
 	glm::ivec2 currRegion = this->heightmap.getRegionFromPos(camPos);
 	glm::ivec2 diff = this->lastRegionIndex - currRegion;
@@ -625,7 +637,7 @@ void ProjectFinal::record(uint32_t frameIndex)
 	// Graphics
 	std::vector<VkCommandBuffer> vkCommands;
 	{
-		JAS_PROFILER_SAMPLE_SCOPE("Record primary graphics");
+		JAS_PROFILER_SAMPLE_SCOPE("Record primary graphics " + std::to_string(frameIndex));
 		buffer = this->graphicsPrimary[frameIndex];
 		buffer->begin(0, nullptr);
 		VulkanProfiler::get().resetBufferTimestamps(buffer);
@@ -659,7 +671,7 @@ void ProjectFinal::record(uint32_t frameIndex)
 
 	// Compute
 	{
-		JAS_PROFILER_SAMPLE_SCOPE("Record primary compute");
+		JAS_PROFILER_SAMPLE_SCOPE("Record primary compute " + std::to_string(frameIndex));
 		buffer = this->computePrimary[frameIndex];
 		buffer->begin(0, nullptr);
 

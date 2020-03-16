@@ -7,6 +7,7 @@
 #include "VKImgui.h"
 #include "Core/Window.h"
 #include "VulkanProfiler.h"
+#include "Core/CPUProfiler.h"
 
 Frame::Frame()
 	: window(nullptr), imgui(nullptr), swapChain(nullptr), numImages(0), framesInFlight(0),
@@ -42,7 +43,7 @@ void Frame::cleanup()
 
 void Frame::submit(VkQueue queue, CommandBuffer** commandBuffers)
 {
-
+	JAS_PROFILER_SAMPLE_FUNCTION();
 	this->imgui->end();
 	this->imgui->render();
 
@@ -77,6 +78,7 @@ void Frame::submit(VkQueue queue, CommandBuffer** commandBuffers)
 
 void Frame::submitCompute(VkQueue queue, CommandBuffer* commandBuffer)
 {
+	JAS_PROFILER_SAMPLE_FUNCTION();
 	VkSubmitInfo computeSubmitInfo = { };
 	std::array<VkCommandBuffer, 1> buff = { commandBuffer->getCommandBuffer() };
 	computeSubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -93,6 +95,7 @@ void Frame::submitCompute(VkQueue queue, CommandBuffer* commandBuffer)
 
 bool Frame::beginFrame(float dt)
 {
+	JAS_PROFILER_SAMPLE_FUNCTION();
 	this->dt = dt;
 
 	vkWaitForFences(Instance::get().getDevice(), 1, &this->inFlightFences[this->currentFrame], VK_TRUE, UINT64_MAX);
@@ -124,6 +127,7 @@ bool Frame::beginFrame(float dt)
 
 bool Frame::endFrame()
 {
+	JAS_PROFILER_SAMPLE_FUNCTION();
 	VkSemaphore waitSemaphores[] = { this->renderFinishedSemaphores[this->currentFrame] };
 
 	VkPresentInfoKHR presentInfo = {};
