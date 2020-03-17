@@ -452,14 +452,13 @@ void VulkanProfiler::setupTimers(CommandPool* pool)
 
 	vkQueueSubmit(Instance::get().getGraphicsQueue().queue, 1, &sInfo, fence);
 
-	vkWaitForFences(Instance::get().getDevice(), 1, &fence, VK_TRUE, UINT64_MAX);
-
 	// Set starttime
 	ERROR_CHECK(vkGetQueryPoolResults(Instance::get().getDevice(), qPool, 0,
 		1u, sizeof(uint64_t), &this->startTimeGPU, sizeof(uint64_t), VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT), "Failed to get first timestamp!");
 	this->startTimeCPU = std::chrono::time_point_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now()).time_since_epoch().count();
 
 	// Cleanup
+	vkWaitForFences(Instance::get().getDevice(), 1, &fence, VK_TRUE, UINT64_MAX);
 	vkDestroyQueryPool(Instance::get().getDevice(), qPool, nullptr);
 	vkDestroyFence(Instance::get().getDevice(), fence, nullptr);
 	pool->removeCommandBuffer(buffer);
