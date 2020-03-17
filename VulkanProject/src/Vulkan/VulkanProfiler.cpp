@@ -210,6 +210,7 @@ void VulkanProfiler::addIndexedTimestamps(std::string name, uint32_t count)
 		size_t index = this->freeIndex;
 		this->timestamps[name].push_back(Timestamp(index, index + 1, nullptr));
 		this->freeIndex += 2;
+		this->timestamps[name][i].id = i;
 
 		this->plotResults[name].resize(this->plotDataCount);
 	}
@@ -471,18 +472,19 @@ void VulkanProfiler::setupTimers(CommandPool* pool)
 	vkQueueSubmit(Instance::get().getGraphicsQueue().queue, 1, &sInfo, fence);
 
 	// Ensure that command buffer is at the wait event so that the timestamp will execute right after it to sync with host
-	std::this_thread::sleep_for(std::chrono::seconds(1));
+	//std::this_thread::sleep_for(std::chrono::seconds(1));
 
 	ERROR_CHECK(vkSetEvent(Instance::get().getDevice(), e), "Failed to set event for profiler!");
-	this->startTimeCPU = std::chrono::time_point_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now()).time_since_epoch().count();
-
-	ERROR_CHECK(vkGetQueryPoolResults(Instance::get().getDevice(), qPool, 0,
-		1u, sizeof(uint64_t), &this->startTimeGPU, sizeof(uint64_t), VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT), "Failed to get first timestamp!");
 
 	// Fence might be needed to ensure that the result has been written
 
 	// Cleanup
 	vkWaitForFences(Instance::get().getDevice(), 1, &fence, VK_TRUE, UINT64_MAX);
+
+	this->startTimeCPU = std::chrono::time_point_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now()).time_since_epoch().count();
+	ERROR_CHECK(vkGetQueryPoolResults(Instance::get().getDevice(), qPool, 0,
+		1u, sizeof(uint64_t), &this->startTimeGPU, sizeof(uint64_t), VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT), "Failed to get first timestamp!");
+
 	vkDestroyQueryPool(Instance::get().getDevice(), qPool, nullptr);
 	vkDestroyEvent(Instance::get().getDevice(), e, nullptr);
 	vkDestroyFence(Instance::get().getDevice(), fence, nullptr);
