@@ -51,6 +51,9 @@
     <ClInclude Include="src\Core\Logger.h">
       <Filter>Core</Filter>
     </ClInclude>
+    <ClInclude Include="src\Core\Skybox.h">
+      <Filter>Core</Filter>
+    </ClInclude>
     <ClInclude Include="src\Core\Window.h">
       <Filter>Core</Filter>
     </ClInclude>
@@ -60,16 +63,34 @@
     <ClInclude Include="src\Models\Model\Model.h">
       <Filter>Models\Model</Filter>
     </ClInclude>
+    <ClInclude Include="src\Models\ModelRenderer.h">
+      <Filter>Models</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Sandbox\ProjectFinal.h">
+      <Filter>Sandbox</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Sandbox\ProjectFinalNaive.h">
+      <Filter>Sandbox</Filter>
+    </ClInclude>
     <ClInclude Include="src\Sandbox\SandboxManager.h">
       <Filter>Sandbox</Filter>
     </ClInclude>
     <ClInclude Include="src\Sandbox\Tests\ComputeTest\ComputeTest.h">
       <Filter>Sandbox\Tests\ComputeTest</Filter>
     </ClInclude>
+    <ClInclude Include="src\Sandbox\Tests\ComputeTransferTest.h">
+      <Filter>Sandbox\Tests</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Sandbox\Tests\CubemapTest.h">
+      <Filter>Sandbox\Tests</Filter>
+    </ClInclude>
     <ClInclude Include="src\Sandbox\Tests\GLTFTest.h">
       <Filter>Sandbox\Tests</Filter>
     </ClInclude>
     <ClInclude Include="src\Sandbox\Tests\HeightmapTest.h">
+      <Filter>Sandbox\Tests</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Sandbox\Tests\NoThreadingTest.h">
       <Filter>Sandbox\Tests</Filter>
     </ClInclude>
     <ClInclude Include="src\Sandbox\Tests\RenderTest.h">
@@ -80,6 +101,9 @@
     </ClInclude>
     <ClInclude Include="src\Sandbox\VKSandboxBase.h">
       <Filter>Sandbox</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Threading\ThreadDispatcher.h">
+      <Filter>Threading</Filter>
     </ClInclude>
     <ClInclude Include="src\Threading\ThreadManager.h">
       <Filter>Threading</Filter>
@@ -157,15 +181,6 @@
       <Filter>Vulkan</Filter>
     </ClInclude>
     <ClInclude Include="src\jaspch.h" />
-    <ClInclude Include="src\Core\CPUProfiler.h" />
-    <ClInclude Include="src\Sandbox\Tests\NoThreadingTest.h" />
-    <ClInclude Include="src\Sandbox\Tests\CubemapTest.h" />
-    <ClInclude Include="src\Models\ModelRenderer.h" />
-    <ClInclude Include="src\Sandbox\Tests\ComputeTransferTest.h" />
-    <ClInclude Include="src\Threading\ThreadDispatcher.h" />
-    <ClInclude Include="src\Core\Skybox.h" />
-    <ClInclude Include="src\Sandbox\ProjectFinal.h" />
-    <ClInclude Include="src\Sandbox\ProjectFinalNaive.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Core\CPUProfiler.cpp">
@@ -183,6 +198,9 @@
     <ClCompile Include="src\Core\Logger.cpp">
       <Filter>Core</Filter>
     </ClCompile>
+    <ClCompile Include="src\Core\Skybox.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
     <ClCompile Include="src\Core\Window.cpp">
       <Filter>Core</Filter>
     </ClCompile>
@@ -192,16 +210,34 @@
     <ClCompile Include="src\Models\Model\Model.cpp">
       <Filter>Models\Model</Filter>
     </ClCompile>
+    <ClCompile Include="src\Models\ModelRenderer.cpp">
+      <Filter>Models</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Sandbox\ProjectFinal.cpp">
+      <Filter>Sandbox</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Sandbox\ProjectFinalNaive.cpp">
+      <Filter>Sandbox</Filter>
+    </ClCompile>
     <ClCompile Include="src\Sandbox\SandboxManager.cpp">
       <Filter>Sandbox</Filter>
     </ClCompile>
     <ClCompile Include="src\Sandbox\Tests\ComputeTest\ComputeTest.cpp">
       <Filter>Sandbox\Tests\ComputeTest</Filter>
     </ClCompile>
+    <ClCompile Include="src\Sandbox\Tests\ComputeTransferTest.cpp">
+      <Filter>Sandbox\Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Sandbox\Tests\CubemapTest.cpp">
+      <Filter>Sandbox\Tests</Filter>
+    </ClCompile>
     <ClCompile Include="src\Sandbox\Tests\GLTFTest.cpp">
       <Filter>Sandbox\Tests</Filter>
     </ClCompile>
     <ClCompile Include="src\Sandbox\Tests\HeightmapTest.cpp">
+      <Filter>Sandbox\Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Sandbox\Tests\NoThreadingTest.cpp">
       <Filter>Sandbox\Tests</Filter>
     </ClCompile>
     <ClCompile Include="src\Sandbox\Tests\RenderTest.cpp">
@@ -212,6 +248,9 @@
     </ClCompile>
     <ClCompile Include="src\Sandbox\VKSandboxBase.cpp">
       <Filter>Sandbox</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Threading\ThreadDispatcher.cpp">
+      <Filter>Threading</Filter>
     </ClCompile>
     <ClCompile Include="src\Threading\ThreadManager.cpp">
       <Filter>Threading</Filter>
@@ -281,14 +320,5 @@
     </ClCompile>
     <ClCompile Include="src\jaspch.cpp" />
     <ClCompile Include="src\main.cpp" />
-    <ClCompile Include="src\Core\CPUProfiler.cpp" />
-    <ClCompile Include="src\Sandbox\Tests\CubemapTest.cpp" />
-    <ClCompile Include="src\Models\ModelRenderer.cpp" />
-    <ClCompile Include="src\Sandbox\Tests\NoThreadingTest.cpp" />
-    <ClCompile Include="src\Sandbox\Tests\ComputeTransferTest.cpp" />
-    <ClCompile Include="src\Threading\ThreadDispatcher.cpp" />
-    <ClCompile Include="src\Core\Skybox.cpp" />
-    <ClCompile Include="src\Sandbox\ProjectFinal.cpp" />
-    <ClCompile Include="src\Sandbox\ProjectFinalNaive.cpp" />
   </ItemGroup>
 </Project>

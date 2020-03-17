@@ -604,7 +604,12 @@ void ProjectFinal::secRecordHeightmap(uint32_t frameIndex, CommandBuffer* buffer
 void ProjectFinal::record(uint32_t frameIndex)
 {
 	JAS_PROFILER_SAMPLE_FUNCTION();
-
+	{
+		CommandBuffer* buffer = this->graphicsPrimary[frameIndex];
+		VulkanProfiler::get().getBufferTimestamps(buffer);
+		buffer = this->computePrimary[frameIndex];
+		VulkanProfiler::get().getBufferTimestamps(buffer);
+	}
 	uint32_t threadIndex = 0;
 	uint32_t secondaryBuffer = 0;
 	auto nextThread = [&threadIndex]() -> uint32_t {
@@ -641,8 +646,9 @@ void ProjectFinal::record(uint32_t frameIndex)
 	{
 		JAS_PROFILER_SAMPLE_SCOPE("Record primary graphics " + std::to_string(frameIndex));
 		buffer = this->graphicsPrimary[frameIndex];
+
 		buffer->begin(0, nullptr);
-		//VulkanProfiler::get().resetBufferTimestamps(buffer);
+		VulkanProfiler::get().resetBufferTimestamps(buffer);
 		VulkanProfiler::get().startIndexedTimestamp("Graphics", buffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, frameIndex);
 
 		buffer->acquireBuffer(&this->buffers[BUFFER_INDIRECT_DRAW], VK_ACCESS_INDIRECT_COMMAND_READ_BIT,
@@ -675,10 +681,11 @@ void ProjectFinal::record(uint32_t frameIndex)
 	{
 		JAS_PROFILER_SAMPLE_SCOPE("Record primary compute " + std::to_string(frameIndex));
 		buffer = this->computePrimary[frameIndex];
-		buffer->begin(0, nullptr);
 
-		//VulkanProfiler::get().resetBufferTimestamps(buffer);
-		VulkanProfiler::get().resetAllTimestamps(buffer);
+		//VulkanProfiler::get().getBufferTimestamps(buffer);
+		buffer->begin(0, nullptr);
+		VulkanProfiler::get().resetBufferTimestamps(buffer);
+		//VulkanProfiler::get().resetAllTimestamps(buffer);
 		VulkanProfiler::get().startIndexedTimestamp("Compute", buffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, frameIndex);
 
 		buffer->acquireBuffer(&this->buffers[BUFFER_INDIRECT_DRAW], VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,

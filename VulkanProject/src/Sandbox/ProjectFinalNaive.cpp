@@ -2,10 +2,13 @@
 #include "ProjectFinalNaive.h"
 
 #include <stb/stb_image.h>
+#include <GLFW/glfw3.h>
 
 #include "Core/Camera.h"
 #include "Threading/ThreadDispatcher.h"
 #include "Threading/ThreadManager.h"
+#include "Vulkan/VulkanProfiler.h"
+#include "Core/CPUProfiler.h"
 
 #define MAIN_THREAD 0
 
@@ -26,11 +29,20 @@ void ProjectFinalNaive::init()
 	setupDescManagers();
 	setupCommandBuffers();
 
+	VulkanProfiler::get().init(&this->graphicsPools[MAIN_THREAD], 10, 60, VulkanProfiler::TimeUnit::MICRO);
+	VulkanProfiler::get().createTimestamps(6 + (FUNC_COUNT_COMPUTE + FUNC_COUNT_GRAPHICS) * 3);
+	VulkanProfiler::get().addIndexedTimestamps("Graphics", 3, this->graphicsPrimary.data());
+	VulkanProfiler::get().addIndexedTimestamps("Skybox", 3, this->graphicsPrimary.data());
+	VulkanProfiler::get().addIndexedTimestamps("Heightmap", 3, this->graphicsPrimary.data());
+	VulkanProfiler::get().addIndexedTimestamps("Frustum", 3, this->graphicsPrimary.data());
+
 	transferInitalData();
 }
 
 void ProjectFinalNaive::loop(float dt)
 {
+	JAS_PROFILER_SAMPLE_FUNCTION();
+	JAS_PROFILER_TOGGLE_SAMPLE(GLFW_KEY_R, 10);
 	// Update view matrix
 	this->camera->update(dt);
 
@@ -537,36 +549,47 @@ void ProjectFinalNaive::verticesToDevice(Buffer* buffer, const std::vector<Heigh
 
 void ProjectFinalNaive::secRecordFrustum(uint32_t frameIndex, CommandBuffer* buffer, VkCommandBufferInheritanceInfo inheritanceInfo)
 {
+	JAS_PROFILER_SAMPLE_FUNCTION();
 	buffer->begin(0, &inheritanceInfo);
+	VulkanProfiler::get().startIndexedTimestamp("Frustum", buffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, frameIndex);
 	buffer->cmdBindPipeline(&getPipeline(PIPELINE_FRUSTUM));
 	std::vector<VkDescriptorSet> sets = { this->descManagers[PIPELINE_FRUSTUM].getSet(frameIndex, 0) };
 	std::vector<uint32_t> offsets;
 	buffer->cmdBindDescriptorSets(&getPipeline(PIPELINE_FRUSTUM), 0, sets, offsets);
 	buffer->cmdDispatch((uint32_t)ceilf((float)this->regionCount / 16), 1, 1);
+	VulkanProfiler::get().endIndexedTimestamp("Frustum", buffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, frameIndex);
+
 	buffer->end();
 }
 
 void ProjectFinalNaive::secRecordSkybox(uint32_t frameIndex, CommandBuffer* buffer, VkCommandBufferInheritanceInfo inheritanceInfo)
 {
+	JAS_PROFILER_SAMPLE_FUNCTION();
 	buffer->begin(VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, &inheritanceInfo);
+	VulkanProfiler::get().startIndexedTimestamp("Skybox", buffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, frameIndex);
 	this->skybox.draw(buffer, frameIndex);
+	VulkanProfiler::get().endIndexedTimestamp("Skybox", buffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, frameIndex);
 	buffer->end();
 }
 
 void ProjectFinalNaive::secRecordHeightmap(uint32_t frameIndex, CommandBuffer* buffer, VkCommandBufferInheritanceInfo inheritanceInfo)
 {
+	JAS_PROFILER_SAMPLE_FUNCTION();
 	buffer->begin(VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, &inheritanceInfo);
+	VulkanProfiler::get().startIndexedTimestamp("Heightmap", buffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, frameIndex);
 	buffer->cmdBindPipeline(&getPipeline(PIPELINE_GRAPHICS));
 	std::vector<VkDescriptorSet> sets = { this->descManagers[PIPELINE_GRAPHICS].getSet(frameIndex, 0) };
 	std::vector<uint32_t> offsets;
 	buffer->cmdBindDescriptorSets(&getPipeline(PIPELINE_GRAPHICS), 0, sets, offsets);
 	buffer->cmdBindIndexBuffer(this->buffers[BUFFER_INDEX].getBuffer(), 0, VK_INDEX_TYPE_UINT32);
 	buffer->cmdDrawIndexedIndirect(this->buffers[BUFFER_INDIRECT_DRAW].getBuffer(), 0, this->regionCount, sizeof(VkDrawIndexedIndirectCommand));
+	VulkanProfiler::get().endIndexedTimestamp("Heightmap", buffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, frameIndex);
 	buffer->end();
 }
 
 void ProjectFinalNaive::record(uint32_t frameIndex)
 {
+	JAS_PROFILER_SAMPLE_FUNCTION();
 	uint32_t threadIndex = 0;
 	uint32_t secondaryBuffer = 0;
 	auto nextThread = [&threadIndex]() -> uint32_t {
@@ -601,6 +624,8 @@ void ProjectFinalNaive::record(uint32_t frameIndex)
 	// Graphics
 	buffer = this->graphicsPrimary[frameIndex];
 	buffer->begin(0, nullptr);
+	VulkanProfiler::get().resetAllTimestamps(buffer);
+	VulkanProfiler::get().startIndexedTimestamp("Graphics", buffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, frameIndex);
 
 	//buffer->acquireBuffer(&this->buffers[BUFFER_INDIRECT_DRAW], VK_ACCESS_INDIRECT_COMMAND_READ_BIT,
 	//	Instance::get().getComputeQueue().queueIndex, Instance::get().getGraphicsQueue().queueIndex,
@@ -633,7 +658,9 @@ void ProjectFinalNaive::record(uint32_t frameIndex)
 		vkCommands.push_back(this->graphicsSecondary[frameIndex][i]->getCommandBuffer());
 	
 	buffer->cmdExecuteCommands(vkCommands.size(), vkCommands.data());
+
 	buffer->cmdEndRenderPass();
+	VulkanProfiler::get().endIndexedTimestamp("Graphics", buffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, frameIndex);
 
 	//buffer->releaseBuffer(&this->buffers[BUFFER_INDIRECT_DRAW], VK_ACCESS_INDIRECT_COMMAND_READ_BIT,
 	//	Instance::get().getGraphicsQueue().queueIndex, Instance::get().getComputeQueue().queueIndex,

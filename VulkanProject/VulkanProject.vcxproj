@@ -102,16 +102,16 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="src\Core\Skybox.h" />
     <ClInclude Include="src\Core\CPUProfiler.h" />
     <ClInclude Include="src\Core\Camera.h" />
     <ClInclude Include="src\Core\Heightmap\Heightmap.h" />
     <ClInclude Include="src\Core\Input.h" />
     <ClInclude Include="src\Core\Logger.h" />
+    <ClInclude Include="src\Core\Skybox.h" />
     <ClInclude Include="src\Core\Window.h" />
     <ClInclude Include="src\Models\GLTFLoader.h" />
-    <ClInclude Include="src\Models\ModelRenderer.h" />
     <ClInclude Include="src\Models\Model\Model.h" />
+    <ClInclude Include="src\Models\ModelRenderer.h" />
     <ClInclude Include="src\Sandbox\ProjectFinal.h" />
     <ClInclude Include="src\Sandbox\ProjectFinalNaive.h" />
     <ClInclude Include="src\Sandbox\SandboxManager.h" />
@@ -119,8 +119,8 @@
     <ClInclude Include="src\Sandbox\Tests\ComputeTransferTest.h" />
     <ClInclude Include="src\Sandbox\Tests\CubemapTest.h" />
     <ClInclude Include="src\Sandbox\Tests\GLTFTest.h" />
-    <ClInclude Include="src\Sandbox\Tests\NoThreadingTest.h" />
     <ClInclude Include="src\Sandbox\Tests\HeightmapTest.h" />
+    <ClInclude Include="src\Sandbox\Tests\NoThreadingTest.h" />
     <ClInclude Include="src\Sandbox\Tests\RenderTest.h" />
     <ClInclude Include="src\Sandbox\Tests\TransferTest.h" />
     <ClInclude Include="src\Sandbox\VKSandboxBase.h" />
@@ -153,16 +153,16 @@
     <ClInclude Include="src\jaspch.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\Core\Skybox.cpp" />
     <ClCompile Include="src\Core\CPUProfiler.cpp" />
     <ClCompile Include="src\Core\Camera.cpp" />
     <ClCompile Include="src\Core\Heightmap\Heightmap.cpp" />
     <ClCompile Include="src\Core\Input.cpp" />
     <ClCompile Include="src\Core\Logger.cpp" />
+    <ClCompile Include="src\Core\Skybox.cpp" />
     <ClCompile Include="src\Core\Window.cpp" />
     <ClCompile Include="src\Models\GLTFLoader.cpp" />
-    <ClCompile Include="src\Models\ModelRenderer.cpp" />
     <ClCompile Include="src\Models\Model\Model.cpp" />
+    <ClCompile Include="src\Models\ModelRenderer.cpp" />
     <ClCompile Include="src\Sandbox\ProjectFinal.cpp" />
     <ClCompile Include="src\Sandbox\ProjectFinalNaive.cpp" />
     <ClCompile Include="src\Sandbox\SandboxManager.cpp" />
