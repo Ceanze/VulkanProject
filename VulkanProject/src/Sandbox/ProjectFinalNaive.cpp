@@ -41,8 +41,8 @@ void ProjectFinalNaive::init()
 
 void ProjectFinalNaive::loop(float dt)
 {
-	JAS_PROFILER_SAMPLE_FUNCTION();
 	JAS_PROFILER_TOGGLE_SAMPLE(GLFW_KEY_R, 10);
+	JAS_PROFILER_SAMPLE_FUNCTION();
 	// Update view matrix
 	this->camera->update(dt);
 
@@ -589,7 +589,12 @@ void ProjectFinalNaive::secRecordHeightmap(uint32_t frameIndex, CommandBuffer* b
 
 void ProjectFinalNaive::record(uint32_t frameIndex)
 {
-	JAS_PROFILER_SAMPLE_FUNCTION();
+	JAS_PROFILER_SAMPLE_SCOPE("Record " + std::to_string(frameIndex));
+	{
+		CommandBuffer* buffer = this->graphicsPrimary[frameIndex];
+		VulkanProfiler::get().getBufferTimestamps(buffer);
+	}
+
 	uint32_t threadIndex = 0;
 	uint32_t secondaryBuffer = 0;
 	auto nextThread = [&threadIndex]() -> uint32_t {
@@ -624,7 +629,7 @@ void ProjectFinalNaive::record(uint32_t frameIndex)
 	// Graphics
 	buffer = this->graphicsPrimary[frameIndex];
 	buffer->begin(0, nullptr);
-	VulkanProfiler::get().resetAllTimestamps(buffer);
+	VulkanProfiler::get().resetBufferTimestamps(buffer);
 	VulkanProfiler::get().startIndexedTimestamp("Graphics", buffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, frameIndex);
 
 	//buffer->acquireBuffer(&this->buffers[BUFFER_INDIRECT_DRAW], VK_ACCESS_INDIRECT_COMMAND_READ_BIT,

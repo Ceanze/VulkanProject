@@ -127,7 +127,7 @@ bool Frame::beginFrame(float dt)
 
 bool Frame::endFrame()
 {
-	JAS_PROFILER_SAMPLE_FUNCTION();
+	JAS_PROFILER_SAMPLE_SCOPE("endFrame " + std::to_string(this->imageIndex));
 	VkSemaphore waitSemaphores[] = { this->renderFinishedSemaphores[this->currentFrame] };
 
 	VkPresentInfoKHR presentInfo = {};
