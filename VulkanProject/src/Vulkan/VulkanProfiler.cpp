@@ -61,8 +61,6 @@ void VulkanProfiler::render(float dt)
 
 	ImGui::Begin("Profiling data");
 
-	// ((r.second[i].end - r.second[i].start) * timestampPeriod) / (uint32_t)this->timeUnit
-
 	// Render timestamp results
 	if (this->timestampCount != 0 && ImGui::CollapsingHeader("Timestamps"))
 	{
@@ -302,15 +300,6 @@ void VulkanProfiler::getBufferTimestamps(CommandBuffer* buffer)
 						this->timeResults[timestamp.first].erase(this->timeResults[timestamp.first].begin());
 					}
 					this->timeResults[timestamp.first].push_back(this->results[timestamp.first][i]);
-
-					//auto it = this->startTimes.find(timestamp.first);
-					//if (it == this->startTimes.end()) {
-					//	this->startTimes[timestamp.first].resize(timestamp.second.size());
-					//}
-
-					//if (this->startTimes[timestamp.first][i] == 0) {
-					//	this->startTimes[timestamp.first][i] = this->results[timestamp.first][i].start;
-					//}
 				}
 			}
 		}
@@ -449,17 +438,9 @@ void VulkanProfiler::setupTimers(CommandPool* pool)
 	createInfo.pipelineStatistics = 0;
 	ERROR_CHECK(vkCreateQueryPool(Instance::get().getDevice(), &createInfo, nullptr, &qPool), "Failed to create query pool!");
 
-	// Create event to signal
-	VkEventCreateInfo info = {};
-	info.sType = VK_STRUCTURE_TYPE_EVENT_CREATE_INFO;
-	VkEvent e;
-	ERROR_CHECK(vkCreateEvent(Instance::get().getDevice(), &info, nullptr, &e), "Failed to create event for vulkan profiler!");
-
 	// Create single time command buffer
 	CommandBuffer* buffer = pool->beginSingleTimeCommand();
 	buffer->cmdResetQueryPool(qPool, 0, 1);
-	vkCmdWaitEvents(buffer->getCommandBuffer(), 1, &e, VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_HOST_BIT | VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-		0, nullptr, 0, nullptr, 0, nullptr);
 	buffer->cmdWriteTimestamp(VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, qPool, 0);
 	buffer->end();
 	
@@ -471,22 +452,15 @@ void VulkanProfiler::setupTimers(CommandPool* pool)
 
 	vkQueueSubmit(Instance::get().getGraphicsQueue().queue, 1, &sInfo, fence);
 
-	// Ensure that command buffer is at the wait event so that the timestamp will execute right after it to sync with host
-	//std::this_thread::sleep_for(std::chrono::seconds(1));
-
-	ERROR_CHECK(vkSetEvent(Instance::get().getDevice(), e), "Failed to set event for profiler!");
-
-	// Fence might be needed to ensure that the result has been written
-
-	// Cleanup
 	vkWaitForFences(Instance::get().getDevice(), 1, &fence, VK_TRUE, UINT64_MAX);
 
-	this->startTimeCPU = std::chrono::time_point_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now()).time_since_epoch().count();
+	// Set starttime
 	ERROR_CHECK(vkGetQueryPoolResults(Instance::get().getDevice(), qPool, 0,
 		1u, sizeof(uint64_t), &this->startTimeGPU, sizeof(uint64_t), VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT), "Failed to get first timestamp!");
+	this->startTimeCPU = std::chrono::time_point_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now()).time_since_epoch().count();
 
+	// Cleanup
 	vkDestroyQueryPool(Instance::get().getDevice(), qPool, nullptr);
-	vkDestroyEvent(Instance::get().getDevice(), e, nullptr);
 	vkDestroyFence(Instance::get().getDevice(), fence, nullptr);
 	pool->removeCommandBuffer(buffer);
 
