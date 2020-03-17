@@ -431,6 +431,12 @@ void VulkanProfiler::saveResults(std::string filePath)
 
 void VulkanProfiler::setupTimers(CommandPool* pool)
 {
+	VkFence fence;
+	VkFenceCreateInfo fInfo = {};
+	fInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+	fInfo.flags = 0;
+	vkCreateFence(Instance::get().getDevice(), &fInfo, nullptr, &fence);
+
 	// Create temp query pool
 	VkQueryPool qPool;
 	VkQueryPoolCreateInfo createInfo = {};
@@ -462,13 +468,12 @@ void VulkanProfiler::setupTimers(CommandPool* pool)
 	VkCommandBuffer cb = buffer->getCommandBuffer();
 	sInfo.pCommandBuffers = &cb;
 
-	vkQueueSubmit(Instance::get().getGraphicsQueue().queue, 1, &sInfo, VK_NULL_HANDLE);
+	vkQueueSubmit(Instance::get().getGraphicsQueue().queue, 1, &sInfo, fence);
 
 	// Ensure that command buffer is at the wait event so that the timestamp will execute right after it to sync with host
 	std::this_thread::sleep_for(std::chrono::seconds(1));
 
 	ERROR_CHECK(vkSetEvent(Instance::get().getDevice(), e), "Failed to set event for profiler!");
-	//std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	this->startTimeCPU = std::chrono::time_point_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now()).time_since_epoch().count();
 
 	ERROR_CHECK(vkGetQueryPoolResults(Instance::get().getDevice(), qPool, 0,
@@ -477,9 +482,10 @@ void VulkanProfiler::setupTimers(CommandPool* pool)
 	// Fence might be needed to ensure that the result has been written
 
 	// Cleanup
-	vkQueueWaitIdle(Instance::get().getGraphicsQueue().queue);
+	vkWaitForFences(Instance::get().getDevice(), 1, &fence, VK_TRUE, UINT64_MAX);
 	vkDestroyQueryPool(Instance::get().getDevice(), qPool, nullptr);
 	vkDestroyEvent(Instance::get().getDevice(), e, nullptr);
+	vkDestroyFence(Instance::get().getDevice(), fence, nullptr);
 	pool->removeCommandBuffer(buffer);
 
 	Instrumentation::get().setStartTime(this->startTimeCPU);
