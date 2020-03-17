@@ -7,6 +7,7 @@
 #include "VKImgui.h"
 #include "Core/Window.h"
 #include "VulkanProfiler.h"
+#include "Core/CPUProfiler.h"
 
 Frame::Frame()
 	: window(nullptr), imgui(nullptr), swapChain(nullptr), numImages(0), framesInFlight(0),
@@ -42,8 +43,7 @@ void Frame::cleanup()
 
 void Frame::submit(VkQueue queue, CommandBuffer** commandBuffers)
 {
-	VulkanProfiler::get().render(this->dt);
-
+	JAS_PROFILER_SAMPLE_FUNCTION();
 	this->imgui->end();
 	this->imgui->render();
 
@@ -72,13 +72,13 @@ void Frame::submit(VkQueue queue, CommandBuffer** commandBuffers)
 	vkResetFences(Instance::get().getDevice(), 1, &this->inFlightFences[this->currentFrame]);
 	ERROR_CHECK(vkQueueSubmit(queue, 1, &submitInfo, this->inFlightFences[this->currentFrame]), "Failed to sumbit commandbuffer!");
 
-	if (this->imageIndex == 0) {
-		VulkanProfiler::get().getAllQueries();
-	}
+	VulkanProfiler::get().getBufferTimestamps(commandBuffers[this->imageIndex]);
+
 }
 
 void Frame::submitCompute(VkQueue queue, CommandBuffer* commandBuffer)
 {
+	JAS_PROFILER_SAMPLE_FUNCTION();
 	VkSubmitInfo computeSubmitInfo = { };
 	std::array<VkCommandBuffer, 1> buff = { commandBuffer->getCommandBuffer() };
 	computeSubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -88,10 +88,14 @@ void Frame::submitCompute(VkQueue queue, CommandBuffer* commandBuffer)
 	computeSubmitInfo.pSignalSemaphores = &this->computeSemaphores;
 
 	ERROR_CHECK(vkQueueSubmit(queue, 1, &computeSubmitInfo, VK_NULL_HANDLE), "Failed to submit compute queue!");
+
+	VulkanProfiler::get().getBufferTimestamps(commandBuffer);
+	//VulkanProfiler::get().getAllQueries();
 }
 
 bool Frame::beginFrame(float dt)
 {
+	JAS_PROFILER_SAMPLE_FUNCTION();
 	this->dt = dt;
 
 	vkWaitForFences(Instance::get().getDevice(), 1, &this->inFlightFences[this->currentFrame], VK_TRUE, UINT64_MAX);
@@ -116,11 +120,14 @@ bool Frame::beginFrame(float dt)
 
 	this->imgui->begin(this->imageIndex, 0.016f);
 
+	VulkanProfiler::get().render(this->dt);
+
 	return true;
 }
 
 bool Frame::endFrame()
 {
+	JAS_PROFILER_SAMPLE_FUNCTION();
 	VkSemaphore waitSemaphores[] = { this->renderFinishedSemaphores[this->currentFrame] };
 
 	VkPresentInfoKHR presentInfo = {};

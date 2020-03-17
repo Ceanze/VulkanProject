@@ -15,6 +15,9 @@
 	#define JAS_PROFILER_SAMPLE_END_SESSION() {if(Instrumentation::g_runProfilingSample) { Instrumentation::get().endSession(); Instrumentation::g_runProfilingSample = false; } }
 	#define JAS_PROFILER_SAMPLE_SCOPE(name) InstrumentationTimer instrumentationTimerRendering##__LINE__(name, Instrumentation::g_runProfilingSample)
 	#define JAS_PROFILER_SAMPLE_FUNCTION() JAS_PROFILER_SAMPLE_SCOPE(__FUNCTION__ )
+
+	#define JAS_PROFILER_TOGGLE_SAMPLE(key, frameCount) Instrumentation::get().toggleSample(key, frameCount)
+
 #else
 #define JAS_PROFILER_BEGIN_SESSION(name, fileName)
 #define JAS_PROFILER_END_SESSION()
@@ -37,8 +40,7 @@ public:
 	void stop();
 
 private:
-	std::chrono::time_point<std::chrono::steady_clock> startTime;
-	std::chrono::time_point<std::chrono::steady_clock> endTime;
+	int64_t startTime;
 	std::string name;
 	bool active;
 };
@@ -49,8 +51,9 @@ public:
 	struct ProfileData
 	{
 		std::string name;
-		long long start, end;
+		uint64_t start, end;
 		size_t tid = 0;
+		size_t pid = 0;
 	};
 	Instrumentation();
 	~Instrumentation();
@@ -61,6 +64,10 @@ public:
 
 	void write(ProfileData data);
 
+	void setStartTime(uint64_t time);
+
+	void toggleSample(int key, uint32_t frameCount);
+
 	void endSession();
 
 
@@ -70,4 +77,5 @@ private:
 	std::mutex mutex;
 	std::ofstream file;
 	unsigned long long counter;
+	uint64_t startTime = 0;
 };

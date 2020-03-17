@@ -13,7 +13,7 @@
 
 void NoThreadingTest::init()
 {
-	VulkanProfiler::get().init(60, 60, VulkanProfiler::TimeUnit::MICRO);
+	VulkanProfiler::get().init(nullptr, 60, 60, VulkanProfiler::TimeUnit::MICRO);
 	VulkanProfiler::get().createTimestamps(2);
 	VulkanProfiler::get().addTimestamp("Main thread");
 
