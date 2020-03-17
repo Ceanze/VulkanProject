@@ -2,7 +2,6 @@
 #include "CPUProfiler.h"
 #include "Core/Input.h"
 #include "Vulkan/VulkanProfiler.h"
-#include "Vulkan/Instance.h"
 
 // Code modifed from: https://github.com/TheCherno/Hazel
 
@@ -115,7 +114,6 @@ void Instrumentation::toggleSample(int key, uint32_t frameCount)
 		if (frameCounter > frameCount)
 		{
 			Instrumentation::g_runProfilingSample = false;
-			vkDeviceWaitIdle(Instance::get().getDevice());
 			auto& results = VulkanProfiler::get().getResults();
 
 			for (auto& res : results) {

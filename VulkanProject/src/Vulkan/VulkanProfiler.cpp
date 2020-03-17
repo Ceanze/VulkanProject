@@ -367,7 +367,7 @@ void VulkanProfiler::resetBufferTimestamps(CommandBuffer* commandBuffer)
 void VulkanProfiler::resetAllTimestamps(CommandBuffer* commandBuffer)
 {
 	if (this->timestampQueryPool != VK_NULL_HANDLE)
-		commandBuffer->cmdResetQueryPool(this->timestampQueryPool, 0, (uint32_t)this->timestamps.size() * 2);
+		commandBuffer->cmdResetQueryPool(this->timestampQueryPool, 0, this->timestampCount);
 }
 
 void VulkanProfiler::resetPipelineStats(CommandBuffer* commandBuffer)
@@ -450,6 +450,7 @@ void VulkanProfiler::setupTimers(CommandPool* pool)
 
 	// Create single time command buffer
 	CommandBuffer* buffer = pool->beginSingleTimeCommand();
+	buffer->cmdResetQueryPool(qPool, 0, 1);
 	vkCmdWaitEvents(buffer->getCommandBuffer(), 1, &e, VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_HOST_BIT | VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
 		0, nullptr, 0, nullptr, 0, nullptr);
 	buffer->cmdWriteTimestamp(VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, qPool, 0);
@@ -467,6 +468,7 @@ void VulkanProfiler::setupTimers(CommandPool* pool)
 	std::this_thread::sleep_for(std::chrono::seconds(1));
 
 	ERROR_CHECK(vkSetEvent(Instance::get().getDevice(), e), "Failed to set event for profiler!");
+	//std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	this->startTimeCPU = std::chrono::time_point_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now()).time_since_epoch().count();
 
 	ERROR_CHECK(vkGetQueryPoolResults(Instance::get().getDevice(), qPool, 0,
