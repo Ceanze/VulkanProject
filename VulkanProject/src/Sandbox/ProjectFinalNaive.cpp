@@ -107,7 +107,7 @@ void ProjectFinalNaive::setupHeightmap()
 	float scale = 0.5f;
 	this->heightmap.setVertexDist(scale);
 	this->heightmap.setProximitySize(30);
-	this->heightmap.setMaxZ(100.f);
+	this->heightmap.setMaxZ(30.f);
 	this->heightmap.setMinZ(0.f);
 
 	int width, height;

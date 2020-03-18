@@ -15,6 +15,9 @@
 // Vulkan
 #include <vulkan/vulkan.h>
 
+// Define for toggling imgui
+//#define USE_IMGUI
+
 // Externals
 #pragma warning(push)
 #pragma warning(disable : 26495)

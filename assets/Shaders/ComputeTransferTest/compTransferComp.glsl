@@ -95,14 +95,7 @@ void main()
         // vec4 tr = tl + vec4(float(regWidth) - 1.0, 0.0, 0.0, 0.0);
         // vec4 bl = br - vec4(float(regWidth) - 1.0, 0.0, 0.0, 0.0);
 
-        double a = 3428095398.0;
-        double b = 234235.0;
-        for (int i = 0; i < 0; i++) {
-            a = sqrt(pow((sin(float(b)) * float(a)) / (float(b) * cos(float(a))), float(b)));
-            b = sqrt(pow((sin(float(b)) * float(a)) / (float(a) * cos(float(a))), float(b)));
-        }
-
-        bool shouldDraw = frustum(tl + float(b / 100000000.0 + a * 0.000001)) || frustum(br) || frustum(tr) || frustum(bl);
+        bool shouldDraw = frustum(tl) || frustum(br) || frustum(tr) || frustum(bl);
         if(shouldDraw)
         {
             indirectDraws[id].instanceCount = 1;

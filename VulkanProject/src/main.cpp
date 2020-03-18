@@ -18,6 +18,8 @@
 
 #include "Core/CPUProfiler.h"
 
+
+
 int main(int argv, char* argc[])
 {
 	JAS_PROFILER_BEGIN_SESSION("Profiling", "results.json");

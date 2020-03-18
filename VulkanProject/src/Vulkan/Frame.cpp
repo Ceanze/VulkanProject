@@ -44,6 +44,7 @@ void Frame::cleanup()
 void Frame::submit(VkQueue queue, CommandBuffer** commandBuffers)
 {
 	JAS_PROFILER_SAMPLE_FUNCTION();
+
 	this->imgui->end();
 	this->imgui->render();
 
@@ -62,7 +63,11 @@ void Frame::submit(VkQueue queue, CommandBuffer** commandBuffers)
 	submitInfo.pWaitSemaphores = waitSemaphores.data();
 
 	VkSemaphore signalSemaphores[] = { this->renderFinishedSemaphores[this->currentFrame] };
+#ifdef USE_IMGUI
 	std::vector<VkCommandBuffer> buffers = { commandBuffers[this->imageIndex]->getCommandBuffer(), this->imgui->getCurrentCommandBuffer() };
+#else
+	std::vector<VkCommandBuffer> buffers = { commandBuffers[this->imageIndex]->getCommandBuffer() };
+#endif
 	submitInfo.signalSemaphoreCount = 1;
 	submitInfo.pSignalSemaphores = signalSemaphores;
 	submitInfo.pCommandBuffers = buffers.data();

@@ -55,6 +55,7 @@ const std::unordered_map<std::string, std::vector<VulkanProfiler::Timestamp>>& V
 
 void VulkanProfiler::render(float dt)
 {
+#ifdef USE_IMGUI
 	this->timeSinceUpdate += dt;
 
 	float timestampPeriod = Instance::get().getPhysicalDeviceProperties().limits.timestampPeriod;
@@ -119,6 +120,7 @@ void VulkanProfiler::render(float dt)
 
 	if (this->timeSinceUpdate > 1/this->updateFreq)
 		this->timeSinceUpdate = 0.0f;
+#endif
 }
 
 void VulkanProfiler::createTimestamps(uint32_t timestampPairCount)

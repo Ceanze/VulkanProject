@@ -44,7 +44,11 @@ void RenderPass::addDefaultColorAttachment(VkFormat swapChainImageFormat)
 	colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 	colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 	colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+#ifdef USE_IMGUI
 	colorAttachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL; // If ImGUI is not used, use this instead: VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+#else
+	colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+#endif
 	addColorAttachment(colorAttachment);
 }
 
