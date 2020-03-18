@@ -114,13 +114,18 @@ void Instrumentation::toggleSample(int key, uint32_t frameCount)
 		if (frameCounter > frameCount)
 		{
 			Instrumentation::g_runProfilingSample = false;
-			auto& results = VulkanProfiler::get().getResults();
+			writeVulkanData();
+		}
+	}
+}
 
-			for (auto& res : results) {
-				for (uint32_t i = 0; i < res.second.size(); i++) {
-					write({ res.first + std::to_string(res.second[i].id), res.second[i].start, res.second[i].end, 0, 1 });
-				}
-			}
+void Instrumentation::writeVulkanData()
+{
+	auto& results = VulkanProfiler::get().getResults();
+
+	for (auto& res : results) {
+		for (uint32_t i = 0; i < res.second.size(); i++) {
+			write({ res.first + std::to_string(res.second[i].id), res.second[i].start, res.second[i].end, 0, 1 });
 		}
 	}
 }

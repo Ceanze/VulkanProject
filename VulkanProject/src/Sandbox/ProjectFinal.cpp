@@ -73,7 +73,7 @@ void ProjectFinal::loop(float dt)
 	getFrame()->submit(Instance::get().getGraphicsQueue().queue, this->graphicsPrimary.data());
 	getFrame()->endFrame();
 
-	JAS_PROFILER_TOGGLE_SAMPLE(GLFW_KEY_R, 10);
+	//JAS_PROFILER_TOGGLE_SAMPLE(GLFW_KEY_R, 10);
 }
 
 void ProjectFinal::cleanup()
@@ -494,6 +494,8 @@ void ProjectFinal::transferVertexData()
 	glm::ivec2 diff = this->lastRegionIndex - currRegion;
 	if (abs(diff.x) > this->transferThreshold || abs(diff.y) > this->transferThreshold) {
 		if (ThreadDispatcher::finished()) {
+			Instrumentation::g_runProfilingSample = true;
+			JAS_INFO("Start profiling");
 			this->lastRegionIndex = currRegion;
 			// Transfer proximity verticies to device
 			uint32_t id = ThreadDispatcher::dispatch([&, camPos]() {
@@ -536,6 +538,9 @@ void ProjectFinal::transferVertexData()
 			}
 
 			this->workIds.pop();
+			Instrumentation::g_runProfilingSample = false;
+			JAS_PROFILER_WRITE_VULKAN_DATA();
+			JAS_INFO("End profiling");
 		}
 	}
 }
@@ -559,6 +564,7 @@ void ProjectFinal::transferToDevice(Buffer* buffer, Buffer* stagingBuffer, Memor
 
 void ProjectFinal::verticesToDevice(Buffer* buffer, const std::vector<Heightmap::Vertex>& verticies)
 {
+	JAS_PROFILER_SAMPLE_FUNCTION();
 	transferToDevice(buffer, &this->buffers[BUFFER_VERT_STAGING], &this->memories[MEMORY_VERT_STAGING], vertices.data(), vertices.size() * sizeof(Heightmap::Vertex));
 }
 

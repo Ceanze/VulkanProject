@@ -17,6 +17,7 @@
 	#define JAS_PROFILER_SAMPLE_FUNCTION() JAS_PROFILER_SAMPLE_SCOPE(__FUNCTION__ )
 
 	#define JAS_PROFILER_TOGGLE_SAMPLE(key, frameCount) Instrumentation::get().toggleSample(key, frameCount)
+	#define JAS_PROFILER_WRITE_VULKAN_DATA() Instrumentation::get().writeVulkanData()
 
 #else
 #define JAS_PROFILER_BEGIN_SESSION(name, fileName)
@@ -28,6 +29,9 @@
 #define JAS_PROFILER_SAMPLE_END_SESSION()
 #define JAS_PROFILER_SAMPLE_SCOPE(name)
 #define JAS_PROFILER_SAMPLE_FUNCTION()
+
+#define JAS_PROFILER_TOGGLE_SAMPLE(key, frameCount)
+#define JAS_PROFILER_WRITE_VULKAN_DATA()
 #endif
 
 class InstrumentationTimer
@@ -67,6 +71,7 @@ public:
 	void setStartTime(uint64_t time);
 
 	void toggleSample(int key, uint32_t frameCount);
+	void writeVulkanData();
 
 	void endSession();
 
