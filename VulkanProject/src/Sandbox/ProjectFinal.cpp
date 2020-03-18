@@ -139,7 +139,7 @@ void ProjectFinal::setupHeightmap()
 
 	// Set data used for transfer
 	this->lastRegionIndex = this->heightmap.getRegionFromPos(this->camera->getPosition());
-	this->transferThreshold = 1;
+	this->transferThreshold = 5;
 
 	this->regionCount = this->heightmap.getProximityRegionCount();
 
