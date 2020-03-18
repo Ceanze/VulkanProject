@@ -1,5 +1,6 @@
 #include "jaspch.h"
 #include "ThreadManager.h"
+#include "Core/CPUProfiler.h"
 
 std::vector<ThreadManager::Thread*> ThreadManager::threads;
 
@@ -36,9 +37,14 @@ uint32_t ThreadManager::addWorkTrace(uint32_t threadIndex, std::function<void(vo
 
 void ThreadManager::wait()
 {
+	JAS_PROFILER_SAMPLE_FUNCTION();
 	// Wait for all threads to finish.
-	for (Thread* thread : threads)
-		thread->wait();
+	bool done = false;
+	while (!done) {
+		done = true;
+		for (Thread* thread : threads)
+			done &= thread->isQueueEmpty();
+	}
 }
 
 bool ThreadManager::isQueueEmpty()
@@ -95,13 +101,14 @@ void ThreadManager::Thread::addWork(uint32_t id, std::function<void(void)> work)
 
 void ThreadManager::Thread::wait()
 {
+	JAS_PROFILER_SAMPLE_FUNCTION();
 	std::unique_lock<std::mutex> lock(this->mutex);
 	this->condition.wait(lock, [this]() { return this->queue.empty(); });
 }
 
 bool ThreadManager::Thread::isQueueEmpty()
 {
-	std::lock_guard<std::mutex> lock(this->mutex);
+	/*std::lock_guard<std::mutex> lock(this->mutex);*/
 	return this->queue.empty();
 }
 
@@ -144,10 +151,11 @@ void ThreadManager::Thread::threadLoop()
 
 			work = this->queue.front().second;
 		}
-
+		
 		work();
-
+	
 		{
+			JAS_PROFILER_SAMPLE_SCOPE("TF");
 			// Lock mutex to be able to access the queue.
 			std::lock_guard<std::mutex> lock(this->mutex);
 			auto& currentQueue = this->queue;
@@ -157,5 +165,6 @@ void ThreadManager::Thread::threadLoop()
 			currentQueue.pop();
 			this->condition.notify_one();
 		}
+
 	}
 }

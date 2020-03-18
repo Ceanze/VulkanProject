@@ -44,6 +44,7 @@ void ProjectFinal::init()
 
 void ProjectFinal::loop(float dt)
 {
+	JAS_PROFILER_TOGGLE_SAMPLE(GLFW_KEY_R, 10);
 	JAS_PROFILER_SAMPLE_FUNCTION();
 
 	// Update view matrix
@@ -72,8 +73,6 @@ void ProjectFinal::loop(float dt)
 	getFrame()->submitCompute(Instance::get().getComputeQueue().queue, this->computePrimary[getFrame()->getCurrentImageIndex()]);
 	getFrame()->submit(Instance::get().getGraphicsQueue().queue, this->graphicsPrimary.data());
 	getFrame()->endFrame();
-
-	//JAS_PROFILER_TOGGLE_SAMPLE(GLFW_KEY_R, 10);
 }
 
 void ProjectFinal::cleanup()
@@ -120,7 +119,7 @@ void ProjectFinal::setupHeightmap()
 	float scale = 0.5f;
 	this->heightmap.setVertexDist(scale);
 	this->heightmap.setProximitySize(30);
-	this->heightmap.setMaxZ(100.f);
+	this->heightmap.setMaxZ(30.f);
 	this->heightmap.setMinZ(0.f);
 
 	int width, height;
@@ -139,7 +138,7 @@ void ProjectFinal::setupHeightmap()
 
 	// Set data used for transfer
 	this->lastRegionIndex = this->heightmap.getRegionFromPos(this->camera->getPosition());
-	this->transferThreshold = 5;
+	this->transferThreshold = 1;
 
 	this->regionCount = this->heightmap.getProximityRegionCount();
 
@@ -630,7 +629,9 @@ void ProjectFinal::record(uint32_t frameIndex)
 
 	// Frustum compute
 	buffer = this->computeSecondary[frameIndex][secondaryBuffer++];
-	ThreadManager::addWork(nextThread(), [=]() { secRecordFrustum(frameIndex, buffer, inheritInfo); });
+	int t = nextThread();
+	for (int i = 0; i < 50; i++)
+		ThreadManager::addWork(t, [=]() { secRecordFrustum(frameIndex, buffer, inheritInfo); });
 
 	// Graphics
 	secondaryBuffer = 0;
@@ -638,13 +639,16 @@ void ProjectFinal::record(uint32_t frameIndex)
 	inheritInfo.renderPass = this->renderPass.getRenderPass();
 
 	// Skybox
+	t = nextThread();
 	buffer = this->graphicsSecondary[frameIndex][secondaryBuffer++];
-	ThreadManager::addWork(nextThread(), [=]() { secRecordSkybox(frameIndex, buffer, inheritInfo); });
+	for (int i = 0; i < 50; i++)
+		ThreadManager::addWork(t, [=]() { secRecordSkybox(frameIndex, buffer, inheritInfo); });
 
 	// Heightmap
 	buffer = this->graphicsSecondary[frameIndex][secondaryBuffer++];
-	ThreadManager::addWork(nextThread(), [=]() { secRecordHeightmap(frameIndex, buffer, inheritInfo); });
-
+	t = nextThread();
+	for (int i = 0; i < 50; i++)
+		ThreadManager::addWork(t, [=]() { secRecordHeightmap(frameIndex, buffer, inheritInfo); });
 
 	// Primary recording
 	// Graphics
