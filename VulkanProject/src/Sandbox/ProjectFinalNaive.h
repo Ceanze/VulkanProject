@@ -112,6 +112,8 @@ private:
 	std::unordered_map<PipelineID, DescriptorManager> descManagers;
 
 	std::vector<CommandPool> graphicsPools;
+	// Pool used for transferring vertices
+	CommandPool graphicsTransferPool;
 	//std::vector<CommandPool> computePools;
 	//std::vector<CommandPool> transferPools;
 

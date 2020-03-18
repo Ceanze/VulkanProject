@@ -74,6 +74,7 @@ void ProjectFinalNaive::cleanup()
 	for (auto& pool : this->graphicsPools)
 		pool.cleanup();
 
+	this->graphicsTransferPool.cleanup();
 	//for (auto& pool : this->computePools)
 	//	pool.cleanup();
 
@@ -305,7 +306,7 @@ void ProjectFinalNaive::setupCommandBuffers()
 		for (size_t j = 0; j < FUNC_COUNT_COMPUTE; j++)
 			this->computeSecondary[i].push_back(this->graphicsPools[(j + FUNC_COUNT_GRAPHICS + 1u) % ThreadManager::threadCount()].createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_SECONDARY));
 	}
-	this->transferBuffer = this->graphicsPools[MAIN_THREAD].createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_SECONDARY);
+	this->transferBuffer = this->graphicsTransferPool.createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_SECONDARY);
 }
 
 void ProjectFinalNaive::setupCommandPools()
@@ -314,6 +315,8 @@ void ProjectFinalNaive::setupCommandPools()
 	this->graphicsPools.resize(std::min(1u + FUNC_COUNT_GRAPHICS + FUNC_COUNT_COMPUTE, ThreadManager::threadCount()));
 	for (auto& pool : this->graphicsPools)
 		pool.init(CommandPool::Queue::GRAPHICS, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+
+	this->graphicsTransferPool.init(CommandPool::Queue::GRAPHICS, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
 
 	// Compute
 	//this->computePools.resize(std::min(1u + FUNC_COUNT_COMPUTE, ThreadManager::threadCount()));
