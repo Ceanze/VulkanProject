@@ -565,7 +565,6 @@ void ProjectFinalNaive::verticesToDevice(Buffer* buffer, const std::vector<Heigh
 void ProjectFinalNaive::secRecordFrustum(uint32_t frameIndex, CommandBuffer* buffer, VkCommandBufferInheritanceInfo inheritanceInfo)
 {
 	JAS_PROFILER_SAMPLE_FUNCTION();
-	std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	buffer->begin(0, &inheritanceInfo);
 	VulkanProfiler::get().startIndexedTimestamp("Frustum", buffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, frameIndex);
 	buffer->cmdBindPipeline(&getPipeline(PIPELINE_FRUSTUM));
