@@ -427,6 +427,12 @@ void VulkanProfiler::setupTimers(CommandPool* pool)
 	fInfo.flags = 0;
 	vkCreateFence(Instance::get().getDevice(), &fInfo, nullptr, &fence);
 
+	// Create event to signal	
+	VkEventCreateInfo info = {};
+	info.sType = VK_STRUCTURE_TYPE_EVENT_CREATE_INFO;
+	VkEvent e;
+	ERROR_CHECK(vkCreateEvent(Instance::get().getDevice(), &info, nullptr, &e), "Failed to create event for vulkan profiler!");
+
 	// Create temp query pool
 	VkQueryPool qPool;
 	VkQueryPoolCreateInfo createInfo = {};
@@ -441,6 +447,8 @@ void VulkanProfiler::setupTimers(CommandPool* pool)
 	// Create single time command buffer
 	CommandBuffer* buffer = pool->beginSingleTimeCommand();
 	buffer->cmdResetQueryPool(qPool, 0, 1);
+	vkCmdWaitEvents(buffer->getCommandBuffer(), 1, &e, VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_HOST_BIT | VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+		0, nullptr, 0, nullptr, 0, nullptr);
 	buffer->cmdWriteTimestamp(VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, qPool, 0);
 	buffer->end();
 	
@@ -452,6 +460,9 @@ void VulkanProfiler::setupTimers(CommandPool* pool)
 
 	vkQueueSubmit(Instance::get().getGraphicsQueue().queue, 1, &sInfo, fence);
 
+	std::this_thread::sleep_for(std::chrono::seconds(1));
+	ERROR_CHECK(vkSetEvent(Instance::get().getDevice(), e), "Failed to set event for profiler!");
+
 	// Set starttime
 	ERROR_CHECK(vkGetQueryPoolResults(Instance::get().getDevice(), qPool, 0,
 		1u, sizeof(uint64_t), &this->startTimeGPU, sizeof(uint64_t), VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT), "Failed to get first timestamp!");
@@ -459,6 +470,7 @@ void VulkanProfiler::setupTimers(CommandPool* pool)
 
 	// Cleanup
 	vkWaitForFences(Instance::get().getDevice(), 1, &fence, VK_TRUE, UINT64_MAX);
+	vkDestroyEvent(Instance::get().getDevice(), e, nullptr);
 	vkDestroyQueryPool(Instance::get().getDevice(), qPool, nullptr);
 	vkDestroyFence(Instance::get().getDevice(), fence, nullptr);
 	pool->removeCommandBuffer(buffer);
