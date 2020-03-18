@@ -66,6 +66,7 @@ void ProjectFinalNaive::cleanup()
 {
 	ThreadDispatcher::shutdown();
 	ThreadManager::cleanup();
+	VulkanProfiler::get().cleanup();
 
 	for (auto& descManager : this->descManagers)
 		descManager.second.cleanup();
@@ -609,7 +610,8 @@ void ProjectFinalNaive::record(uint32_t frameIndex)
 
 	// Frustum compute
 	buffer = this->computeSecondary[frameIndex][secondaryBuffer++];
-	ThreadManager::addWork(nextThread(), [=]() { secRecordFrustum(frameIndex, buffer, inheritInfo); });
+	//ThreadManager::addWork(nextThread(), [=]() { secRecordFrustum(frameIndex, buffer, inheritInfo); });
+	secRecordFrustum(frameIndex, buffer, inheritInfo);
 
 	// Graphics
 	secondaryBuffer = 0;
@@ -618,11 +620,13 @@ void ProjectFinalNaive::record(uint32_t frameIndex)
 
 	// Skybox
 	buffer = this->graphicsSecondary[frameIndex][secondaryBuffer++];
-	ThreadManager::addWork(nextThread(), [=]() { secRecordSkybox(frameIndex, buffer, inheritInfo); });
+	//ThreadManager::addWork(nextThread(), [=]() { secRecordSkybox(frameIndex, buffer, inheritInfo); });
+	secRecordSkybox(frameIndex, buffer, inheritInfo);
 
 	// Heightmap
 	buffer = this->graphicsSecondary[frameIndex][secondaryBuffer++];
-	ThreadManager::addWork(nextThread(), [=]() { secRecordHeightmap(frameIndex, buffer, inheritInfo); });
+	//ThreadManager::addWork(nextThread(), [=]() { secRecordHeightmap(frameIndex, buffer, inheritInfo); });
+	secRecordHeightmap(frameIndex, buffer, inheritInfo);
 
 
 	// Primary recording
