@@ -651,6 +651,7 @@ void ProjectFinal::secRecordFrustum(uint32_t frameIndex, CommandBuffer* buffer, 
 void ProjectFinal::secRecordSkybox(uint32_t frameIndex, CommandBuffer* buffer, VkCommandBufferInheritanceInfo inheritanceInfo)
 {
 	JAS_PROFILER_SAMPLE_FUNCTION();
+	std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	buffer->begin(VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, &inheritanceInfo);
 	VulkanProfiler::get().startIndexedTimestamp("Skybox", buffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, frameIndex);
 	this->skybox.draw(buffer, frameIndex);
@@ -661,6 +662,7 @@ void ProjectFinal::secRecordSkybox(uint32_t frameIndex, CommandBuffer* buffer, V
 void ProjectFinal::secRecordHeightmap(uint32_t frameIndex, CommandBuffer* buffer, VkCommandBufferInheritanceInfo inheritanceInfo)
 {
 	JAS_PROFILER_SAMPLE_FUNCTION();
+	std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	buffer->begin(VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, &inheritanceInfo);
 	VulkanProfiler::get().startIndexedTimestamp("Heightmap", buffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, frameIndex);
 	buffer->cmdBindPipeline(&getPipeline(PIPELINE_GRAPHICS));

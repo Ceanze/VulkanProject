@@ -580,6 +580,7 @@ void ProjectFinalNaive::secRecordFrustum(uint32_t frameIndex, CommandBuffer* buf
 void ProjectFinalNaive::secRecordSkybox(uint32_t frameIndex, CommandBuffer* buffer, VkCommandBufferInheritanceInfo inheritanceInfo)
 {
 	JAS_PROFILER_SAMPLE_FUNCTION();
+	std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	buffer->begin(VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, &inheritanceInfo);
 	VulkanProfiler::get().startIndexedTimestamp("Skybox", buffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, frameIndex);
 	this->skybox.draw(buffer, frameIndex);
@@ -590,6 +591,7 @@ void ProjectFinalNaive::secRecordSkybox(uint32_t frameIndex, CommandBuffer* buff
 void ProjectFinalNaive::secRecordHeightmap(uint32_t frameIndex, CommandBuffer* buffer, VkCommandBufferInheritanceInfo inheritanceInfo)
 {
 	JAS_PROFILER_SAMPLE_FUNCTION();
+	std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	buffer->begin(VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, &inheritanceInfo);
 	VulkanProfiler::get().startIndexedTimestamp("Heightmap", buffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, frameIndex);
 	buffer->cmdBindPipeline(&getPipeline(PIPELINE_GRAPHICS));
@@ -622,10 +624,12 @@ void ProjectFinalNaive::record(uint32_t frameIndex)
 	inheritInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
 	CommandBuffer* buffer;
 
+	const int numWork = 10;
+
 	// Frustum compute
 	buffer = this->computeSecondary[frameIndex][secondaryBuffer++];
 	//ThreadManager::addWork(nextThread(), [=]() { secRecordFrustum(frameIndex, buffer, inheritInfo); });
-	for (int i = 0; i < 50; i++)
+	for (int i = 0; i < numWork; i++)
 		secRecordFrustum(frameIndex, buffer, inheritInfo);
 
 	// Graphics
@@ -636,13 +640,13 @@ void ProjectFinalNaive::record(uint32_t frameIndex)
 	// Skybox
 	buffer = this->graphicsSecondary[frameIndex][secondaryBuffer++];
 	//ThreadManager::addWork(nextThread(), [=]() { secRecordSkybox(frameIndex, buffer, inheritInfo); });
-	for (int i = 0; i < 50; i++)
+	for (int i = 0; i < numWork; i++)
 		secRecordSkybox(frameIndex, buffer, inheritInfo);
 
 	// Heightmap
 	buffer = this->graphicsSecondary[frameIndex][secondaryBuffer++];
 	//ThreadManager::addWork(nextThread(), [=]() { secRecordHeightmap(frameIndex, buffer, inheritInfo); });
-	for (int i = 0; i < 50; i++)
+	for (int i = 0; i < numWork; i++)
 		secRecordHeightmap(frameIndex, buffer, inheritInfo);
 
 	// Primary recording
