@@ -130,7 +130,7 @@ void TransferTest::setupPost()
 	// Set uniform data.
 	UboData uboData;
 	uboData.vp = this->camera->getMatrix();
-	uboData.world = glm::translate(glm::mat4(1.0f), glm::vec3{0.0f, 0.0f, -1.0f});
+	uboData.world = glm::translate(glm::mat4(1.0f), glm::vec3{0.0f, 0.0f, -19.0f});
 	uboData.world[3][3] = 1.0f;
 	uint32_t unsiformBufferSize = sizeof(UboData);
 
@@ -141,7 +141,7 @@ void TransferTest::setupPost()
 	this->memory.init(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
 	// Transfer the data to the buffer.
-	this->memory.directTransfer(&this->bufferUniform, (void*)& uboData, unsiformBufferSize, 0);
+	this->memory.directTransfer(&this->bufferUniform, (void*)&uboData, unsiformBufferSize, 0);
 
 	// Update descriptor
 	for (uint32_t i = 0; i < static_cast<uint32_t>(getSwapChain()->getNumImages()); i++)

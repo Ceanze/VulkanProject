@@ -19,6 +19,7 @@ private:
 	enum BufferID {
 		BUFFER_PLANES,
 		BUFFER_WORLD_DATA,
+		BUFFER_MODEL_TRANSFORMS,
 		BUFFER_INDIRECT_DRAW,
 		BUFFER_VERTICES,
 		BUFFER_VERTICES_2,
@@ -37,6 +38,7 @@ private:
 
 	enum PipelineID {
 		PIPELINE_GRAPHICS = 0,
+		PIPELINE_MODELS,
 		PIPELINE_FRUSTUM,
 		PIPELINE_INDEX,
 		PIPELINE_COUNT
@@ -44,6 +46,7 @@ private:
 
 	enum WorkFunctionGraphics {
 		FUNC_HEIGHTMAP = 0,
+		FUNC_MODELS,
 		FUNC_SKYBOX,
 		FUNC_COUNT_GRAPHICS
 	};
@@ -51,6 +54,11 @@ private:
 	enum WorkFunctionCompute {
 		FUNC_FRUSTUM = 0,
 		FUNC_COUNT_COMPUTE
+	};
+
+	enum ModelID {
+		MODEL_TREE = 0,
+		MODEL_COUNT
 	};
 
 	struct ComputeIndexConfig {
@@ -81,6 +89,7 @@ public:
 private:
 	void setupHeightmap();
 
+	void setupModels();
 	void setupDescLayouts();
 	void setupGeneral();
 	void setupBuffers();
@@ -93,8 +102,9 @@ private:
 	void setupFrustumPipeline();
 	void setupIndexPipeline();
 	void setupGraphicsPipeline();
+	void setupModelsPipeline();
 
-	void transferInitalData();
+	void transferInitialData();
 	void transferVertexData();
 
 	void transferToDevice(Buffer* buffer, Buffer* stagingBuffer, Memory* stagingMemory, void* data, uint32_t size);
@@ -103,10 +113,14 @@ private:
 	void secRecordFrustum(uint32_t frameIndex, CommandBuffer* buffer, VkCommandBufferInheritanceInfo inheritanceInfo);
 	void secRecordSkybox(uint32_t frameIndex, CommandBuffer* buffer,VkCommandBufferInheritanceInfo inheritanceInfo);
 	void secRecordHeightmap(uint32_t frameIndex, CommandBuffer* buffer, VkCommandBufferInheritanceInfo inheritanceInfo);
+	void secRecordModels(uint32_t frameIndex, CommandBuffer* buffer, VkCommandBufferInheritanceInfo inheritanceInfo);
 
 	void record(uint32_t frameIndex);
 
 private:
+	uint32_t treeCount;
+	std::unordered_map<ModelID, Model> models;
+
 	std::unordered_map<BufferID, Buffer> buffers;
 	std::unordered_map<MemoryType, Memory> memories;
 	std::unordered_map<PipelineID, DescriptorManager> descManagers;

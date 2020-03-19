@@ -8,6 +8,8 @@
 #include "Threading/ThreadManager.h"
 #include "Vulkan/VulkanProfiler.h"
 #include "Core/CPUProfiler.h"
+#include "Models/ModelRenderer.h"
+#include "Models/GLTFLoader.h"
 
 #include <GLFW/glfw3.h>
 
@@ -20,9 +22,9 @@ void ProjectFinal::init()
 	// Initalize with maximum available threads
 	ThreadDispatcher::init(2);
 	ThreadManager::init(static_cast<uint32_t>(std::thread::hardware_concurrency()));
-	this->camera = new Camera(getWindow()->getAspectRatio(), 45.f, { 0.f, 20.f, 10.f }, { 0.f, 0.f, 0.f }, 10.0f, 10.0f);
+	this->camera = new Camera(getWindow()->getAspectRatio(), 45.f, { 0.f, 20.f, 0.f }, { 0.f, 0.f, 0.f }, 10.0f, 10.0f);
 
-
+	setupModels();
 	setupHeightmap();
 	setupDescLayouts();
 	setupGeneral();
@@ -34,12 +36,13 @@ void ProjectFinal::init()
 	VulkanProfiler::get().init(&this->graphicsPools[MAIN_THREAD], 10, 60, VulkanProfiler::TimeUnit::MICRO);
 	VulkanProfiler::get().createTimestamps(6 + (FUNC_COUNT_COMPUTE + FUNC_COUNT_GRAPHICS) * 3);
 	VulkanProfiler::get().addIndexedTimestamps("Graphics", 3, this->graphicsPrimary.data());
+	VulkanProfiler::get().addIndexedTimestamps("Models", 3, this->graphicsPrimary.data());
 	VulkanProfiler::get().addIndexedTimestamps("Compute", 3, this->computePrimary.data());
 	VulkanProfiler::get().addIndexedTimestamps("Skybox", 3, this->graphicsPrimary.data());
 	VulkanProfiler::get().addIndexedTimestamps("Heightmap", 3, this->graphicsPrimary.data());
 	VulkanProfiler::get().addIndexedTimestamps("Frustum", 3, this->computePrimary.data());
 
-	transferInitalData();
+	transferInitialData();
 }
 
 void ProjectFinal::loop(float dt)
@@ -81,6 +84,9 @@ void ProjectFinal::cleanup()
 	ThreadManager::cleanup();
 	VulkanProfiler::get().cleanup();
 
+	for (auto& model : this->models)
+		model.second.cleanup();
+
 	for (auto& descManager : this->descManagers)
 		descManager.second.cleanup();
 
@@ -114,11 +120,11 @@ void ProjectFinal::cleanup()
 
 void ProjectFinal::setupHeightmap()
 {
-	this->regionSize = 16;
+	this->regionSize = 8;
 
 	float scale = 0.5f;
 	this->heightmap.setVertexDist(scale);
-	this->heightmap.setProximitySize(30);
+	this->heightmap.setProximitySize(1);
 	this->heightmap.setMaxZ(30.f);
 	this->heightmap.setMinZ(0.f);
 
@@ -146,6 +152,18 @@ void ProjectFinal::setupHeightmap()
 	this->heightmap.getProximityVerticies(this->camera->getPosition(), this->vertices);
 }
 
+void ProjectFinal::setupModels()
+{
+	this->treeCount = 2;
+	// This can now be done in another thread.
+	const std::string filePath = "..\\assets\\Models\\Tree\\tree.glb";
+	GLTFLoader::load(filePath, &this->models[MODEL_TREE]);
+	//this->isTransferDone = false;
+	//this->thread = new std::thread(&TransferTest::loadingThread, this);
+
+	ModelRenderer::get().init();
+}
+
 void ProjectFinal::setupDescLayouts()
 {
 	// Graphics: Set 0
@@ -156,6 +174,17 @@ void ProjectFinal::setupDescLayouts()
 		descLayout.init();
 		this->descManagers[PIPELINE_GRAPHICS].addLayout(descLayout);
 		this->descManagers[PIPELINE_GRAPHICS].init(getSwapChain()->getNumImages());
+	}
+
+	// Models: Set 0
+	{
+		DescriptorLayout descLayout;
+		descLayout.add(new SSBO(VK_SHADER_STAGE_VERTEX_BIT, 1, nullptr)); // Vertices
+		descLayout.add(new SSBO(VK_SHADER_STAGE_VERTEX_BIT, 1, nullptr)); // Transforms
+		descLayout.add(new UBO(VK_SHADER_STAGE_VERTEX_BIT, 1, nullptr)); // World Vp
+		descLayout.init();
+		this->descManagers[PIPELINE_MODELS].addLayout(descLayout);
+		this->descManagers[PIPELINE_MODELS].init(getSwapChain()->getNumImages());
 	}
 
 	// Frustum compute: Set 0
@@ -190,6 +219,7 @@ void ProjectFinal::setupGeneral()
 	setupCommandPools();
 	setupShaders();
 	setupGraphicsPipeline();
+	setupModelsPipeline();
 	setupFrustumPipeline();
 	setupIndexPipeline();
 
@@ -231,7 +261,9 @@ void ProjectFinal::setupBuffers()
 	{
 		std::vector<uint32_t> queueIndices = { Instance::get().getGraphicsQueue().queueIndex };
 		this->buffers[BUFFER_CAMERA].init(sizeof(CameraData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, queueIndices);
+		this->buffers[BUFFER_MODEL_TRANSFORMS].init(sizeof(glm::mat4) * this->treeCount, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, queueIndices);
 		this->memories[MEMORY_HOST_VISIBLE].bindBuffer(&this->buffers[BUFFER_CAMERA]);
+		this->memories[MEMORY_HOST_VISIBLE].bindBuffer(&this->buffers[BUFFER_MODEL_TRANSFORMS]);
 	}
 
 	// Frustum buffers
@@ -290,6 +322,16 @@ void ProjectFinal::setupDescManagers()
 		this->descManagers[PIPELINE_GRAPHICS].updateSets({ 0 }, i);
 	}
 
+	// Models
+	for (uint32_t i = 0; i < static_cast<uint32_t>(getSwapChain()->getNumImages()); i++)
+	{
+		VkDeviceSize vertexBufferSize = this->models[MODEL_TREE].vertices.size() * sizeof(Vertex);
+		this->descManagers[PIPELINE_MODELS].updateBufferDesc(0, 0, this->models[MODEL_TREE].vertexBuffer.getBuffer(), 0, vertexBufferSize);
+		this->descManagers[PIPELINE_MODELS].updateBufferDesc(0, 1, this->buffers[BUFFER_MODEL_TRANSFORMS].getBuffer(), 0, this->buffers[BUFFER_MODEL_TRANSFORMS].getSize());
+		this->descManagers[PIPELINE_MODELS].updateBufferDesc(0, 2, this->buffers[BUFFER_CAMERA].getBuffer(), 0, sizeof(CameraData));
+		this->descManagers[PIPELINE_MODELS].updateSets({ 0 }, i);
+	}
+
 	// Frustum compute
 	for (size_t i = 0; i < getSwapChain()->getNumImages(); i++) {
 		this->descManagers[PIPELINE_FRUSTUM].updateBufferDesc(0, 0, this->buffers[BUFFER_INDIRECT_DRAW].getBuffer(), 0, this->buffers[BUFFER_INDIRECT_DRAW].getSize());
@@ -346,6 +388,11 @@ void ProjectFinal::setupShaders()
 	getShader(PIPELINE_GRAPHICS).addStage(Shader::Type::FRAGMENT, "ComputeTransferTest\\compTransferFrag.spv");
 	getShader(PIPELINE_GRAPHICS).init();
 
+	// Model
+	getShader(PIPELINE_MODELS).addStage(Shader::Type::VERTEX, "modelVertex.spv");
+	getShader(PIPELINE_MODELS).addStage(Shader::Type::FRAGMENT, "modelFragment.spv");
+	getShader(PIPELINE_MODELS).init();
+
 	// Frustum compute
 
 	getShader(PIPELINE_FRUSTUM).addStage(Shader::Type::COMPUTE, "ComputeTransferTest\\compTransferComp.spv");
@@ -395,7 +442,16 @@ void ProjectFinal::setupGraphicsPipeline()
 	getPipeline(PIPELINE_GRAPHICS).init(Pipeline::Type::GRAPHICS, &getShader(PIPELINE_GRAPHICS));
 }
 
-void ProjectFinal::transferInitalData()
+void ProjectFinal::setupModelsPipeline()
+{
+	PushConstants& pushConstants = ModelRenderer::get().getPushConstants();
+	getPipeline(PIPELINE_MODELS).setPushConstants(pushConstants);
+	getPipeline(PIPELINE_MODELS).setDescriptorLayouts(this->descManagers[PIPELINE_MODELS].getLayouts());
+	getPipeline(PIPELINE_MODELS).setGraphicsPipelineInfo(getSwapChain()->getExtent(), &this->renderPass);
+	getPipeline(PIPELINE_MODELS).init(Pipeline::Type::GRAPHICS, &getShader(PIPELINE_MODELS));
+}
+
+void ProjectFinal::transferInitialData()
 {
 	// Set inital indirect draw data
 	{
@@ -441,6 +497,17 @@ void ProjectFinal::transferInitalData()
 		tempData.regWidth = this->heightmap.getRegionSize();
 		tempData.regionCount = this->heightmap.getProximityRegionCount();
 		this->memories[MEMORY_HOST_VISIBLE].directTransfer(&this->buffers[BUFFER_WORLD_DATA], &tempData, sizeof(WorldData), 0);
+	}
+
+	// Set model transform data
+	{
+		std::vector<glm::mat4> matrices;
+		glm::mat4 mat;
+		mat = glm::translate(glm::mat4(1.0), glm::vec3(0.0, 0.0, -10.0));
+		matrices.push_back(mat);
+		mat = glm::translate(glm::mat4(1.0), glm::vec3(0.0, 0.0, 10.0));
+		matrices.push_back(mat);
+		this->memories[MEMORY_HOST_VISIBLE].directTransfer(&this->buffers[BUFFER_MODEL_TRANSFORMS], matrices.data(), this->buffers[BUFFER_MODEL_TRANSFORMS].getSize(), 0);
 	}
 
 	// Send inital data to GPU
@@ -493,8 +560,8 @@ void ProjectFinal::transferVertexData()
 	glm::ivec2 diff = this->lastRegionIndex - currRegion;
 	if (abs(diff.x) > this->transferThreshold || abs(diff.y) > this->transferThreshold) {
 		if (ThreadDispatcher::finished()) {
-			Instrumentation::g_runProfilingSample = true;
-			JAS_INFO("Start profiling");
+			//Instrumentation::g_runProfilingSample = true;
+			//JAS_INFO("Start profiling");
 			this->lastRegionIndex = currRegion;
 			// Transfer proximity verticies to device
 			uint32_t id = ThreadDispatcher::dispatch([&, camPos]() {
@@ -537,9 +604,9 @@ void ProjectFinal::transferVertexData()
 			}
 
 			this->workIds.pop();
-			Instrumentation::g_runProfilingSample = false;
+	/*		Instrumentation::g_runProfilingSample = false;
 			JAS_PROFILER_WRITE_VULKAN_DATA();
-			JAS_INFO("End profiling");
+			JAS_INFO("End profiling");*/
 		}
 	}
 }
@@ -606,6 +673,19 @@ void ProjectFinal::secRecordHeightmap(uint32_t frameIndex, CommandBuffer* buffer
 	buffer->end();
 }
 
+void ProjectFinal::secRecordModels(uint32_t frameIndex, CommandBuffer* buffer, VkCommandBufferInheritanceInfo inheritanceInfo)
+{
+	JAS_PROFILER_SAMPLE_FUNCTION();
+	buffer->begin(VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, &inheritanceInfo);
+	VulkanProfiler::get().startIndexedTimestamp("Models", buffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, frameIndex);
+	buffer->cmdBindPipeline(&getPipeline(PIPELINE_MODELS));
+	std::vector<uint32_t> offsets;
+	std::vector<VkDescriptorSet> sets = { this->descManagers[PIPELINE_MODELS].getSet(frameIndex, 0) };
+	ModelRenderer::get().record(&this->models[MODEL_TREE], glm::mat4(1.0), buffer, &getPipeline(PIPELINE_MODELS), sets, offsets, this->treeCount);
+	VulkanProfiler::get().endIndexedTimestamp("Models", buffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, frameIndex);
+	buffer->end();
+}
+
 void ProjectFinal::record(uint32_t frameIndex)
 {
 	JAS_PROFILER_SAMPLE_FUNCTION();
@@ -627,10 +707,12 @@ void ProjectFinal::record(uint32_t frameIndex)
 	inheritInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
 	CommandBuffer* buffer;
 
+	int jobCount = 1;
+
 	// Frustum compute
 	buffer = this->computeSecondary[frameIndex][secondaryBuffer++];
 	int t = nextThread();
-	for (int i = 0; i < 50; i++)
+	for (int i = 0; i < jobCount; i++)
 		ThreadManager::addWork(t, [=]() { secRecordFrustum(frameIndex, buffer, inheritInfo); });
 
 	// Graphics
@@ -641,14 +723,19 @@ void ProjectFinal::record(uint32_t frameIndex)
 	// Skybox
 	t = nextThread();
 	buffer = this->graphicsSecondary[frameIndex][secondaryBuffer++];
-	for (int i = 0; i < 50; i++)
+	for (int i = 0; i < jobCount; i++)
 		ThreadManager::addWork(t, [=]() { secRecordSkybox(frameIndex, buffer, inheritInfo); });
 
 	// Heightmap
 	buffer = this->graphicsSecondary[frameIndex][secondaryBuffer++];
 	t = nextThread();
-	for (int i = 0; i < 50; i++)
+	for (int i = 0; i < jobCount; i++)
 		ThreadManager::addWork(t, [=]() { secRecordHeightmap(frameIndex, buffer, inheritInfo); });
+
+	buffer = this->graphicsSecondary[frameIndex][secondaryBuffer++];
+	t = nextThread();
+	for (int i = 0; i < jobCount; i++)
+		ThreadManager::addWork(t, [=]() { secRecordModels(frameIndex, buffer, inheritInfo); });
 
 	// Primary recording
 	// Graphics

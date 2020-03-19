@@ -13,7 +13,7 @@ ModelRenderer::~ModelRenderer()
 	this->pushConstants.cleanup();
 }
 
-void ModelRenderer::record(Model* model, glm::mat4 transform, CommandBuffer* commandBuffer, Pipeline* pipeline, const std::vector<VkDescriptorSet>& sets, const std::vector<uint32_t>& offsets)
+void ModelRenderer::record(Model* model, glm::mat4 transform, CommandBuffer* commandBuffer, Pipeline* pipeline, const std::vector<VkDescriptorSet>& sets, const std::vector<uint32_t>& offsets, uint32_t instanceCount)
 {
 	// TODO: Use different materials, can still use same pipeline if all meshes uses same type of material (i.e. PBR)!
 	if (model->vertexBuffer.getBuffer() == VK_NULL_HANDLE)
@@ -27,7 +27,7 @@ void ModelRenderer::record(Model* model, glm::mat4 transform, CommandBuffer* com
 
 	commandBuffer->cmdBindDescriptorSets(pipeline, 0, sets, offsets);
 	for (Model::Node& node : model->nodes)
-		drawNode(commandBuffer, pipeline, node, transform);
+		drawNode(commandBuffer, pipeline, node, transform, instanceCount);
 }
 
 void ModelRenderer::init()
@@ -57,7 +57,7 @@ ModelRenderer::ModelRenderer() : size(0)
 	this->size = this->pushConstants.getSize();
 }
 
-void ModelRenderer::drawNode(CommandBuffer* commandBuffer, Pipeline* pipeline, Model::Node& node, glm::mat4 transform)
+void ModelRenderer::drawNode(CommandBuffer* commandBuffer, Pipeline* pipeline, Model::Node& node, glm::mat4 transform, uint32_t instanceCount)
 {
 	if (node.hasMesh)
 	{
@@ -72,13 +72,13 @@ void ModelRenderer::drawNode(CommandBuffer* commandBuffer, Pipeline* pipeline, M
 			// TODO: Send node transformation as push constant per draw!
 
 			if (primitive.hasIndices)
-				commandBuffer->cmdDrawIndexed(primitive.indexCount, 1, primitive.firstIndex, 0, 0);
+				commandBuffer->cmdDrawIndexed(primitive.indexCount, instanceCount, primitive.firstIndex, 0, 0);
 			else
-				commandBuffer->cmdDraw(primitive.vertexCount, 1, 0, 0);
+				commandBuffer->cmdDraw(primitive.vertexCount, instanceCount, 0, 0);
 		}
 	}
 
 	// Draw child nodes
 	for (Model::Node& child : node.children)
-		drawNode(commandBuffer, pipeline, child, transform);
+		drawNode(commandBuffer, pipeline, child, transform, instanceCount);
 }

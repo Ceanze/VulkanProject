@@ -15,7 +15,7 @@ public:
 	/*
 		ModelRender has its own push constants at the start of the data. You need to offset your push constants with getPushConstantSize()!
 	*/
-	void record(Model* model, glm::mat4 transform, CommandBuffer* commandBuffer, Pipeline* pipeline, const std::vector<VkDescriptorSet>& sets, const std::vector<uint32_t>& offsets);
+	void record(Model* model, glm::mat4 transform, CommandBuffer* commandBuffer, Pipeline* pipeline, const std::vector<VkDescriptorSet>& sets, const std::vector<uint32_t>& offsets, uint32_t instanceCount = 1);
 
 	void init();
 
@@ -31,7 +31,7 @@ private:
 	};
 
 	ModelRenderer();
-	void drawNode(CommandBuffer* commandBuffer, Pipeline* pipeline, Model::Node& node, glm::mat4 transform);
+	void drawNode(CommandBuffer* commandBuffer, Pipeline* pipeline, Model::Node& node, glm::mat4 transform, uint32_t instanceCount = 1);
 	
 private:
 	PushConstants pushConstants;
