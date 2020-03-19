@@ -111,6 +111,64 @@ void Heightmap::setProximitySize(int size)
 {
 	this->proxDim = size;
 }
+
+float Heightmap::getTerrainHeight(float x, float z) const
+{
+	auto toOffest = [&](glm::ivec2 v)->uint32_t {
+		v = glm::clamp(v, 0, this->heightmapWidth);
+		return v.x + v.y * this->heightmapWidth; 
+	};
+
+	float xDist = x - this->origin.x;
+	float zDist = z - this->origin.z;
+
+	// This is the bottom left corner in the quad x and z is in.
+	glm::ivec2 blIdx;
+	blIdx.x = static_cast<int>(xDist / this->vertDist);
+	blIdx.y = static_cast<int>(zDist / this->vertDist);
+
+	// Get the other corner indices.
+	glm::ivec2 tlIdx(blIdx.x, blIdx.y - 1);
+	glm::ivec2 trIdx(blIdx.x+1, blIdx.y - 1);
+	glm::ivec2 brIdx(blIdx.x+1, blIdx.y);
+
+	// Fetch each vertices height
+	float bl = this->verticies[toOffest(blIdx)].position.y;
+	float tl = this->verticies[toOffest(tlIdx)].position.y;
+	float br = this->verticies[toOffest(brIdx)].position.y;
+	float tr = this->verticies[toOffest(trIdx)].position.y;
+
+	// Check which triangle it is in.
+	glm::vec2 point;
+	point.x = fmod(xDist, this->vertDist) / this->vertDist;
+	point.y = fmod(zDist, this->vertDist) / this->vertDist;
+	bool isLeft = point.x <= (1.0f - point.y);
+
+	float height = 0.0f;
+	if (isLeft)
+	{
+		// Top left triangle
+		height = barryCentricHeight({0, tl, 0}, {1, tr, 0}, {0, bl, 1}, point);
+	}
+	else
+	{
+		// Bottom right triangle
+		height = barryCentricHeight({ 1, tr, 0 }, { 1, br, 1 }, { 0, bl, 1 }, point);
+	}
+
+	return height;
+}
+
+glm::vec3 Heightmap::getOrigin() const
+{
+	return this->origin;
+}
+
+float Heightmap::getVertexDist() const
+{
+	return this->vertDist;
+}
+
 glm::ivec2 Heightmap::getRegionFromPos(const glm::vec3& position)
 {
 	float regionWorldSize = (this->regionSize - 1) * this->vertDist;
@@ -125,10 +183,12 @@ glm::ivec2 Heightmap::getRegionFromPos(const glm::vec3& position)
 
 	return index;
 }
+
 int Heightmap::getProximityVertexDim()
 {
 	return this->proxVertDim;
 }
+
 void Heightmap::getProximityVerticies(const glm::vec3& position, std::vector<Vertex>& verticies)
 {
 	float xDistance = position.x - this->origin.x;
@@ -300,4 +360,13 @@ int Heightmap::getWidth()
 int Heightmap::getHeight()
 {
 	return this->heightmapHeight;
+}
+
+float Heightmap::barryCentricHeight(glm::vec3 v1, glm::vec3 v2, glm::vec3 v3, glm::vec2 xz)
+{
+	float det = (v2.z - v3.z) * (v1.x - v3.x) - (v2.x - v3.x) * (v1.z - v3.z);
+	float l1 = abs(((v2.z - v3.z) * (xz.x - v3.x) - (v2.x - v3.x) * (xz.y - v3.z)) / det);
+	float l2 = abs(((v1.z - v3.z) * (xz.x - v3.x) - (v1.x - v3.x) * (xz.y - v3.z)) / det);
+	float l3 = 1.0f - l1 - l2;
+	return l1 * v1.y + l2 * v2.y + l3 * v3.y;
 }

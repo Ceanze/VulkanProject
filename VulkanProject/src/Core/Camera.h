@@ -11,10 +11,10 @@ public:
 		alignas(16) glm::vec3 point;
 	};
 public:
-	Camera(float aspect, float fov, const glm::vec3& position, const glm::vec3& target, float speed, float hasteSpeed);
+	Camera(float aspect, float fov, const glm::vec3& position, const glm::vec3& target, float speed, float hasteSpeed, bool gravityOn = false);
 	~Camera();
 	
-	void update(float dt);
+	void update(float dt, float floor = 0.0f);
 
 	void setPosition(const glm::vec3& position);
 	void setSpeed(float speed);
@@ -48,4 +48,7 @@ private:
 
 	glm::vec3 position;
 	glm::vec3 target;
+
+	bool gravityOn;
+	float playerHeight;
 };

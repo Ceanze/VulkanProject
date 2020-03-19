@@ -22,8 +22,7 @@ void ProjectFinal::init()
 	// Initalize with maximum available threads
 	ThreadDispatcher::init(2);
 	ThreadManager::init(static_cast<uint32_t>(std::thread::hardware_concurrency()));
-	this->camera = new Camera(getWindow()->getAspectRatio(), 45.f, { 0.f, 20.f, 0.f }, { 0.f, 0.f, 0.f }, 10.0f, 10.0f);
-
+	
 	setupModels();
 	setupHeightmap();
 	setupDescLayouts();
@@ -53,7 +52,7 @@ void ProjectFinal::loop(float dt)
 	// Update view matrix
 	{
 		JAS_PROFILER_SAMPLE_SCOPE("Update skybox & camera");
-		this->camera->update(dt);
+		this->camera->update(dt, this->heightmap.getTerrainHeight(this->camera->getPosition().x, this->camera->getPosition().z));
 
 		this->skybox.update(this->camera);
 	}
@@ -122,10 +121,10 @@ void ProjectFinal::setupHeightmap()
 {
 	this->regionSize = 8;
 
-	float scale = 0.5f;
+	float scale = 2.0f;
 	this->heightmap.setVertexDist(scale);
-	this->heightmap.setProximitySize(1);
-	this->heightmap.setMaxZ(30.f);
+	this->heightmap.setProximitySize(20);
+	this->heightmap.setMaxZ(20.f);
 	this->heightmap.setMinZ(0.f);
 
 	int width, height;
@@ -142,6 +141,9 @@ void ProjectFinal::setupHeightmap()
 		delete[] data;
 	}
 
+	float th = this->heightmap.getTerrainHeight(0, 0);
+	this->camera = new Camera(getWindow()->getAspectRatio(), 45.f, { 0.f, th, 0.f }, { 0.f, th, 1.f }, 10.0f, 10.0f, true);
+
 	// Set data used for transfer
 	this->lastRegionIndex = this->heightmap.getRegionFromPos(this->camera->getPosition());
 	this->transferThreshold = 1;
@@ -154,7 +156,7 @@ void ProjectFinal::setupHeightmap()
 
 void ProjectFinal::setupModels()
 {
-	this->treeCount = 2;
+	this->treeCount = 1000;
 	// This can now be done in another thread.
 	const std::string filePath = "..\\assets\\Models\\Tree\\tree.glb";
 	GLTFLoader::load(filePath, &this->models[MODEL_TREE]);
@@ -501,12 +503,20 @@ void ProjectFinal::transferInitialData()
 
 	// Set model transform data
 	{
-		std::vector<glm::mat4> matrices;
-		glm::mat4 mat;
-		mat = glm::translate(glm::mat4(1.0), glm::vec3(0.0, 0.0, -10.0));
-		matrices.push_back(mat);
-		mat = glm::translate(glm::mat4(1.0), glm::vec3(0.0, 0.0, 10.0));
-		matrices.push_back(mat);
+		std::srand((unsigned)std::time(0));
+		auto rnd11 = [](int precision = 10000) { return (float)(std::rand() % precision) / (float)precision; };
+		auto rnd = [rnd11](float min, float max) { return min + rnd11(RAND_MAX) * glm::abs(max - min); };
+
+		std::vector<glm::mat4> matrices(this->treeCount);
+		for (uint32_t i = 0; i < this->treeCount; i++)
+		{
+			float w = (float)this->heightmap.getWidth() * this->heightmap.getVertexDist();
+			float a = -w / 2;
+			float b = w / 2;
+			glm::vec3 pos(rnd(a, b), 0.f, rnd(a, b));
+			pos.y = this->heightmap.getTerrainHeight(pos.x, pos.z);
+			matrices[i] = glm::translate(glm::mat4(1.0), pos);
+		}
 		this->memories[MEMORY_HOST_VISIBLE].directTransfer(&this->buffers[BUFFER_MODEL_TRANSFORMS], matrices.data(), this->buffers[BUFFER_MODEL_TRANSFORMS].getSize(), 0);
 	}
 
@@ -651,7 +661,6 @@ void ProjectFinal::secRecordFrustum(uint32_t frameIndex, CommandBuffer* buffer, 
 void ProjectFinal::secRecordSkybox(uint32_t frameIndex, CommandBuffer* buffer, VkCommandBufferInheritanceInfo inheritanceInfo)
 {
 	JAS_PROFILER_SAMPLE_FUNCTION();
-	std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	buffer->begin(VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, &inheritanceInfo);
 	VulkanProfiler::get().startIndexedTimestamp("Skybox", buffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, frameIndex);
 	this->skybox.draw(buffer, frameIndex);
@@ -662,7 +671,6 @@ void ProjectFinal::secRecordSkybox(uint32_t frameIndex, CommandBuffer* buffer, V
 void ProjectFinal::secRecordHeightmap(uint32_t frameIndex, CommandBuffer* buffer, VkCommandBufferInheritanceInfo inheritanceInfo)
 {
 	JAS_PROFILER_SAMPLE_FUNCTION();
-	std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	buffer->begin(VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, &inheritanceInfo);
 	VulkanProfiler::get().startIndexedTimestamp("Heightmap", buffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, frameIndex);
 	buffer->cmdBindPipeline(&getPipeline(PIPELINE_GRAPHICS));

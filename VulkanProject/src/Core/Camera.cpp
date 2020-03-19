@@ -6,9 +6,12 @@
 
 #define FRUSTUM_SHRINK_FACTOR -5.f
 
-Camera::Camera(float aspect, float fov, const glm::vec3& position, const glm::vec3& target, float speed, float hasteSpeed)
-	: position(position), target(target), speed(speed), hasteSpeed(hasteSpeed), globalUp(0.f, 1.f, 0.f), aspect(aspect)
+Camera::Camera(float aspect, float fov, const glm::vec3& position, const glm::vec3& target, float speed, float hasteSpeed, bool gravityOn)
+	: position(position), target(target), speed(speed), hasteSpeed(hasteSpeed), globalUp(0.f, 1.f, 0.f), aspect(aspect), gravityOn(gravityOn)
 {
+	this->playerHeight = 2.0f;
+	if (this->gravityOn) this->position.y += this->playerHeight;
+
 	this->forward = glm::normalize(this->target - this->position);
 	this->up = this->globalUp;
 	this->right = glm::cross(this->forward, this->up);
@@ -34,7 +37,7 @@ Camera::~Camera()
 {
 }
 
-void Camera::update(float dt)
+void Camera::update(float dt, float floor)
 {
 	static Input& input = Input::get();
 
@@ -52,6 +55,11 @@ void Camera::update(float dt)
 		this->position += this->globalUp * this->speed * dt * this->speedFactor;
 	if (input.isKeyDown(GLFW_KEY_LEFT_CONTROL))
 		this->position -= this->globalUp * this->speed * dt * this->speedFactor;
+
+	if (this->gravityOn)
+	{
+		this->position.y = floor + this->playerHeight;
+	}
 
 	if (input.isKeyDown(GLFW_KEY_LEFT_SHIFT))
 		this->speedFactor = hasteSpeed;
