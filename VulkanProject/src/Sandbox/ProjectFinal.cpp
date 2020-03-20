@@ -10,6 +10,7 @@
 #include "Core/CPUProfiler.h"
 #include "Models/ModelRenderer.h"
 #include "Models/GLTFLoader.h"
+#include "Core/Input.h"
 
 #include <GLFW/glfw3.h>
 

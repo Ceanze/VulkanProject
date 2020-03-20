@@ -99,15 +99,13 @@ void Instrumentation::setStartTime(uint64_t time)
 void Instrumentation::toggleSample(int key, uint32_t frameCount)
 {
 	static uint32_t frameCounter = 0;
-	static bool keyWasPressed = false;
-	if (Input::get().isKeyDown(key))
-		keyWasPressed = true;
-	else if (keyWasPressed)
+	if (Input::get().getKeyState(key) == Input::KeyState::FIRST_RELEASED)
 	{
-		keyWasPressed = false;
 		frameCounter = 0;
 		Instrumentation::g_runProfilingSample = true;
+		JAS_INFO("Start Profiling");
 	}
+
 	if (Instrumentation::g_runProfilingSample)
 	{
 		frameCounter++;
@@ -115,6 +113,7 @@ void Instrumentation::toggleSample(int key, uint32_t frameCount)
 		{
 			Instrumentation::g_runProfilingSample = false;
 			writeVulkanData();
+			JAS_INFO("End Profiling");
 		}
 	}
 }

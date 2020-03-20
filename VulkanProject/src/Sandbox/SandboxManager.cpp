@@ -3,6 +3,7 @@
 
 #include "VKSandboxBase.h"
 #include "Vulkan/Instance.h"
+#include "Core/Input.h"
 #include <GLFW/glfw3.h>
 
 SandboxManager::SandboxManager() : running(true), sandbox(nullptr)
@@ -50,6 +51,7 @@ void SandboxManager::run()
 			this->running = false;
 
 		this->sandbox->selfLoop(dt);
+		Input::get().update();
 
 		currentTime = std::chrono::high_resolution_clock::now();
 		dt = std::chrono::duration<float>(currentTime - prevTime).count();

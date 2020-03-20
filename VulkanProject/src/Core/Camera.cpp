@@ -56,6 +56,12 @@ void Camera::update(float dt, float floor)
 	if (input.isKeyDown(GLFW_KEY_LEFT_CONTROL))
 		this->position -= this->globalUp * this->speed * dt * this->speedFactor;
 
+	if (input.getKeyState(GLFW_KEY_F) == Input::KeyState::FIRST_RELEASED)
+	{
+		this->gravityOn ^= true;
+		JAS_INFO("Toggled gravity: {}", this->gravityOn ? "On" : "Off");
+	}
+
 	if (this->gravityOn)
 	{
 		this->position.y = floor + this->playerHeight;
