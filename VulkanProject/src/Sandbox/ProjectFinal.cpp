@@ -18,6 +18,15 @@
 
 void ProjectFinal::init()
 {
+	/*
+		---------------Controls---------------
+			WASD:	Move camera
+			Mouse:	Look around
+			R:		Start frame profiling
+			C:		Toggle camera
+			F:		Tollge gravity
+	*/
+
 	getFrame()->queueUsage(VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT);
 
 	// Initalize with maximum available threads
