@@ -110,6 +110,7 @@
     <ClInclude Include="src\Core\Skybox.h" />
     <ClInclude Include="src\Core\Window.h" />
     <ClInclude Include="src\Models\GLTFLoader.h" />
+    <ClInclude Include="src\Models\Model\Material.h" />
     <ClInclude Include="src\Models\Model\Model.h" />
     <ClInclude Include="src\Models\ModelRenderer.h" />
     <ClInclude Include="src\Sandbox\ProjectFinal.h" />
@@ -161,6 +162,7 @@
     <ClCompile Include="src\Core\Skybox.cpp" />
     <ClCompile Include="src\Core\Window.cpp" />
     <ClCompile Include="src\Models\GLTFLoader.cpp" />
+    <ClCompile Include="src\Models\Model\Material.cpp" />
     <ClCompile Include="src\Models\Model\Model.cpp" />
     <ClCompile Include="src\Models\ModelRenderer.cpp" />
     <ClCompile Include="src\Sandbox\ProjectFinal.cpp" />

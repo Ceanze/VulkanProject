@@ -4,7 +4,7 @@
 
 #include <vulkan/vulkan.h>
 
-typedef uint32_t Offset;
+typedef uint64_t Offset;
 
 class Buffer;
 class Texture;
@@ -17,7 +17,7 @@ public:
 
 	void bindBuffer(Buffer* buffer);
 	void bindTexture(Texture* texture);
-	void directTransfer(Buffer* buffer, const void* data, uint32_t size, Offset bufferOffset);
+	void directTransfer(Buffer* buffer, const void* data, uint64_t size, Offset bufferOffset);
 
 	void init(VkMemoryPropertyFlags memProp);
 

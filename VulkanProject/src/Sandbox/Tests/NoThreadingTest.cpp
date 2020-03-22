@@ -124,8 +124,7 @@ void NoThreadingTest::loop(float dt)
 void NoThreadingTest::cleanup()
 {
 	VulkanProfiler::get().cleanup();
-	this->stagingBuffer.cleanup();
-	this->stagingMemory.cleanup();
+	this->stagingBuffers.cleanup();
 	this->transferCommandPool.cleanup();
 	this->cameraBuffer.cleanup();
 	this->memory.cleanup();
@@ -235,9 +234,10 @@ void NoThreadingTest::setupPre()
 	this->descManager.init(getSwapChain()->getNumImages());
 
 	const std::string filePath = "..\\assets\\Models\\Cube\\Cube.gltf";
-	GLTFLoader::prepareStagingBuffer(filePath, &this->model, &this->stagingBuffer, &this->stagingMemory);
-	this->stagingMemory.init(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-	GLTFLoader::transferToModel(&this->transferCommandPool, &this->model, &this->stagingBuffer, &this->stagingMemory);
+	
+	GLTFLoader::prepareStagingBuffer(filePath, &this->model, &this->stagingBuffers);
+	this->stagingBuffers.initMemory();
+	GLTFLoader::transferToModel(&this->transferCommandPool, &this->model, &this->stagingBuffers);
 
 	uint32_t pushOffset = ModelRenderer::get().getPushConstantSize();
 	ModelRenderer::get().addPushConstant(VK_SHADER_STAGE_VERTEX_BIT, sizeof(PushConstantData), pushOffset);

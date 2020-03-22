@@ -10,6 +10,7 @@
 #include "Vulkan/Sampler.h"
 #include "Vulkan/Pipeline/PushConstants.h"
 #include "Models/Model/Model.h"
+#include "Models/GLTFLoader.h"
 
 class NoThreadingTest : public VKSandboxBase
 {
@@ -53,8 +54,9 @@ private:
 	DescriptorManager descManager;
 
 	Model model;
-	Buffer stagingBuffer;
-	Memory stagingMemory;
+	GLTFLoader::StagingBuffers stagingBuffers;
+	//Buffer stagingBuffer;
+	//Memory stagingMemory;
 
 	std::vector<CommandBuffer*> primaryBuffers;
 	Texture depthTexture;

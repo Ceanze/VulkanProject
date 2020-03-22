@@ -32,7 +32,8 @@ void ProjectFinal::init()
 	// Initalize with maximum available threads
 	ThreadDispatcher::init(2);
 	ThreadManager::init(static_cast<uint32_t>(std::thread::hardware_concurrency()));
-	
+	setupCommandPools();
+
 	setupModels();
 	setupHeightmap();
 	setupDescLayouts();
@@ -93,11 +94,13 @@ void ProjectFinal::cleanup()
 	ThreadManager::cleanup();
 	VulkanProfiler::get().cleanup();
 
-	for (auto& model : this->models)
-		model.second.cleanup();
+	GLTFLoader::cleanupDefaultData();
 
 	for (auto& descManager : this->descManagers)
 		descManager.second.cleanup();
+
+	for (auto& model : this->models)
+		model.second.cleanup();
 
 	for (auto& pool : this->graphicsPools)
 		pool.cleanup();
@@ -166,10 +169,19 @@ void ProjectFinal::setupHeightmap()
 
 void ProjectFinal::setupModels()
 {
+	GLTFLoader::initDefaultData(&this->graphicsPools[MAIN_THREAD]);
+
 	this->treeCount = 1000;
 	// This can now be done in another thread.
 	const std::string filePath = "..\\assets\\Models\\Tree\\tree.glb";
-	GLTFLoader::load(filePath, &this->models[MODEL_TREE]);
+	//const std::string filePath = "..\\assets\\Models\\Sponza\\glTF\\Sponza.gltf";
+
+	GLTFLoader::StagingBuffers stagingBuffers;
+	GLTFLoader::prepareStagingBuffer(filePath, &this->models[MODEL_TREE], &stagingBuffers);
+	stagingBuffers.initMemory();
+	GLTFLoader::transferToModel(&this->graphicsPools[MAIN_THREAD], &this->models[MODEL_TREE], &stagingBuffers);
+	stagingBuffers.cleanup();
+
 	//this->isTransferDone = false;
 	//this->thread = new std::thread(&TransferTest::loadingThread, this);
 
@@ -196,6 +208,13 @@ void ProjectFinal::setupDescLayouts()
 		descLayout.add(new UBO(VK_SHADER_STAGE_VERTEX_BIT, 1, nullptr)); // World Vp
 		descLayout.init();
 		this->descManagers[PIPELINE_MODELS].addLayout(descLayout);
+		std::vector<DescriptorLayout> descLayouts(this->models[MODEL_TREE].materials.size());
+		for (uint32_t i = 0; i < (uint32_t)this->models[MODEL_TREE].materials.size(); i++)
+		{
+			Material& material = this->models[MODEL_TREE].materials[i];
+			Material::initializeDescriptor(descLayouts[i]);
+			this->descManagers[PIPELINE_MODELS].addLayout(descLayouts[i]);
+		}
 		this->descManagers[PIPELINE_MODELS].init(getSwapChain()->getNumImages());
 	}
 
@@ -228,7 +247,6 @@ void ProjectFinal::setupGeneral()
 	getShaders().resize(PIPELINE_COUNT);
 	getPipelines().resize(PIPELINE_COUNT);
 
-	setupCommandPools();
 	setupShaders();
 	setupGraphicsPipeline();
 	setupModelsPipeline();
@@ -341,7 +359,28 @@ void ProjectFinal::setupDescManagers()
 		this->descManagers[PIPELINE_MODELS].updateBufferDesc(0, 0, this->models[MODEL_TREE].vertexBuffer.getBuffer(), 0, vertexBufferSize);
 		this->descManagers[PIPELINE_MODELS].updateBufferDesc(0, 1, this->buffers[BUFFER_MODEL_TRANSFORMS].getBuffer(), 0, this->buffers[BUFFER_MODEL_TRANSFORMS].getSize());
 		this->descManagers[PIPELINE_MODELS].updateBufferDesc(0, 2, this->buffers[BUFFER_CAMERA].getBuffer(), 0, sizeof(CameraData));
-		this->descManagers[PIPELINE_MODELS].updateSets({ 0 }, i);
+		auto& materials = this->models[MODEL_TREE].materials;
+		std::vector<uint32_t> sets(1+ materials.size(), 0);
+		for (uint32_t j = 1; j <= (uint32_t)materials.size(); j++)
+		{
+			Material& material = materials[j - 1];
+			sets[j] = j;
+			this->descManagers[PIPELINE_MODELS].updateImageDesc(j, 0, material.baseColorTexture.texture->getImage().getLayout(), 
+				material.baseColorTexture.texture->getVkImageView(), material.baseColorTexture.sampler->getSampler());
+
+			this->descManagers[PIPELINE_MODELS].updateImageDesc(j, 1, material.metallicRoughnessTexture.texture->getImage().getLayout(),
+				material.metallicRoughnessTexture.texture->getVkImageView(), material.metallicRoughnessTexture.sampler->getSampler());
+
+			this->descManagers[PIPELINE_MODELS].updateImageDesc(j, 2, material.normalTexture.texture->getImage().getLayout(),
+				material.normalTexture.texture->getVkImageView(), material.normalTexture.sampler->getSampler());
+
+			this->descManagers[PIPELINE_MODELS].updateImageDesc(j, 3, material.occlusionTexture.texture->getImage().getLayout(),
+				material.occlusionTexture.texture->getVkImageView(), material.occlusionTexture.sampler->getSampler());
+
+			this->descManagers[PIPELINE_MODELS].updateImageDesc(j, 4, material.emissiveTexture.texture->getImage().getLayout(),
+				material.emissiveTexture.texture->getVkImageView(), material.emissiveTexture.sampler->getSampler());
+		}
+		this->descManagers[PIPELINE_MODELS].updateSets(sets, i);
 	}
 
 	// Frustum compute
@@ -701,6 +740,8 @@ void ProjectFinal::secRecordModels(uint32_t frameIndex, CommandBuffer* buffer, V
 	buffer->cmdBindPipeline(&getPipeline(PIPELINE_MODELS));
 	std::vector<uint32_t> offsets;
 	std::vector<VkDescriptorSet> sets = { this->descManagers[PIPELINE_MODELS].getSet(frameIndex, 0) };
+	for (Material& material : this->models[MODEL_TREE].materials)
+		sets.push_back(this->descManagers[PIPELINE_MODELS].getSet(frameIndex, material.index+1));
 	ModelRenderer::get().record(&this->models[MODEL_TREE], glm::mat4(1.0), buffer, &getPipeline(PIPELINE_MODELS), sets, offsets, this->treeCount);
 	VulkanProfiler::get().endIndexedTimestamp("Models", buffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, frameIndex);
 	buffer->end();

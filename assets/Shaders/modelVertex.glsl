@@ -22,9 +22,9 @@ layout(location = 0) out vec3 fragNormal;
 layout(location = 1) out vec2 fragUv;
 
 
-layout(push_constant) uniform PushConstants
+layout(push_constant) uniform PushConstantsVert
 {
-    mat4 transform;
+    layout(offset = 0) mat4 transform;
 };
 
 layout(set=0, binding = 2) uniform Camera
@@ -33,7 +33,7 @@ layout(set=0, binding = 2) uniform Camera
 };
 
 void main() {
-    gl_Position = vp * transform * modelTransform[gl_InstanceIndex] * vec4(vertices[gl_VertexIndex].inPosition.xyz, 1.0);
-    fragNormal = normalize((transform * modelTransform[gl_InstanceIndex] * vec4(vertices[gl_VertexIndex].inNormal.xyz, 0.0)).xyz);
+    gl_Position = vp * modelTransform[gl_InstanceIndex] * transform * vec4(vertices[gl_VertexIndex].inPosition.xyz, 1.0);
+    fragNormal = normalize((modelTransform[gl_InstanceIndex] * transform * vec4(vertices[gl_VertexIndex].inNormal.xyz, 0.0)).xyz);
     fragUv = vertices[gl_VertexIndex].inUv.xy;
 }

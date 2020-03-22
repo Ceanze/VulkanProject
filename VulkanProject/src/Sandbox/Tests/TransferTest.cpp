@@ -92,8 +92,7 @@ void TransferTest::cleanup()
 
 	this->transferModel.cleanup();
 	this->defaultModel.cleanup();
-	this->stagingBuffer.cleanup();
-	this->stagingMemory.cleanup();
+	this->stagingBuffers.cleanup();
 	this->depthTexture.cleanup();
 	this->imageMemory.cleanup();
 	this->bufferUniform.cleanup();
@@ -160,11 +159,10 @@ void TransferTest::loadingThread()
 {
 	const std::string filePath = "..\\assets\\Models\\Sponza\\glTF\\Sponza.gltf";
 
-	GLTFLoader::prepareStagingBuffer(filePath, &this->transferModel, &this->stagingBuffer, &this->stagingMemory);
-
-	this->stagingMemory.init(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+	GLTFLoader::prepareStagingBuffer(filePath, &this->transferModel, &this->stagingBuffers);
+	this->stagingBuffers.initMemory();
 	// Use the transfer queue, create a single command buffer and copy the contents of the staging buffer to the model's buffers.
-	GLTFLoader::transferToModel(&this->transferCommandPool, &this->transferModel, &this->stagingBuffer, &this->stagingMemory);
+	GLTFLoader::transferToModel(&this->transferCommandPool, &this->transferModel, &this->stagingBuffers);
 
 	{
 		std::lock_guard<std::mutex> lock(this->mutex);
