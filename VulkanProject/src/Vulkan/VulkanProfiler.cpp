@@ -298,10 +298,13 @@ void VulkanProfiler::getBufferTimestamps(CommandBuffer* buffer)
 					this->results[timestamp.first][i].end = (((this->results[timestamp.first][i].end - this->startTimeGPU) * timestampPeriod) / (uint64_t)this->timeUnit);
 					this->results[timestamp.first][i].id = i;
 
-					if (this->timeResults[timestamp.first].size() == this->plotDataCount) {
-						this->timeResults[timestamp.first].erase(this->timeResults[timestamp.first].begin());
+					if (Instrumentation::g_runProfilingSample)
+					{
+						if (this->timeResults[timestamp.first].size() == this->plotDataCount) {
+							this->timeResults[timestamp.first].erase(this->timeResults[timestamp.first].begin());
+						}
+						this->timeResults[timestamp.first].push_back(this->results[timestamp.first][i]);
 					}
-					this->timeResults[timestamp.first].push_back(this->results[timestamp.first][i]);
 				}
 			}
 		}
@@ -478,6 +481,10 @@ void VulkanProfiler::setupTimers(CommandPool* pool)
 	pool->removeCommandBuffer(buffer);
 
 	Instrumentation::get().setStartTime(this->startTimeCPU);
+
+	CommandBuffer* buff = pool->beginSingleTimeCommand();
+	resetAllTimestamps(buff);
+	pool->endSingleTimeCommand(buff);
 }
 
 std::string VulkanProfiler::getTimeUnitName()

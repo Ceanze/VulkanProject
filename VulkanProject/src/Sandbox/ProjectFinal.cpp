@@ -57,7 +57,7 @@ void ProjectFinal::init()
 
 void ProjectFinal::loop(float dt)
 {
-	JAS_PROFILER_TOGGLE_SAMPLE(GLFW_KEY_R, 10);
+	JAS_PROFILER_TOGGLE_SAMPLE_POOL(&this->graphicsPools[MAIN_THREAD], GLFW_KEY_R, 10);
 	JAS_PROFILER_SAMPLE_FUNCTION();
 
 	// Update view matrix
@@ -171,7 +171,7 @@ void ProjectFinal::setupModels()
 {
 	GLTFLoader::initDefaultData(&this->graphicsPools[MAIN_THREAD]);
 
-	this->treeCount = 1000;
+	this->treeCount = 100000;
 	// This can now be done in another thread.
 	const std::string filePath = "..\\assets\\Models\\Tree\\tree.glb";
 	//const std::string filePath = "..\\assets\\Models\\Sponza\\glTF\\Sponza.gltf";
@@ -445,7 +445,6 @@ void ProjectFinal::setupShaders()
 	getShader(PIPELINE_MODELS).init();
 
 	// Frustum compute
-
 	getShader(PIPELINE_FRUSTUM).addStage(Shader::Type::COMPUTE, "ComputeTransferTest\\compTransferComp.spv");
 	getShader(PIPELINE_FRUSTUM).init();
 

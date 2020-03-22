@@ -118,6 +118,29 @@ void Instrumentation::toggleSample(int key, uint32_t frameCount)
 	}
 }
 
+void Instrumentation::toggleSample(CommandPool* pool, int key, uint32_t frameCount)
+{
+	static uint32_t frameCounter = 0;
+	if (Input::get().getKeyState(key) == Input::KeyState::FIRST_RELEASED)
+	{
+		frameCounter = 0;
+		VulkanProfiler::get().setupTimers(pool);
+		Instrumentation::g_runProfilingSample = true;
+		JAS_INFO("Start Profiling");
+	}
+
+	if (Instrumentation::g_runProfilingSample)
+	{
+		frameCounter++;
+		if (frameCounter > frameCount)
+		{
+			Instrumentation::g_runProfilingSample = false;
+			writeVulkanData();
+			JAS_INFO("End Profiling");
+		}
+	}
+}
+
 void Instrumentation::writeVulkanData()
 {
 	auto& results = VulkanProfiler::get().getResults();

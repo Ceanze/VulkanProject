@@ -76,11 +76,11 @@ public:
 	void resetAllTimestamps(CommandBuffer* commandBuffer);
 	void resetPipelineStats(CommandBuffer* commandBuffer);
 	void resetAll(CommandBuffer* commandBuffer);
+	void setupTimers(CommandPool* pool);
 
 private:
 	VulkanProfiler();
 	void saveResults(std::string filePath);
-	void setupTimers(CommandPool* pool);
 	std::string getTimeUnitName();
 
 	VkQueryPool timestampQueryPool;
