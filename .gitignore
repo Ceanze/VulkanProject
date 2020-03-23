@@ -356,3 +356,5 @@ MigrationBackup/
 *.tlog
 imgui.ini
 *.lastbuildstate
+results.json
+GPUresults.json
