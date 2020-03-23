@@ -45,7 +45,7 @@ void ProjectFinalNaive::init()
 
 void ProjectFinalNaive::loop(float dt)
 {
-	JAS_PROFILER_TOGGLE_SAMPLE(GLFW_KEY_R, 10);
+	JAS_PROFILER_TOGGLE_SAMPLE_POOL(&this->graphicsPools[MAIN_THREAD], GLFW_KEY_R, 10);
 	JAS_PROFILER_SAMPLE_FUNCTION();
 
 	// Update view matrix
@@ -263,7 +263,7 @@ void ProjectFinalNaive::setupBuffers()
 	// Graphics buffers
 	{
 		std::vector<uint32_t> queueIndices = { Instance::get().getGraphicsQueue().queueIndex };
-		this->buffers[BUFFER_CAMERA].init(sizeof(CameraData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, queueIndices);
+		this->buffers[BUFFER_CAMERA].init(sizeof(CameraData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, queueIndices);
 		this->buffers[BUFFER_MODEL_TRANSFORMS].init(sizeof(glm::mat4) * this->treeCount, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, queueIndices);
 		this->memories[MEMORY_HOST_VISIBLE].bindBuffer(&this->buffers[BUFFER_CAMERA]);
 		this->memories[MEMORY_HOST_VISIBLE].bindBuffer(&this->buffers[BUFFER_MODEL_TRANSFORMS]);
@@ -273,7 +273,7 @@ void ProjectFinalNaive::setupBuffers()
 	{
 		// Planes and world data
 		std::vector<uint32_t> queueIndices = { Instance::get().getGraphicsQueue().queueIndex };
-		this->buffers[BUFFER_PLANES].init(sizeof(Camera::Plane) * 6, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, queueIndices);
+		this->buffers[BUFFER_PLANES].init(sizeof(Camera::Plane) * 6, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, queueIndices);
 		this->buffers[BUFFER_WORLD_DATA].init(sizeof(WorldData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, queueIndices);
 		this->memories[MEMORY_HOST_VISIBLE].bindBuffer(&this->buffers[BUFFER_PLANES]);
 		this->memories[MEMORY_HOST_VISIBLE].bindBuffer(&this->buffers[BUFFER_WORLD_DATA]);
@@ -667,6 +667,7 @@ void ProjectFinalNaive::secRecordFrustum(uint32_t frameIndex, CommandBuffer* buf
 	JAS_PROFILER_SAMPLE_FUNCTION();
 	buffer->begin(0, &inheritanceInfo);
 	VulkanProfiler::get().startIndexedTimestamp("Frustum", buffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, frameIndex);
+	std::this_thread::sleep_for(std::chrono::duration(std::chrono::milliseconds(1)));
 	buffer->cmdBindPipeline(&getPipeline(PIPELINE_FRUSTUM));
 	std::vector<VkDescriptorSet> sets = { this->descManagers[PIPELINE_FRUSTUM].getSet(frameIndex, 0) };
 	std::vector<uint32_t> offsets;
@@ -681,6 +682,7 @@ void ProjectFinalNaive::secRecordSkybox(uint32_t frameIndex, CommandBuffer* buff
 	JAS_PROFILER_SAMPLE_FUNCTION();
 	buffer->begin(VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, &inheritanceInfo);
 	VulkanProfiler::get().startIndexedTimestamp("Skybox", buffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, frameIndex);
+	std::this_thread::sleep_for(std::chrono::duration(std::chrono::milliseconds(1)));
 	this->skybox.draw(buffer, frameIndex);
 	VulkanProfiler::get().endIndexedTimestamp("Skybox", buffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, frameIndex);
 	buffer->end();
@@ -691,6 +693,7 @@ void ProjectFinalNaive::secRecordHeightmap(uint32_t frameIndex, CommandBuffer* b
 	JAS_PROFILER_SAMPLE_FUNCTION();
 	buffer->begin(VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, &inheritanceInfo);
 	VulkanProfiler::get().startIndexedTimestamp("Heightmap", buffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, frameIndex);
+	std::this_thread::sleep_for(std::chrono::duration(std::chrono::milliseconds(1)));
 	buffer->cmdBindPipeline(&getPipeline(PIPELINE_GRAPHICS));
 	std::vector<VkDescriptorSet> sets = { this->descManagers[PIPELINE_GRAPHICS].getSet(frameIndex, 0) };
 	std::vector<uint32_t> offsets;
@@ -706,6 +709,7 @@ void ProjectFinalNaive::secRecordModels(uint32_t frameIndex, CommandBuffer* buff
 	JAS_PROFILER_SAMPLE_FUNCTION();
 	buffer->begin(VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, &inheritanceInfo);
 	VulkanProfiler::get().startIndexedTimestamp("Models", buffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, frameIndex);
+	std::this_thread::sleep_for(std::chrono::duration(std::chrono::milliseconds(1)));
 	buffer->cmdBindPipeline(&getPipeline(PIPELINE_MODELS));
 	std::vector<uint32_t> offsets;
 	std::vector<VkDescriptorSet> sets = { this->descManagers[PIPELINE_MODELS].getSet(frameIndex, 0) };

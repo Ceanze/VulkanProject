@@ -1,0 +1,8 @@
+resultsNaiveNormal, resultsThreadNormal:
+	100000 trees, no extra work, no sleep on secondary
+
+resultsThreadExtraWork, resultsNaiveExtraWork:
+	100000 trees, 50 total work, no sleep on secondary
+
+resultsThreadLongerWork, resultsNaiveLongerWork:
+	100000 trees, no extra work, 1 milliseconds sleep on secondaries
