@@ -10,6 +10,7 @@
 #include "Vulkan/Sampler.h"
 #include "Vulkan/Pipeline/PushConstants.h"
 #include "Models/Model/Model.h"
+#include "Models/GLTFLoader.h"
 
 #include <thread>
 #include <mutex>
@@ -50,8 +51,7 @@ private:
 	// For loading model
 	Model defaultModel;
 	Model transferModel;
-	Buffer stagingBuffer;
-	Memory stagingMemory;
+	GLTFLoader::StagingBuffers stagingBuffers;
 
 	Buffer bufferUniform;
 	Texture depthTexture;

@@ -14,8 +14,9 @@ public:
 	
 	/*
 		ModelRender has its own push constants at the start of the data. You need to offset your push constants with getPushConstantSize()!
+		sets must have all the material sets at the end, so the recording can choose from them when needed.
 	*/
-	void record(Model* model, glm::mat4 transform, CommandBuffer* commandBuffer, Pipeline* pipeline, const std::vector<VkDescriptorSet>& sets, const std::vector<uint32_t>& offsets);
+	void record(Model* model, glm::mat4 transform, CommandBuffer* commandBuffer, Pipeline* pipeline, const std::vector<VkDescriptorSet>& sets, const std::vector<uint32_t>& offsets, uint32_t instanceCount = 1);
 
 	void init();
 
@@ -31,7 +32,7 @@ private:
 	};
 
 	ModelRenderer();
-	void drawNode(CommandBuffer* commandBuffer, Pipeline* pipeline, Model::Node& node, glm::mat4 transform);
+	void drawNode(CommandBuffer* commandBuffer, Pipeline* pipeline, Model::Node& node, glm::mat4 transform, const std::vector<VkDescriptorSet>& sets, const std::vector<uint32_t>& offsets, uint32_t instanceCount);
 	
 private:
 	PushConstants pushConstants;

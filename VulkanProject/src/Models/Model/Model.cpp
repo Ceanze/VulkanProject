@@ -21,8 +21,15 @@ void Model::cleanup()
 	if(this->indices.empty() == false && this->vertices.empty() == false)
 		this->bufferMemory.cleanup();
 
-	if(hasImageMemory)
+	if (hasImageMemory)
 		this->imageMemory.cleanup();
 	if(hasMaterialMemory)
 		this->materialMemory.cleanup();
+
+	for (Texture& texture : this->textures)
+		texture.cleanup();
+	imageData.clear();
+
+	for (Sampler& sampler : this->samplers)
+		sampler.cleanup();
 }

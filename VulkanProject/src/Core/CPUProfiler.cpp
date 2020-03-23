@@ -99,28 +99,55 @@ void Instrumentation::setStartTime(uint64_t time)
 void Instrumentation::toggleSample(int key, uint32_t frameCount)
 {
 	static uint32_t frameCounter = 0;
-	static bool keyWasPressed = false;
-	if (Input::get().isKeyDown(key))
-		keyWasPressed = true;
-	else if (keyWasPressed)
+	if (Input::get().getKeyState(key) == Input::KeyState::FIRST_RELEASED)
 	{
-		keyWasPressed = false;
 		frameCounter = 0;
 		Instrumentation::g_runProfilingSample = true;
+		JAS_INFO("Start Profiling");
 	}
+
 	if (Instrumentation::g_runProfilingSample)
 	{
 		frameCounter++;
 		if (frameCounter > frameCount)
 		{
 			Instrumentation::g_runProfilingSample = false;
-			auto& results = VulkanProfiler::get().getResults();
+			writeVulkanData();
+			JAS_INFO("End Profiling");
+		}
+	}
+}
 
-			for (auto& res : results) {
-				for (uint32_t i = 0; i < res.second.size(); i++) {
-					write({ res.first + std::to_string(res.second[i].id), res.second[i].start, res.second[i].end, 0, 1 });
-				}
-			}
+void Instrumentation::toggleSample(CommandPool* pool, int key, uint32_t frameCount)
+{
+	static uint32_t frameCounter = 0;
+	if (Input::get().getKeyState(key) == Input::KeyState::FIRST_RELEASED)
+	{
+		frameCounter = 0;
+		VulkanProfiler::get().setupTimers(pool);
+		Instrumentation::g_runProfilingSample = true;
+		JAS_INFO("Start Profiling");
+	}
+
+	if (Instrumentation::g_runProfilingSample)
+	{
+		frameCounter++;
+		if (frameCounter > frameCount)
+		{
+			Instrumentation::g_runProfilingSample = false;
+			writeVulkanData();
+			JAS_INFO("End Profiling");
+		}
+	}
+}
+
+void Instrumentation::writeVulkanData()
+{
+	auto& results = VulkanProfiler::get().getResults();
+
+	for (auto& res : results) {
+		for (uint32_t i = 0; i < res.second.size(); i++) {
+			write({ res.first + std::to_string(res.second[i].id), res.second[i].start, res.second[i].end, 0, 1 });
 		}
 	}
 }

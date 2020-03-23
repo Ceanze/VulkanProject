@@ -24,7 +24,7 @@ void Frame::init(Window* window, SwapChain* swapChain)
 	this->swapChain = swapChain;
 	this->numImages = swapChain->getNumImages();
 	this->window = window;
-	this->framesInFlight = 2; // Unsure of purpose
+	this->framesInFlight = 3; // Unsure of purpose
 	this->currentFrame = 0;
 	this->imageIndex = 0;
 
@@ -44,6 +44,7 @@ void Frame::cleanup()
 void Frame::submit(VkQueue queue, CommandBuffer** commandBuffers)
 {
 	JAS_PROFILER_SAMPLE_FUNCTION();
+
 	this->imgui->end();
 	this->imgui->render();
 
@@ -62,7 +63,11 @@ void Frame::submit(VkQueue queue, CommandBuffer** commandBuffers)
 	submitInfo.pWaitSemaphores = waitSemaphores.data();
 
 	VkSemaphore signalSemaphores[] = { this->renderFinishedSemaphores[this->currentFrame] };
+#ifdef USE_IMGUI
 	std::vector<VkCommandBuffer> buffers = { commandBuffers[this->imageIndex]->getCommandBuffer(), this->imgui->getCurrentCommandBuffer() };
+#else
+	std::vector<VkCommandBuffer> buffers = { commandBuffers[this->imageIndex]->getCommandBuffer() };
+#endif
 	submitInfo.signalSemaphoreCount = 1;
 	submitInfo.pSignalSemaphores = signalSemaphores;
 	submitInfo.pCommandBuffers = buffers.data();
@@ -72,7 +77,7 @@ void Frame::submit(VkQueue queue, CommandBuffer** commandBuffers)
 	vkResetFences(Instance::get().getDevice(), 1, &this->inFlightFences[this->currentFrame]);
 	ERROR_CHECK(vkQueueSubmit(queue, 1, &submitInfo, this->inFlightFences[this->currentFrame]), "Failed to sumbit commandbuffer!");
 
-	VulkanProfiler::get().getBufferTimestamps(commandBuffers[this->imageIndex]);
+	//VulkanProfiler::get().getBufferTimestamps(commandBuffers[this->imageIndex]);
 
 }
 
@@ -89,7 +94,7 @@ void Frame::submitCompute(VkQueue queue, CommandBuffer* commandBuffer)
 
 	ERROR_CHECK(vkQueueSubmit(queue, 1, &computeSubmitInfo, VK_NULL_HANDLE), "Failed to submit compute queue!");
 
-	VulkanProfiler::get().getBufferTimestamps(commandBuffer);
+	//VulkanProfiler::get().getBufferTimestamps(commandBuffer);
 	//VulkanProfiler::get().getAllQueries();
 }
 
@@ -127,7 +132,7 @@ bool Frame::beginFrame(float dt)
 
 bool Frame::endFrame()
 {
-	JAS_PROFILER_SAMPLE_FUNCTION();
+	JAS_PROFILER_SAMPLE_SCOPE("endFrame " + std::to_string(this->imageIndex));
 	VkSemaphore waitSemaphores[] = { this->renderFinishedSemaphores[this->currentFrame] };
 
 	VkPresentInfoKHR presentInfo = {};

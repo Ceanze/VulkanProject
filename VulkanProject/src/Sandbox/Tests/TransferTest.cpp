@@ -92,8 +92,7 @@ void TransferTest::cleanup()
 
 	this->transferModel.cleanup();
 	this->defaultModel.cleanup();
-	this->stagingBuffer.cleanup();
-	this->stagingMemory.cleanup();
+	this->stagingBuffers.cleanup();
 	this->depthTexture.cleanup();
 	this->imageMemory.cleanup();
 	this->bufferUniform.cleanup();
@@ -130,7 +129,7 @@ void TransferTest::setupPost()
 	// Set uniform data.
 	UboData uboData;
 	uboData.vp = this->camera->getMatrix();
-	uboData.world = glm::translate(glm::mat4(1.0f), glm::vec3{0.0f, 0.0f, -1.0f});
+	uboData.world = glm::translate(glm::mat4(1.0f), glm::vec3{0.0f, 0.0f, -19.0f});
 	uboData.world[3][3] = 1.0f;
 	uint32_t unsiformBufferSize = sizeof(UboData);
 
@@ -141,7 +140,7 @@ void TransferTest::setupPost()
 	this->memory.init(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
 	// Transfer the data to the buffer.
-	this->memory.directTransfer(&this->bufferUniform, (void*)& uboData, unsiformBufferSize, 0);
+	this->memory.directTransfer(&this->bufferUniform, (void*)&uboData, unsiformBufferSize, 0);
 
 	// Update descriptor
 	for (uint32_t i = 0; i < static_cast<uint32_t>(getSwapChain()->getNumImages()); i++)
@@ -160,11 +159,10 @@ void TransferTest::loadingThread()
 {
 	const std::string filePath = "..\\assets\\Models\\Sponza\\glTF\\Sponza.gltf";
 
-	GLTFLoader::prepareStagingBuffer(filePath, &this->transferModel, &this->stagingBuffer, &this->stagingMemory);
-
-	this->stagingMemory.init(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+	GLTFLoader::prepareStagingBuffer(filePath, &this->transferModel, &this->stagingBuffers);
+	this->stagingBuffers.initMemory();
 	// Use the transfer queue, create a single command buffer and copy the contents of the staging buffer to the model's buffers.
-	GLTFLoader::transferToModel(&this->transferCommandPool, &this->transferModel, &this->stagingBuffer, &this->stagingMemory);
+	GLTFLoader::transferToModel(&this->transferCommandPool, &this->transferModel, &this->stagingBuffers);
 
 	{
 		std::lock_guard<std::mutex> lock(this->mutex);

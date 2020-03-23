@@ -1,6 +1,9 @@
 C:/VulkanSDK/1.1.130.0/Bin32/glslc.exe -fshader-stage=frag testFragment.glsl -o testFragment.spv
 C:/VulkanSDK/1.1.130.0/Bin32/glslc.exe -fshader-stage=vertex testVertex.glsl -o testVertex.spv
 
+C:/VulkanSDK/1.1.130.0/Bin32/glslc.exe -fshader-stage=frag modelFragment.glsl -o modelFragment.spv
+C:/VulkanSDK/1.1.130.0/Bin32/glslc.exe -fshader-stage=vertex modelVertex.glsl -o modelVertex.spv
+
 C:/VulkanSDK/1.1.130.0/Bin32/glslc.exe -fshader-stage=frag ComputeTest/particleFragment.glsl -o ComputeTest/particleFragment.spv
 C:/VulkanSDK/1.1.130.0/Bin32/glslc.exe -fshader-stage=vertex ComputeTest/particleVertex.glsl -o ComputeTest/particleVertex.spv
 C:/VulkanSDK/1.1.130.0/Bin32/glslc.exe -fshader-stage=compute ComputeTest/computeTest.glsl -o ComputeTest/computeTest.spv

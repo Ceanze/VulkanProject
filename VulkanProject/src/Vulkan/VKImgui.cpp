@@ -34,6 +34,7 @@ VKImgui::~VKImgui()
 
 void VKImgui::init(Window* window, SwapChain* swapChain)
 {
+#ifdef USE_IMGUI
 	this->window = window->getNativeWindow();
 	this->swapChain = swapChain;
 
@@ -42,10 +43,12 @@ void VKImgui::init(Window* window, SwapChain* swapChain)
 	createRenderPass();
 	createFramebuffers();
 	initImgui();
+#endif
 }
 
 void VKImgui::cleanup()
 {
+#ifdef USE_IMGUI
 	for (auto& buffer : this->framebuffers) {
 		buffer->cleanup();
 		delete buffer;
@@ -60,10 +63,12 @@ void VKImgui::cleanup()
 
 	delete this->commandPool;
 	delete this->renderPass;
+#endif
 }
 
 void VKImgui::begin(uint32_t frameIndex, float dt)
 {
+#ifdef USE_IMGUI
 	this->frameIndex = frameIndex;
 
 	auto& io = ImGui::GetIO();
@@ -72,29 +77,38 @@ void VKImgui::begin(uint32_t frameIndex, float dt)
 	ImGui_ImplVulkan_NewFrame();
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
+#endif
 }
 
 void VKImgui::end()
 {
+#ifdef USE_IMGUI
 	if (Input::get().isKeyToggled(GLFW_KEY_C))
 		ImGui::SetMouseCursor(ImGuiMouseCursor_None);
 
 	ImGui::EndFrame();
 	ImGui::Render();
+#endif
 }
 
 void VKImgui::render()
 {
+#ifdef USE_IMGUI
 	this->commandBuffers[this->frameIndex]->begin(0, nullptr);
 	this->commandBuffers[this->frameIndex]->cmdBeginRenderPass(this->renderPass, this->framebuffers[this->frameIndex]->getFramebuffer(), this->swapChain->getExtent(), { {0.0f, 0.0f, 0.0f, 1.0f} }, VK_SUBPASS_CONTENTS_INLINE);
 	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), this->commandBuffers[this->frameIndex]->getCommandBuffer());
 	this->commandBuffers[this->frameIndex]->cmdEndRenderPass();
 	this->commandBuffers[this->frameIndex]->end();
+#endif
 }
 
 VkCommandBuffer VKImgui::getCurrentCommandBuffer() const
 {
+#ifdef USE_IMGUI
 	return this->commandBuffers[this->frameIndex]->getCommandBuffer();
+#else
+	return VK_NULL_HANDLE;
+#endif
 }
 
 void VKImgui::createFramebuffers()

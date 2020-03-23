@@ -26,7 +26,7 @@ void Memory::bindTexture(Texture* texture)
 	this->currentOffset += static_cast<Offset>(texture->getMemReq().size);
 }
 
-void Memory::directTransfer(Buffer* buffer, const void* data, uint32_t size, Offset bufferOffset)
+void Memory::directTransfer(Buffer* buffer, const void* data, uint64_t size, Offset bufferOffset)
 {
 	Offset offset = this->bufferOffsets[buffer];
 

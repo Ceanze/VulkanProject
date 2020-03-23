@@ -3,6 +3,8 @@
 #include "Vulkan/Buffers/Memory.h"
 #include "Vulkan/Buffers/Buffer.h"
 #include "Vulkan/Texture.h"
+#include "Vulkan/Sampler.h"
+#include "Material.h"
 
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/quaternion.hpp>
@@ -48,6 +50,7 @@ struct Primitive
 	uint32_t indexCount{0};
 	uint32_t vertexCount{0};
 	bool hasIndices{false};
+	Material* material;
 };
 
 class Mesh
@@ -70,6 +73,7 @@ public:
 		glm::mat4 matrix; // Combination of rotation, translation and scale.
 		std::vector<Node> children;
 		Node* parent{ nullptr };
+		Model* model;
 	};
 
 public:
@@ -89,7 +93,13 @@ public:
 	Memory bufferMemory;
 
 	bool hasImageMemory{false};
-	bool hasMaterialMemory{ false };
+	std::vector<std::vector<uint8_t>> imageData;
+	std::vector<Texture> textures;
 	Memory imageMemory;
+
+	std::vector<Sampler> samplers;
+
+	bool hasMaterialMemory{ false };
 	Memory materialMemory;
+	std::vector<Material> materials;
 };

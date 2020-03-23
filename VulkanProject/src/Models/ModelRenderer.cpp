@@ -13,7 +13,7 @@ ModelRenderer::~ModelRenderer()
 	this->pushConstants.cleanup();
 }
 
-void ModelRenderer::record(Model* model, glm::mat4 transform, CommandBuffer* commandBuffer, Pipeline* pipeline, const std::vector<VkDescriptorSet>& sets, const std::vector<uint32_t>& offsets)
+void ModelRenderer::record(Model* model, glm::mat4 transform, CommandBuffer* commandBuffer, Pipeline* pipeline, const std::vector<VkDescriptorSet>& sets, const std::vector<uint32_t>& offsets, uint32_t instanceCount)
 {
 	// TODO: Use different materials, can still use same pipeline if all meshes uses same type of material (i.e. PBR)!
 	if (model->vertexBuffer.getBuffer() == VK_NULL_HANDLE)
@@ -25,9 +25,8 @@ void ModelRenderer::record(Model* model, glm::mat4 transform, CommandBuffer* com
 	if (model->indices.empty() == false)
 		commandBuffer->cmdBindIndexBuffer(model->indexBuffer.getBuffer(), 0, VK_INDEX_TYPE_UINT32);
 
-	commandBuffer->cmdBindDescriptorSets(pipeline, 0, sets, offsets);
 	for (Model::Node& node : model->nodes)
-		drawNode(commandBuffer, pipeline, node, transform);
+		drawNode(commandBuffer, pipeline, node, transform, sets, offsets, instanceCount);
 }
 
 void ModelRenderer::init()
@@ -54,10 +53,11 @@ ModelRenderer::ModelRenderer() : size(0)
 {
 	// Vertex push constants
 	this->pushConstants.addLayout(VK_SHADER_STAGE_VERTEX_BIT, sizeof(PushConstantData), 0);
+	this->pushConstants.addLayout(VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(Material::PushData), sizeof(PushConstantData));
 	this->size = this->pushConstants.getSize();
 }
 
-void ModelRenderer::drawNode(CommandBuffer* commandBuffer, Pipeline* pipeline, Model::Node& node, glm::mat4 transform)
+void ModelRenderer::drawNode(CommandBuffer* commandBuffer, Pipeline* pipeline, Model::Node& node, glm::mat4 transform, const std::vector<VkDescriptorSet>& sets, const std::vector<uint32_t>& offsets, uint32_t instanceCount)
 {
 	if (node.hasMesh)
 	{
@@ -69,16 +69,25 @@ void ModelRenderer::drawNode(CommandBuffer* commandBuffer, Pipeline* pipeline, M
 		Mesh& mesh = node.mesh;
 		for (Primitive& primitive : mesh.primitives)
 		{
-			// TODO: Send node transformation as push constant per draw!
+			Material::PushData& pushData = primitive.material->pushData;
+			commandBuffer->cmdPushConstants(pipeline, VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(PushConstantData), sizeof(Material::PushData), &pushData);
+
+			uint32_t numNonMaterialSets = sets.size() - (uint32_t)node.model->materials.size();
+			std::vector<VkDescriptorSet> setsUsed(numNonMaterialSets + 1);
+			for(uint32_t i = 0; i < numNonMaterialSets; i++)
+				setsUsed[i] = sets[i];
+			uint32_t materialIndex = numNonMaterialSets + primitive.material->index;
+			setsUsed[numNonMaterialSets] = sets[materialIndex];
+			commandBuffer->cmdBindDescriptorSets(pipeline, 0, setsUsed, offsets);
 
 			if (primitive.hasIndices)
-				commandBuffer->cmdDrawIndexed(primitive.indexCount, 1, primitive.firstIndex, 0, 0);
+				commandBuffer->cmdDrawIndexed(primitive.indexCount, instanceCount, primitive.firstIndex, 0, 0);
 			else
-				commandBuffer->cmdDraw(primitive.vertexCount, 1, 0, 0);
+				commandBuffer->cmdDraw(primitive.vertexCount, instanceCount, 0, 0);
 		}
 	}
 
 	// Draw child nodes
 	for (Model::Node& child : node.children)
-		drawNode(commandBuffer, pipeline, child, transform);
+		drawNode(commandBuffer, pipeline, child, transform, sets, offsets, instanceCount);
 }

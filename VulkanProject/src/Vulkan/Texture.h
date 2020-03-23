@@ -19,8 +19,13 @@ public:
 	ImageView& getImageView();
 	VkImageView getVkImageView() const;
 
+	VkFormat getFormat() const;
+	uint32_t getWidth() const;
+	uint32_t getHeight() const;
 
 private:
 	Image image;
 	ImageView imageView;
+	uint32_t width, height;
+	VkFormat format;
 };

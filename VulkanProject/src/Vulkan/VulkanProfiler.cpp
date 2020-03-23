@@ -55,6 +55,7 @@ const std::unordered_map<std::string, std::vector<VulkanProfiler::Timestamp>>& V
 
 void VulkanProfiler::render(float dt)
 {
+#ifdef USE_IMGUI
 	this->timeSinceUpdate += dt;
 
 	float timestampPeriod = Instance::get().getPhysicalDeviceProperties().limits.timestampPeriod;
@@ -119,6 +120,7 @@ void VulkanProfiler::render(float dt)
 
 	if (this->timeSinceUpdate > 1/this->updateFreq)
 		this->timeSinceUpdate = 0.0f;
+#endif
 }
 
 void VulkanProfiler::createTimestamps(uint32_t timestampPairCount)
@@ -286,7 +288,7 @@ void VulkanProfiler::getBufferTimestamps(CommandBuffer* buffer)
 			if (timestamp.second[i].buffer == buffer) {
 				VkResult res = vkGetQueryPoolResults(instance.getDevice(), this->timestampQueryPool, timestamp.second[i].start,
 					(uint32_t)timestampCount, (uint32_t)(poolResults.size() * sizeof(uint64_t)), poolResults.data(),
-					sizeof(uint64_t), VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT);
+					sizeof(uint64_t), VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT);
 
 				if (res == VK_SUCCESS) {
 					this->results[timestamp.first][i].start = glm::bitfieldExtract<uint64_t>(poolResults[0], 0, timestampValidBits);
@@ -296,10 +298,13 @@ void VulkanProfiler::getBufferTimestamps(CommandBuffer* buffer)
 					this->results[timestamp.first][i].end = (((this->results[timestamp.first][i].end - this->startTimeGPU) * timestampPeriod) / (uint64_t)this->timeUnit);
 					this->results[timestamp.first][i].id = i;
 
-					if (this->timeResults[timestamp.first].size() == this->plotDataCount) {
-						this->timeResults[timestamp.first].erase(this->timeResults[timestamp.first].begin());
+					if (Instrumentation::g_runProfilingSample)
+					{
+						if (this->timeResults[timestamp.first].size() == this->plotDataCount) {
+							this->timeResults[timestamp.first].erase(this->timeResults[timestamp.first].begin());
+						}
+						this->timeResults[timestamp.first].push_back(this->results[timestamp.first][i]);
 					}
-					this->timeResults[timestamp.first].push_back(this->results[timestamp.first][i]);
 				}
 			}
 		}
@@ -427,6 +432,12 @@ void VulkanProfiler::setupTimers(CommandPool* pool)
 	fInfo.flags = 0;
 	vkCreateFence(Instance::get().getDevice(), &fInfo, nullptr, &fence);
 
+	// Create event to signal	
+	VkEventCreateInfo info = {};
+	info.sType = VK_STRUCTURE_TYPE_EVENT_CREATE_INFO;
+	VkEvent e;
+	ERROR_CHECK(vkCreateEvent(Instance::get().getDevice(), &info, nullptr, &e), "Failed to create event for vulkan profiler!");
+
 	// Create temp query pool
 	VkQueryPool qPool;
 	VkQueryPoolCreateInfo createInfo = {};
@@ -441,6 +452,8 @@ void VulkanProfiler::setupTimers(CommandPool* pool)
 	// Create single time command buffer
 	CommandBuffer* buffer = pool->beginSingleTimeCommand();
 	buffer->cmdResetQueryPool(qPool, 0, 1);
+	vkCmdWaitEvents(buffer->getCommandBuffer(), 1, &e, VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_HOST_BIT | VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+		0, nullptr, 0, nullptr, 0, nullptr);
 	buffer->cmdWriteTimestamp(VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, qPool, 0);
 	buffer->end();
 	
@@ -452,6 +465,9 @@ void VulkanProfiler::setupTimers(CommandPool* pool)
 
 	vkQueueSubmit(Instance::get().getGraphicsQueue().queue, 1, &sInfo, fence);
 
+	std::this_thread::sleep_for(std::chrono::seconds(1));
+	ERROR_CHECK(vkSetEvent(Instance::get().getDevice(), e), "Failed to set event for profiler!");
+
 	// Set starttime
 	ERROR_CHECK(vkGetQueryPoolResults(Instance::get().getDevice(), qPool, 0,
 		1u, sizeof(uint64_t), &this->startTimeGPU, sizeof(uint64_t), VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT), "Failed to get first timestamp!");
@@ -459,11 +475,16 @@ void VulkanProfiler::setupTimers(CommandPool* pool)
 
 	// Cleanup
 	vkWaitForFences(Instance::get().getDevice(), 1, &fence, VK_TRUE, UINT64_MAX);
+	vkDestroyEvent(Instance::get().getDevice(), e, nullptr);
 	vkDestroyQueryPool(Instance::get().getDevice(), qPool, nullptr);
 	vkDestroyFence(Instance::get().getDevice(), fence, nullptr);
 	pool->removeCommandBuffer(buffer);
 
 	Instrumentation::get().setStartTime(this->startTimeCPU);
+
+	CommandBuffer* buff = pool->beginSingleTimeCommand();
+	resetAllTimestamps(buff);
+	pool->endSingleTimeCommand(buff);
 }
 
 std::string VulkanProfiler::getTimeUnitName()

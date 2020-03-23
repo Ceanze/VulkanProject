@@ -20,6 +20,9 @@ public:
 	void setMaxZ(float value);
 	void setVertexDist(float value);
 	void setProximitySize(int size);
+	float getTerrainHeight(float x, float z) const;
+	glm::vec3 getOrigin() const;
+	float getVertexDist() const;
 
 	glm::ivec2 getRegionFromPos(const glm::vec3& position);
 
@@ -42,6 +45,8 @@ public:
 
 	int getWidth();
 	int getHeight();
+
+	static float barryCentricHeight(glm::vec3 v1, glm::vec3 v2, glm::vec3 v3, glm::vec2 xz);
 
 private:
 	glm::vec3 origin;

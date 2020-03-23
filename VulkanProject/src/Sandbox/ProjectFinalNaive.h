@@ -13,7 +13,7 @@ class Camera;
 
 typedef uint32_t PrimaryIndex;
 
-class ProjectFinal : public VKSandboxBase
+class ProjectFinalNaive : public VKSandboxBase
 {
 private:
 	enum BufferID {
@@ -104,14 +104,14 @@ private:
 	void setupGraphicsPipeline();
 	void setupModelsPipeline();
 
-	void transferInitialData();
+	void transferInitalData();
 	void transferVertexData();
 
 	void transferToDevice(Buffer* buffer, Buffer* stagingBuffer, Memory* stagingMemory, void* data, uint32_t size);
 	void verticesToDevice(Buffer* buffer, const std::vector<Heightmap::Vertex>& verticies);
 
 	void secRecordFrustum(uint32_t frameIndex, CommandBuffer* buffer, VkCommandBufferInheritanceInfo inheritanceInfo);
-	void secRecordSkybox(uint32_t frameIndex, CommandBuffer* buffer,VkCommandBufferInheritanceInfo inheritanceInfo);
+	void secRecordSkybox(uint32_t frameIndex, CommandBuffer* buffer, VkCommandBufferInheritanceInfo inheritanceInfo);
 	void secRecordHeightmap(uint32_t frameIndex, CommandBuffer* buffer, VkCommandBufferInheritanceInfo inheritanceInfo);
 	void secRecordModels(uint32_t frameIndex, CommandBuffer* buffer, VkCommandBufferInheritanceInfo inheritanceInfo);
 
@@ -126,12 +126,16 @@ private:
 	std::unordered_map<PipelineID, DescriptorManager> descManagers;
 
 	std::vector<CommandPool> graphicsPools;
-	std::vector<CommandPool> computePools;
-	std::vector<CommandPool> transferPools;
+	// Pool used for transferring vertices
+	CommandPool graphicsTransferPool;
+	//std::vector<CommandPool> computePools;
+	//std::vector<CommandPool> transferPools;
 
+	bool transferUpdated = false;
+	CommandBuffer* transferBuffer;
 	std::vector<CommandBuffer*> graphicsPrimary;
 	std::unordered_map<PrimaryIndex, std::vector<CommandBuffer*>> graphicsSecondary;
-	std::vector<CommandBuffer*> computePrimary;
+	//std::vector<CommandBuffer*> computePrimary;
 	std::unordered_map<PrimaryIndex, std::vector<CommandBuffer*>> computeSecondary;
 
 	Skybox skybox;
