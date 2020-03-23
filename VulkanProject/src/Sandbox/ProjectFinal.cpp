@@ -279,7 +279,7 @@ void ProjectFinal::setupBuffers()
 	// Graphics buffers
 	{
 		std::vector<uint32_t> queueIndices = { Instance::get().getGraphicsQueue().queueIndex };
-		this->buffers[BUFFER_CAMERA].init(sizeof(CameraData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, queueIndices);
+		this->buffers[BUFFER_CAMERA].init(sizeof(CameraData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, queueIndices);
 		this->buffers[BUFFER_MODEL_TRANSFORMS].init(sizeof(glm::mat4) * this->treeCount, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, queueIndices);
 		this->memories[MEMORY_HOST_VISIBLE].bindBuffer(&this->buffers[BUFFER_CAMERA]);
 		this->memories[MEMORY_HOST_VISIBLE].bindBuffer(&this->buffers[BUFFER_MODEL_TRANSFORMS]);
@@ -289,7 +289,7 @@ void ProjectFinal::setupBuffers()
 	{
 		// Planes and world data
 		std::vector<uint32_t> queueIndices = { Instance::get().getComputeQueue().queueIndex };
-		this->buffers[BUFFER_PLANES].init(sizeof(Camera::Plane) * 6, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, queueIndices);
+		this->buffers[BUFFER_PLANES].init(sizeof(Camera::Plane) * 6, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, queueIndices);
 		this->buffers[BUFFER_WORLD_DATA].init(sizeof(WorldData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, queueIndices);
 		this->memories[MEMORY_HOST_VISIBLE].bindBuffer(&this->buffers[BUFFER_PLANES]);
 		this->memories[MEMORY_HOST_VISIBLE].bindBuffer(&this->buffers[BUFFER_WORLD_DATA]);

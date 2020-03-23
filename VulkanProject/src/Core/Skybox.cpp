@@ -34,7 +34,7 @@ void Skybox::init(float scale, const std::string& texturePath, SwapChain* swapCh
 
 	// Create the buffer and memory
 	std::vector<uint32_t> queueIndices = { findQueueIndex(VK_QUEUE_GRAPHICS_BIT, Instance::get().getPhysicalDevice()) };
-	this->cubemapUniformBuffer.init(cubemapUboDataSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, queueIndices);
+	this->cubemapUniformBuffer.init(cubemapUboDataSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, queueIndices);
 	this->uniformMemory.bindBuffer(&this->cubemapUniformBuffer);
 	this->uniformMemory.init(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 	// Transfer the data to the buffer.
