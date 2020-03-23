@@ -83,18 +83,18 @@ void ProjectFinalNaive::cleanup()
 	ThreadManager::cleanup();
 	VulkanProfiler::get().cleanup();
 
+	GLTFLoader::cleanupDefaultData();
+
 	for (auto& descManager : this->descManagers)
 		descManager.second.cleanup();
+
+	for (auto& model : this->models)
+		model.second.cleanup();
 
 	for (auto& pool : this->graphicsPools)
 		pool.cleanup();
 
 	this->graphicsTransferPool.cleanup();
-	//for (auto& pool : this->computePools)
-	//	pool.cleanup();
-
-	//for (auto& pool : this->transferPools)
-	//	pool.cleanup();
 
 	for (auto& buffer : this->buffers)
 		buffer.second.cleanup();
