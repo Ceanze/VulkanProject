@@ -115,7 +115,7 @@ void Heightmap::setProximitySize(int size)
 float Heightmap::getTerrainHeight(float x, float z) const
 {
 	auto toOffest = [&](glm::ivec2 v)->uint32_t {
-		v = glm::clamp(v, 0, this->heightmapWidth);
+		v = glm::clamp(v, 0, this->heightmapWidth - 1);
 		return v.x + v.y * this->heightmapWidth; 
 	};
 
