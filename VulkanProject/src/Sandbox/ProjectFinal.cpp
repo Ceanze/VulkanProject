@@ -62,19 +62,8 @@ void ProjectFinal::loop(float dt)
 
 	// Update view matrix
 	{
-		JAS_PROFILER_SAMPLE_SCOPE("Update skybox & camera");
+		JAS_PROFILER_SAMPLE_SCOPE("Update camera");
 		this->camera->update(dt, this->heightmap.getTerrainHeight(this->camera->getPosition().x, this->camera->getPosition().z));
-
-		this->skybox.update(this->camera);
-	}
-
-	{
-		JAS_PROFILER_SAMPLE_SCOPE("Camera transfer");
-		this->memories[MEMORY_HOST_VISIBLE].directTransfer(&this->buffers[BUFFER_CAMERA], (void*)&this->camera->getMatrix()[0], this->buffers[BUFFER_CAMERA].getSize(), 0);
-	}
-	{
-		JAS_PROFILER_SAMPLE_SCOPE("Planes transfer");
-		this->memories[MEMORY_HOST_VISIBLE].directTransfer(&this->buffers[BUFFER_PLANES], (void*)this->camera->getPlanes().data(), this->buffers[BUFFER_PLANES].getSize(), 0);
 	}
 	
 	// Transfer vertex data when proximity changes
@@ -808,6 +797,16 @@ void ProjectFinal::record(uint32_t frameIndex)
 		VulkanProfiler::get().resetBufferTimestamps(buffer);
 		VulkanProfiler::get().startIndexedTimestamp("Graphics", buffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, frameIndex);
 
+		Skybox::CubemapUboData cubemapUboData;
+		cubemapUboData.proj = camera->getProjection();
+		cubemapUboData.view = camera->getView();
+		// Disable translation
+		cubemapUboData.view[3][0] = 0.0f;
+		cubemapUboData.view[3][1] = 0.0f;
+		cubemapUboData.view[3][2] = 0.0f;
+
+		vkCmdUpdateBuffer(buffer->getCommandBuffer(), this->skybox.getBuffer()->getBuffer(), 0, this->skybox.getBuffer()->getSize(), (void*)&cubemapUboData);
+
 		buffer->acquireBuffer(&this->buffers[BUFFER_INDIRECT_DRAW], VK_ACCESS_INDIRECT_COMMAND_READ_BIT,
 			Instance::get().getComputeQueue().queueIndex, Instance::get().getGraphicsQueue().queueIndex,
 			VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT);
@@ -844,6 +843,9 @@ void ProjectFinal::record(uint32_t frameIndex)
 		VulkanProfiler::get().resetBufferTimestamps(buffer);
 		//VulkanProfiler::get().resetAllTimestamps(buffer);
 		VulkanProfiler::get().startIndexedTimestamp("Compute", buffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, frameIndex);
+
+		vkCmdUpdateBuffer(buffer->getCommandBuffer(), this->buffers[BUFFER_CAMERA].getBuffer(), 0, this->buffers[BUFFER_CAMERA].getSize(), (void*)&this->camera->getMatrix()[0]);
+		vkCmdUpdateBuffer(buffer->getCommandBuffer(), this->buffers[BUFFER_PLANES].getBuffer(), 0, this->buffers[BUFFER_PLANES].getSize(), (void*)&this->camera->getPlanes()[0]);
 
 		buffer->acquireBuffer(&this->buffers[BUFFER_INDIRECT_DRAW], VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
 			Instance::get().getGraphicsQueue().queueIndex, Instance::get().getComputeQueue().queueIndex,

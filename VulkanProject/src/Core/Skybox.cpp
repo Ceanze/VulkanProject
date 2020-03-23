@@ -207,7 +207,7 @@ void Skybox::update(Camera* camera)
 	cubemapUboData.view[3][0] = 0.0f;
 	cubemapUboData.view[3][1] = 0.0f;
 	cubemapUboData.view[3][2] = 0.0f;
-	this->uniformMemory.directTransfer(&this->cubemapUniformBuffer, (void*)& cubemapUboData, sizeof(cubemapUboData), 0);
+	//this->uniformMemory.directTransfer(&this->cubemapUniformBuffer, (void*)& cubemapUboData, sizeof(cubemapUboData), 0);
 }
 
 void Skybox::draw(CommandBuffer* cmdBuff, uint32_t frameIndex)
@@ -217,6 +217,11 @@ void Skybox::draw(CommandBuffer* cmdBuff, uint32_t frameIndex)
 	cmdBuff->cmdBindPipeline(&this->pipeline);
 	cmdBuff->cmdBindDescriptorSets(&this->pipeline, 0, sets, offsets);
 	cmdBuff->cmdDraw(36, 1, 0, 0);
+}
+
+Buffer* Skybox::getBuffer()
+{
+	return &this->cubemapUniformBuffer;
 }
 
 void Skybox::cleanup()

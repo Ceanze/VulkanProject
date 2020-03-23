@@ -32,6 +32,8 @@ public:
 	void update(Camera* camera);
 	void draw(CommandBuffer* cmdBuff, uint32_t frameIndex);
 
+	Buffer* getBuffer();
+
 	void cleanup();
 
 	Pipeline& getPipeline();
