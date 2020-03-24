@@ -50,15 +50,18 @@ void Frame::submit(VkQueue queue, CommandBuffer** commandBuffers)
 
 	VkSubmitInfo submitInfo = {};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT };
-
+	std::vector<VkPipelineStageFlags> waitStages;
 	std::vector<VkSemaphore> waitSemaphores;
-	//VkSemaphore waitSemaphores[] = { this->imageAvailableSemaphores[this->currentFrame], this->computeSemaphores[0] };
 
-	if (this->queueFlags & VK_QUEUE_GRAPHICS_BIT)
+	if (this->queueFlags & VK_QUEUE_GRAPHICS_BIT) {
 		waitSemaphores.push_back(this->imageAvailableSemaphores[this->currentFrame]);
-	if (this->queueFlags & VK_QUEUE_COMPUTE_BIT)
+		waitStages.push_back(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+	}
+	if (this->queueFlags & VK_QUEUE_COMPUTE_BIT) {
 		waitSemaphores.push_back(this->computeSemaphores);
+		waitStages.push_back(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+	}
+
 	submitInfo.waitSemaphoreCount = waitSemaphores.size();
 	submitInfo.pWaitSemaphores = waitSemaphores.data();
 
@@ -71,7 +74,7 @@ void Frame::submit(VkQueue queue, CommandBuffer** commandBuffers)
 	submitInfo.signalSemaphoreCount = 1;
 	submitInfo.pSignalSemaphores = signalSemaphores;
 	submitInfo.pCommandBuffers = buffers.data();
-	submitInfo.pWaitDstStageMask = waitStages;
+	submitInfo.pWaitDstStageMask = waitStages.data();
 	submitInfo.commandBufferCount = (uint32_t)buffers.size();
 
 	vkResetFences(Instance::get().getDevice(), 1, &this->inFlightFences[this->currentFrame]);
@@ -84,18 +87,46 @@ void Frame::submit(VkQueue queue, CommandBuffer** commandBuffers)
 void Frame::submitCompute(VkQueue queue, CommandBuffer* commandBuffer)
 {
 	JAS_PROFILER_SAMPLE_FUNCTION();
+
+
+
 	VkSubmitInfo computeSubmitInfo = { };
-	std::array<VkCommandBuffer, 1> buff = { commandBuffer->getCommandBuffer() };
 	computeSubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	std::vector<VkPipelineStageFlags> waitStages;
+	std::vector<VkSemaphore> waitSemaphores;
+	if (this->queueFlags & VK_QUEUE_TRANSFER_BIT) {
+		waitSemaphores.push_back(this->transferSemaphore);
+		waitStages.push_back(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+	}
+	computeSubmitInfo.waitSemaphoreCount = waitSemaphores.size();
+	computeSubmitInfo.pWaitSemaphores = waitSemaphores.data();
+	computeSubmitInfo.pWaitDstStageMask = waitStages.data();
+
+	std::array<VkCommandBuffer, 1> buff = { commandBuffer->getCommandBuffer() };
 	computeSubmitInfo.commandBufferCount = buff.size();
 	computeSubmitInfo.pCommandBuffers = buff.data();
 	computeSubmitInfo.signalSemaphoreCount = 1;
 	computeSubmitInfo.pSignalSemaphores = &this->computeSemaphores;
 
+
 	ERROR_CHECK(vkQueueSubmit(queue, 1, &computeSubmitInfo, VK_NULL_HANDLE), "Failed to submit compute queue!");
 
 	//VulkanProfiler::get().getBufferTimestamps(commandBuffer);
 	//VulkanProfiler::get().getAllQueries();
+}
+
+void Frame::submitTransfer(VkQueue queue, CommandBuffer* commandBuffer)
+{
+	JAS_PROFILER_SAMPLE_FUNCTION();
+	VkSubmitInfo transferSubmitInfo = { };
+	std::array<VkCommandBuffer, 1> buff = { commandBuffer->getCommandBuffer() };
+	transferSubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	transferSubmitInfo.commandBufferCount = buff.size();
+	transferSubmitInfo.pCommandBuffers = buff.data();
+	transferSubmitInfo.signalSemaphoreCount = 1;
+	transferSubmitInfo.pSignalSemaphores = &this->transferSemaphore;
+
+	ERROR_CHECK(vkQueueSubmit(queue, 1, &transferSubmitInfo, VK_NULL_HANDLE), "Failed to submit transfer queue!");
 }
 
 bool Frame::beginFrame(float dt)
@@ -112,10 +143,10 @@ bool Frame::beginFrame(float dt)
 	}
 	JAS_ASSERT(result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR, "Failed to aquire swap chain image!");
 	
-	// Check if a previous frame is using this image (Wait for this image to be free for use)
-	if (this->imagesInFlight[this->imageIndex] != VK_NULL_HANDLE) {
-		vkWaitForFences(Instance::get().getDevice(), 1, &this->imagesInFlight[this->imageIndex], VK_TRUE, UINT64_MAX);
-	}
+	//// Check if a previous frame is using this image (Wait for this image to be free for use)
+	//if (this->imagesInFlight[this->imageIndex] != VK_NULL_HANDLE) {
+	//	vkWaitForFences(Instance::get().getDevice(), 1, &this->imagesInFlight[this->imageIndex], VK_TRUE, UINT64_MAX);
+	//}
 	
 	/*
 		Marked image as being used by this frame
@@ -187,6 +218,7 @@ void Frame::createSyncObjects()
 		ERROR_CHECK(vkCreateFence(Instance::get().getDevice(), &fenceCreateInfo, nullptr, &this->inFlightFences[i]), "Failed to create graphics fence");
 	}
 	ERROR_CHECK(vkCreateSemaphore(Instance::get().getDevice(), &SemaCreateInfo, nullptr, &this->computeSemaphores), "Failed to create compute semaphore");
+	ERROR_CHECK(vkCreateSemaphore(Instance::get().getDevice(), &SemaCreateInfo, nullptr, &this->transferSemaphore), "Failed to create transform semaphore");
 
 	// Compute
 	ERROR_CHECK(vkCreateFence(Instance::get().getDevice(), &fenceCreateInfo, nullptr, &this->computeFence), "Failed to create graphics fence");
@@ -200,5 +232,6 @@ void Frame::destroySyncObjects()
 		vkDestroyFence(Instance::get().getDevice(), this->inFlightFences[i], nullptr);
 	}
 	vkDestroySemaphore(Instance::get().getDevice(), this->computeSemaphores, nullptr);
+	vkDestroySemaphore(Instance::get().getDevice(), this->transferSemaphore, nullptr);
 	vkDestroyFence(Instance::get().getDevice(), this->computeFence, nullptr);
 }

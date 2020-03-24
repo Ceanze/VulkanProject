@@ -27,13 +27,14 @@ void ProjectFinal::init()
 			F:		Tollge gravity
 	*/
 
-	getFrame()->queueUsage(VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT);
+	getFrame()->queueUsage(VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT | VK_QUEUE_TRANSFER_BIT);
 
 	// Initalize with maximum available threads
 	ThreadDispatcher::init(2);
 	ThreadManager::init(static_cast<uint32_t>(std::thread::hardware_concurrency()));
 	setupCommandPools();
 
+	setupSyncObjects();
 	setupModels();
 	setupHeightmap();
 	setupDescLayouts();
@@ -71,7 +72,9 @@ void ProjectFinal::loop(float dt)
 
 	// Render
 	getFrame()->beginFrame(dt);
+	updateDescManagers();
 	record(getFrame()->getCurrentImageIndex());
+	getFrame()->submitTransfer(Instance::get().getTransferQueue().queue, this->transferPrimary[getFrame()->getCurrentImageIndex()]);
 	getFrame()->submitCompute(Instance::get().getComputeQueue().queue, this->computePrimary[getFrame()->getCurrentImageIndex()]);
 	getFrame()->submit(Instance::get().getGraphicsQueue().queue, this->graphicsPrimary.data());
 	getFrame()->endFrame();
@@ -84,6 +87,8 @@ void ProjectFinal::cleanup()
 	VulkanProfiler::get().cleanup();
 
 	GLTFLoader::cleanupDefaultData();
+
+	vkDestroyFence(Instance::get().getDevice(), this->transferFence, nullptr);
 
 	for (auto& descManager : this->descManagers)
 		descManager.second.cleanup();
@@ -121,11 +126,11 @@ void ProjectFinal::cleanup()
 
 void ProjectFinal::setupHeightmap()
 {
-	this->regionSize = 8;
+	this->regionSize = 16;
 
 	float scale = 2.0f;
 	this->heightmap.setVertexDist(scale);
-	this->heightmap.setProximitySize(20);
+	this->heightmap.setProximitySize(80);
 	this->heightmap.setMaxZ(20.f);
 	this->heightmap.setMinZ(0.f);
 
@@ -154,6 +159,14 @@ void ProjectFinal::setupHeightmap()
 
 	this->vertices.resize(this->heightmap.getProximityVertexDim() * this->heightmap.getProximityVertexDim());
 	this->heightmap.getProximityVerticies(this->camera->getPosition(), this->vertices);
+}
+
+void ProjectFinal::setupSyncObjects()
+{
+	VkFenceCreateInfo fenceCreateInfo = {};
+	fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+	// Transfer Fence
+	ERROR_CHECK(vkCreateFence(Instance::get().getDevice(), &fenceCreateInfo, nullptr, &this->transferFence), "Failed to create transfer fence");
 }
 
 void ProjectFinal::setupModels()
@@ -280,8 +293,10 @@ void ProjectFinal::setupBuffers()
 	{
 		std::vector<uint32_t> queueIndices = { Instance::get().getGraphicsQueue().queueIndex };
 		this->buffers[BUFFER_CAMERA].init(sizeof(CameraData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, queueIndices);
+		this->buffers[BUFFER_CAMERA_STAGE].init(sizeof(CameraData), VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, { Instance::get().getTransferQueue().queueIndex });
 		this->buffers[BUFFER_MODEL_TRANSFORMS].init(sizeof(glm::mat4) * this->treeCount, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, queueIndices);
-		this->memories[MEMORY_HOST_VISIBLE].bindBuffer(&this->buffers[BUFFER_CAMERA]);
+		this->memories[MEMORY_DEVICE_LOCAL].bindBuffer(&this->buffers[BUFFER_CAMERA]);
+		this->memories[MEMORY_HOST_VISIBLE].bindBuffer(&this->buffers[BUFFER_CAMERA_STAGE]);
 		this->memories[MEMORY_HOST_VISIBLE].bindBuffer(&this->buffers[BUFFER_MODEL_TRANSFORMS]);
 	}
 
@@ -290,8 +305,10 @@ void ProjectFinal::setupBuffers()
 		// Planes and world data
 		std::vector<uint32_t> queueIndices = { Instance::get().getComputeQueue().queueIndex };
 		this->buffers[BUFFER_PLANES].init(sizeof(Camera::Plane) * 6, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, queueIndices);
+		this->buffers[BUFFER_PLANES_STAGE].init(sizeof(Camera::Plane) * 6, VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, { Instance::get().getTransferQueue().queueIndex });
 		this->buffers[BUFFER_WORLD_DATA].init(sizeof(WorldData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, queueIndices);
-		this->memories[MEMORY_HOST_VISIBLE].bindBuffer(&this->buffers[BUFFER_PLANES]);
+		this->memories[MEMORY_DEVICE_LOCAL].bindBuffer(&this->buffers[BUFFER_PLANES]);
+		this->memories[MEMORY_HOST_VISIBLE].bindBuffer(&this->buffers[BUFFER_PLANES_STAGE]);
 		this->memories[MEMORY_HOST_VISIBLE].bindBuffer(&this->buffers[BUFFER_WORLD_DATA]);
 
 		// Indirect draw data
@@ -327,8 +344,8 @@ void ProjectFinal::setupBuffers()
 void ProjectFinal::setupMemories()
 {
 	this->memories[MEMORY_HOST_VISIBLE].init(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-	this->memories[MEMORY_DEVICE_LOCAL].init(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 	this->memories[MEMORY_VERT_STAGING].init(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+	this->memories[MEMORY_DEVICE_LOCAL].init(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 	//this->memories[MEMORY_TEXTURE].init(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT); Can not be done here
 }
 
@@ -391,6 +408,7 @@ void ProjectFinal::setupCommandBuffers()
 {
 	this->graphicsPrimary = this->graphicsPools[MAIN_THREAD].createCommandBuffers(getSwapChain()->getNumImages(), VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 	this->computePrimary = this->computePools[MAIN_THREAD].createCommandBuffers(getSwapChain()->getNumImages(), VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+	this->transferPrimary = this->transferPools[MAIN_THREAD].createCommandBuffers(getSwapChain()->getNumImages(), VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 
 	for (size_t i = 0; i < getSwapChain()->getNumImages(); i++) {
 		for (size_t j = 0; j < FUNC_COUNT_GRAPHICS; j++)
@@ -400,6 +418,11 @@ void ProjectFinal::setupCommandBuffers()
 	for (size_t i = 0; i < getSwapChain()->getNumImages(); i++) {
 		for (size_t j = 0; j < FUNC_COUNT_COMPUTE ; j++)
 			this->computeSecondary[i].push_back(this->computePools[j % (ThreadManager::threadCount() - 1) + 1].createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_SECONDARY));
+	}
+
+	for (size_t i = 0; i < getSwapChain()->getNumImages(); i++) {
+		for (size_t j = 0; j < FUNC_COUNT_TRANSFER; j++)
+			this->transferSecondary[i].push_back(this->transferPools[j % (ThreadManager::threadCount() - 1) + 1].createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_SECONDARY));
 	}
 }
 
@@ -416,9 +439,9 @@ void ProjectFinal::setupCommandPools()
 		pool.init(CommandPool::Queue::COMPUTE, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
 
 	// Transfer
-	this->transferPools.resize(1);
+	this->transferPools.resize(std::min(1u + FUNC_COUNT_TRANSFER, ThreadManager::threadCount()));
 	for (auto& pool : this->transferPools)
-		pool.init(CommandPool::Queue::TRANSFER, 0);
+		pool.init(CommandPool::Queue::TRANSFER, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
 }
 
 void ProjectFinal::setupShaders()
@@ -538,13 +561,19 @@ void ProjectFinal::transferInitialData()
 		this->memories[MEMORY_HOST_VISIBLE].directTransfer(&this->buffers[BUFFER_WORLD_DATA], &tempData, sizeof(WorldData), 0);
 	}
 
-	// Set model transform data
+	// Send inital data to GPU
+	{
+		verticesToDevice(&this->buffers[BUFFER_VERTICES], this->vertices);
+		this->compVertInactiveBuffer = &this->buffers[BUFFER_VERTICES_2];
+	}
+
+	// Send transforms to GPU
 	{
 		std::srand((unsigned)std::time(0));
 		auto rnd11 = [](int precision = 10000) { return (float)(std::rand() % precision) / (float)precision; };
 		auto rnd = [rnd11](float min, float max) { return min + rnd11(RAND_MAX) * glm::abs(max - min); };
-
-		std::vector<glm::mat4> matrices(this->treeCount);
+		std::vector<glm::mat4> matrices;
+		matrices.resize(this->treeCount);
 		for (uint32_t i = 0; i < this->treeCount; i++)
 		{
 			float w = (float)this->heightmap.getWidth() * this->heightmap.getVertexDist();
@@ -553,14 +582,9 @@ void ProjectFinal::transferInitialData()
 			glm::vec3 pos(rnd(a, b), 0.f, rnd(a, b));
 			pos.y = this->heightmap.getTerrainHeight(pos.x, pos.z);
 			matrices[i] = glm::translate(glm::mat4(1.0), pos);
+			
 		}
-		this->memories[MEMORY_HOST_VISIBLE].directTransfer(&this->buffers[BUFFER_MODEL_TRANSFORMS], matrices.data(), this->buffers[BUFFER_MODEL_TRANSFORMS].getSize(), 0);
-	}
-
-	// Send inital data to GPU
-	{
-		verticesToDevice(&this->buffers[BUFFER_VERTICES], this->vertices);
-		this->compVertInactiveBuffer = &this->buffers[BUFFER_VERTICES_2];
+		this->memories[MEMORY_HOST_VISIBLE].directTransfer(&this->buffers[BUFFER_MODEL_TRANSFORMS], &matrices[0], matrices.size() * sizeof(glm::mat4), 0);
 	}
 	
 	// Submit generate indicies work to GPU once
@@ -613,51 +637,45 @@ void ProjectFinal::transferVertexData()
 			// Transfer proximity verticies to device
 			uint32_t id = ThreadDispatcher::dispatch([&, camPos]() {
 				this->heightmap.getProximityVerticies(camPos, this->vertices);
-				verticesToDevice(this->compVertInactiveBuffer, this->vertices);
+				this->memories[MEMORY_VERT_STAGING].directTransfer(&this->buffers[BUFFER_VERT_STAGING], this->vertices.data(), this->vertices.size() * sizeof(Heightmap::Vertex), 0);
 			});
-
 
 			this->workIds.push(id);
 		}
 	}
+	static CommandBuffer* cBuff = nullptr;
 
 	if (!this->workIds.empty())
 	{
 		uint32_t id = this->workIds.front();
 		if (ThreadDispatcher::finished(id))
 		{
-			Buffer* activeBuffer = nullptr;
-			if (this->compVertInactiveBuffer == &this->buffers[BUFFER_VERTICES_2])
-			{
-				this->compVertInactiveBuffer = &this->buffers[BUFFER_VERTICES];
-				activeBuffer = &this->buffers[BUFFER_VERTICES_2];
-			}
-			else
-			{
-				this->compVertInactiveBuffer = &this->buffers[BUFFER_VERTICES_2];
-				activeBuffer = &this->buffers[BUFFER_VERTICES];
-			}
-
-			vkQueueWaitIdle(Instance::get().getGraphicsQueue().queue);
-			vkQueueWaitIdle(Instance::get().getComputeQueue().queue);
-			VkDeviceSize vertexBufferSize = this->vertices.size() * sizeof(Heightmap::Vertex);
-			for (uint32_t i = 0; i < static_cast<uint32_t>(getSwapChain()->getNumImages()); i++)
-			{
-				this->descManagers[PIPELINE_GRAPHICS].updateBufferDesc(0, 0, activeBuffer->getBuffer(), 0, vertexBufferSize);
-				this->descManagers[PIPELINE_GRAPHICS].updateSets({ 0 }, i);
-
-				this->descManagers[PIPELINE_FRUSTUM].updateBufferDesc(0, 1, activeBuffer->getBuffer(), 0, vertexBufferSize);
-				this->descManagers[PIPELINE_FRUSTUM].updateSets({ 0 }, i);
-			}
-
 			this->workIds.pop();
-	/*		Instrumentation::g_runProfilingSample = false;
-			JAS_PROFILER_WRITE_VULKAN_DATA();
-			JAS_INFO("End profiling");*/
+
+			cBuff = this->transferPools[MAIN_THREAD].beginSingleTimeCommand();
+
+			// Copy vertex data.
+			VkBufferCopy region = {};
+			region.srcOffset = 0;
+			region.dstOffset = 0;
+			region.size = this->buffers[BUFFER_VERT_STAGING].getSize();
+			cBuff->cmdCopyBuffer(this->buffers[BUFFER_VERT_STAGING].getBuffer(), this->compVertInactiveBuffer->getBuffer(), 1, &region);
+
+			this->transferPools[MAIN_THREAD].endSingleTimeCommand(cBuff, this->transferFence);
 		}
 	}
-}
 
+	if (vkGetFenceStatus(Instance::get().getDevice(), this->transferFence) == VK_SUCCESS) {
+
+		if (this->compVertInactiveBuffer == &this->buffers[BUFFER_VERTICES_2])
+			this->compVertInactiveBuffer = &this->buffers[BUFFER_VERTICES];
+		else
+			this->compVertInactiveBuffer = &this->buffers[BUFFER_VERTICES_2];
+
+		this->transferPools[MAIN_THREAD].removeCommandBuffer(cBuff);
+		vkResetFences(Instance::get().getDevice(), 1, &this->transferFence);
+	}
+}
 
 void ProjectFinal::transferToDevice(Buffer* buffer, Buffer* stagingBuffer, Memory* stagingMemory, void* data, uint32_t size)
 {
@@ -679,6 +697,20 @@ void ProjectFinal::verticesToDevice(Buffer* buffer, const std::vector<Heightmap:
 {
 	JAS_PROFILER_SAMPLE_FUNCTION();
 	transferToDevice(buffer, &this->buffers[BUFFER_VERT_STAGING], &this->memories[MEMORY_VERT_STAGING], vertices.data(), vertices.size() * sizeof(Heightmap::Vertex));
+}
+
+void ProjectFinal::secRecordTransfer(uint32_t frameIndex, CommandBuffer* buffer, VkCommandBufferInheritanceInfo inheritanceInfo, Buffer& stage, Buffer& Device)
+{
+	buffer->begin(0, &inheritanceInfo);
+
+	// Copy vertex data.
+	VkBufferCopy region = {};
+	region.srcOffset = 0;
+	region.dstOffset = 0;
+	region.size = stage.getSize();
+	buffer->cmdCopyBuffer(stage.getBuffer(), Device.getBuffer(), 1, &region);
+
+	buffer->end();
 }
 
 void ProjectFinal::secRecordFrustum(uint32_t frameIndex, CommandBuffer* buffer, VkCommandBufferInheritanceInfo inheritanceInfo)
@@ -758,11 +790,26 @@ void ProjectFinal::record(uint32_t frameIndex)
 
 	int jobCount = 1;
 
+	// Compute
+	
 	// Frustum compute
 	buffer = this->computeSecondary[frameIndex][secondaryBuffer++];
 	int t = nextThread();
 	for (int i = 0; i < jobCount; i++)
 		ThreadManager::addWork(t, [=]() { secRecordFrustum(frameIndex, buffer, inheritInfo); });
+
+	// Transfer
+	secondaryBuffer = 0;
+
+	// Transfer Transforms
+	buffer = this->transferSecondary[frameIndex][secondaryBuffer++];
+	t = nextThread();
+	for (int i = 0; i < jobCount; i++)
+		ThreadManager::addWork(t, [=]() { secRecordTransfer(frameIndex, buffer, inheritInfo, this->buffers[BUFFER_CAMERA_STAGE], this->buffers[BUFFER_CAMERA]); });
+
+	buffer = this->transferSecondary[frameIndex][secondaryBuffer++];
+	for (int i = 0; i < jobCount; i++)
+		ThreadManager::addWork(t, [=]() { secRecordTransfer(frameIndex, buffer, inheritInfo, this->buffers[BUFFER_PLANES_STAGE], this->buffers[BUFFER_PLANES]); });
 
 	// Graphics
 	secondaryBuffer = 0;
@@ -785,6 +832,8 @@ void ProjectFinal::record(uint32_t frameIndex)
 	t = nextThread();
 	for (int i = 0; i < jobCount; i++)
 		ThreadManager::addWork(t, [=]() { secRecordModels(frameIndex, buffer, inheritInfo); });
+
+	
 
 	// Primary recording
 	// Graphics
@@ -833,6 +882,23 @@ void ProjectFinal::record(uint32_t frameIndex)
 		buffer->end();
 	}
 
+	// Transfer
+	{
+		JAS_PROFILER_SAMPLE_SCOPE("Record primary transfer " + std::to_string(frameIndex));
+		buffer = this->transferPrimary[frameIndex];
+		buffer->begin(0, nullptr);
+
+		vkCmdUpdateBuffer(buffer->getCommandBuffer(), this->buffers[BUFFER_CAMERA_STAGE].getBuffer(), 0, this->buffers[BUFFER_CAMERA_STAGE].getSize(), (void*)&this->camera->getMatrix()[0]);
+		vkCmdUpdateBuffer(buffer->getCommandBuffer(), this->buffers[BUFFER_PLANES_STAGE].getBuffer(), 0, this->buffers[BUFFER_PLANES_STAGE].getSize(), (void*)&this->camera->getPlanes()[0]);
+
+		vkCommands.clear();
+		for (size_t i = 0; i < this->transferSecondary[frameIndex].size(); i++)
+			vkCommands.push_back(this->transferSecondary[frameIndex][i]->getCommandBuffer());
+		buffer->cmdExecuteCommands(vkCommands.size(), vkCommands.data());
+
+		buffer->end();
+	}
+
 	// Compute
 	{
 		JAS_PROFILER_SAMPLE_SCOPE("Record primary compute " + std::to_string(frameIndex));
@@ -843,9 +909,6 @@ void ProjectFinal::record(uint32_t frameIndex)
 		VulkanProfiler::get().resetBufferTimestamps(buffer);
 		//VulkanProfiler::get().resetAllTimestamps(buffer);
 		VulkanProfiler::get().startIndexedTimestamp("Compute", buffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, frameIndex);
-
-		vkCmdUpdateBuffer(buffer->getCommandBuffer(), this->buffers[BUFFER_CAMERA].getBuffer(), 0, this->buffers[BUFFER_CAMERA].getSize(), (void*)&this->camera->getMatrix()[0]);
-		vkCmdUpdateBuffer(buffer->getCommandBuffer(), this->buffers[BUFFER_PLANES].getBuffer(), 0, this->buffers[BUFFER_PLANES].getSize(), (void*)&this->camera->getPlanes()[0]);
 
 		buffer->acquireBuffer(&this->buffers[BUFFER_INDIRECT_DRAW], VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
 			Instance::get().getGraphicsQueue().queueIndex, Instance::get().getComputeQueue().queueIndex,
@@ -864,4 +927,23 @@ void ProjectFinal::record(uint32_t frameIndex)
 
 		buffer->end();
 	}
+}
+
+void ProjectFinal::updateDescManagers()
+{
+	Buffer* activeBuffer = nullptr;
+	if (this->compVertInactiveBuffer == &this->buffers[BUFFER_VERTICES_2])
+	{
+		activeBuffer = &this->buffers[BUFFER_VERTICES];
+	}
+	else
+	{
+		activeBuffer = &this->buffers[BUFFER_VERTICES_2];
+	}
+
+	this->descManagers[PIPELINE_GRAPHICS].updateBufferDesc(0, 0, activeBuffer->getBuffer(), 0, activeBuffer->getSize());
+	this->descManagers[PIPELINE_GRAPHICS].updateSets({ 0 }, getFrame()->getCurrentImageIndex());
+
+	this->descManagers[PIPELINE_FRUSTUM].updateBufferDesc(0, 1, activeBuffer->getBuffer(), 0, activeBuffer->getSize());
+	this->descManagers[PIPELINE_FRUSTUM].updateSets({ 0 }, getFrame()->getCurrentImageIndex());
 }

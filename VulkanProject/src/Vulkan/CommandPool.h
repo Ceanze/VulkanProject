@@ -27,6 +27,7 @@ public:
 
 	CommandBuffer* beginSingleTimeCommand();
 	void endSingleTimeCommand(CommandBuffer* buffer);
+	void endSingleTimeCommand(CommandBuffer* buffer, VkFence fence);
 
 	CommandBuffer* createCommandBuffer(VkCommandBufferLevel level);
 	std::vector<CommandBuffer*> createCommandBuffers(uint32_t count, VkCommandBufferLevel level);

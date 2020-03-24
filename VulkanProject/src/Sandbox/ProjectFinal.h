@@ -18,6 +18,7 @@ class ProjectFinal : public VKSandboxBase
 private:
 	enum BufferID {
 		BUFFER_PLANES,
+		BUFFER_PLANES_STAGE,
 		BUFFER_WORLD_DATA,
 		BUFFER_MODEL_TRANSFORMS,
 		BUFFER_INDIRECT_DRAW,
@@ -25,6 +26,7 @@ private:
 		BUFFER_VERTICES_2,
 		BUFFER_VERT_STAGING,
 		BUFFER_CAMERA,
+		BUFFER_CAMERA_STAGE,
 		BUFFER_INDEX,
 		BUFFER_CONFIG
 	};
@@ -54,6 +56,12 @@ private:
 	enum WorkFunctionCompute {
 		FUNC_FRUSTUM = 0,
 		FUNC_COUNT_COMPUTE
+	};
+
+	enum WorkFunctionTransfer {
+		FUNC_TRANSFER_CAMERA = 0,
+		FUNC_TRANSFER_PLANES,
+		FUNC_COUNT_TRANSFER
 	};
 
 	enum ModelID {
@@ -89,6 +97,7 @@ public:
 private:
 	void setupHeightmap();
 
+	void setupSyncObjects();
 	void setupModels();
 	void setupDescLayouts();
 	void setupGeneral();
@@ -109,6 +118,8 @@ private:
 
 	void transferToDevice(Buffer* buffer, Buffer* stagingBuffer, Memory* stagingMemory, void* data, uint32_t size);
 	void verticesToDevice(Buffer* buffer, const std::vector<Heightmap::Vertex>& verticies);
+	
+	void secRecordTransfer(uint32_t frameIndex, CommandBuffer* buffer, VkCommandBufferInheritanceInfo inheritanceInfo, Buffer& stage, Buffer& Device);
 
 	void secRecordFrustum(uint32_t frameIndex, CommandBuffer* buffer, VkCommandBufferInheritanceInfo inheritanceInfo);
 	void secRecordSkybox(uint32_t frameIndex, CommandBuffer* buffer,VkCommandBufferInheritanceInfo inheritanceInfo);
@@ -116,6 +127,8 @@ private:
 	void secRecordModels(uint32_t frameIndex, CommandBuffer* buffer, VkCommandBufferInheritanceInfo inheritanceInfo);
 
 	void record(uint32_t frameIndex);
+
+	void updateDescManagers();
 
 private:
 	uint32_t treeCount;
@@ -133,6 +146,8 @@ private:
 	std::unordered_map<PrimaryIndex, std::vector<CommandBuffer*>> graphicsSecondary;
 	std::vector<CommandBuffer*> computePrimary;
 	std::unordered_map<PrimaryIndex, std::vector<CommandBuffer*>> computeSecondary;
+	std::vector<CommandBuffer*> transferPrimary;
+	std::unordered_map<PrimaryIndex, std::vector<CommandBuffer*>> transferSecondary;
 
 	Skybox skybox;
 	Camera* camera;
@@ -147,6 +162,7 @@ private:
 	// Vertex transfer
 	std::queue<uint32_t> workIds;
 	Buffer* compVertInactiveBuffer;
+	VkFence transferFence;
 
 	std::vector<Heightmap::Vertex> vertices;
 

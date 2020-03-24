@@ -77,6 +77,19 @@ void CommandPool::endSingleTimeCommand(CommandBuffer* buffer)
 	removeCommandBuffer(buffer);
 }
 
+void CommandPool::endSingleTimeCommand(CommandBuffer* buffer, VkFence fence)
+{
+	buffer->end();
+
+	VkCommandBuffer commandBuffer = buffer->getCommandBuffer();
+	VkSubmitInfo submitInfo = {};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &commandBuffer;
+
+	vkQueueSubmit(getQueue().queue, 1, &submitInfo, fence);
+}
+
 // Creates one (1) command buffer only
 CommandBuffer* CommandPool::createCommandBuffer(VkCommandBufferLevel level)
 {

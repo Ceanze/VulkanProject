@@ -20,6 +20,7 @@ public:
 
 	void submit(VkQueue queue, CommandBuffer** commandBuffers);
 	void submitCompute(VkQueue queue, CommandBuffer* commandBuffer);
+	void submitTransfer(VkQueue queue, CommandBuffer* commandBuffer);
 
 	bool beginFrame(float dt);
 	bool endFrame();
@@ -37,6 +38,8 @@ private:
 	std::vector<VkSemaphore> imageAvailableSemaphores;
 	std::vector<VkSemaphore> renderFinishedSemaphores;
 	VkSemaphore computeSemaphores;
+	VkSemaphore transferSemaphore;
+
 	VkFence computeFence;
 	std::vector<VkFence> inFlightFences;
 	std::vector<VkFence> imagesInFlight;
