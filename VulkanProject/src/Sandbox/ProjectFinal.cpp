@@ -121,11 +121,11 @@ void ProjectFinal::cleanup()
 
 void ProjectFinal::setupHeightmap()
 {
-	this->regionSize = 8;
+	this->regionSize = 16;
 
 	float scale = 2.0f;
 	this->heightmap.setVertexDist(scale);
-	this->heightmap.setProximitySize(20);
+	this->heightmap.setProximitySize(70);
 	this->heightmap.setMaxZ(20.f);
 	this->heightmap.setMinZ(0.f);
 
