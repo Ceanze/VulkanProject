@@ -26,7 +26,7 @@ int main(int argv, char* argc[])
 	JAS_PROFILER_BEGIN_SESSION("Profiling", "results.json");
 
 	SandboxManager sm;
-	sm.set(new ProjectFinalNaive());
+	sm.set(new ProjectFinal());
 	sm.init();
 	sm.run();
 	sm.cleanup();

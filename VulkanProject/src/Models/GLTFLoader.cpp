@@ -443,6 +443,12 @@ void GLTFLoader::loadMaterials(Model& model, tinygltf::Model& gltfModel)
 			Sampler* sampler = (index != -1 && gltfModel.textures[index].sampler != -1) ? &model.samplers[gltfModel.textures[index].sampler] : &defaultData.sampler;
 			return {texture, sampler};
 		};
+
+		auto getTeCoord = [&](int index, int texCoord)->int {
+			if (texCoord == 1 && index != -1) JAS_WARN("Texture coordinate 1 is not supported!");
+			return index != -1 ? texCoord : -1;
+		};
+
 		material.baseColorTexture = getTex(baseColorTexture.index);
 		material.emissiveTexture = getTex(emissiveTexture.index);
 		material.metallicRoughnessTexture = getTex(metallicRoughnessTexture.index);
@@ -451,14 +457,14 @@ void GLTFLoader::loadMaterials(Model& model, tinygltf::Model& gltfModel)
 
 		// Copy data to push structure.
 		material.pushData.baseColorFactor = glm::make_vec4(pbrMR.baseColorFactor.data());
-		material.pushData.baseColorTextureCoord = baseColorTexture.index != -1 ? baseColorTexture.texCoord : -1;
+		material.pushData.baseColorTextureCoord = getTeCoord(baseColorTexture.index, baseColorTexture.texCoord);
 		material.pushData.emissiveFactor = glm::vec4(glm::make_vec3(materialGltf.emissiveFactor.data()), 0.0f);
-		material.pushData.emissiveTextureCoord = emissiveTexture.index != -1 ? emissiveTexture.texCoord : -1;
+		material.pushData.emissiveTextureCoord = getTeCoord(emissiveTexture.index, emissiveTexture.texCoord);
 		material.pushData.metallicFactor = (float)pbrMR.metallicFactor;
 		material.pushData.roughnessFactor = (float)pbrMR.roughnessFactor;
-		material.pushData.metallicRoughnessTextureCoord = metallicRoughnessTexture.index != -1 ? metallicRoughnessTexture.texCoord : -1;
-		material.pushData.normalTextureCoord = normalTexture.index != -1 ? normalTexture.texCoord : -1;
-		material.pushData.occlusionTextureCoord = occlusionTexture.index != -1 ? occlusionTexture.texCoord : -1;
+		material.pushData.metallicRoughnessTextureCoord = getTeCoord(metallicRoughnessTexture.index, metallicRoughnessTexture.texCoord);
+		material.pushData.normalTextureCoord = getTeCoord(normalTexture.index, normalTexture.texCoord);
+		material.pushData.occlusionTextureCoord = getTeCoord(occlusionTexture.index, occlusionTexture.texCoord);
 	}
 }
 

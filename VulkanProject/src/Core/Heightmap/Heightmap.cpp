@@ -1,6 +1,6 @@
 #include "jaspch.h"
 #include "Heightmap.h"
-
+#include "Core/CPUProfiler.h"
 
 Heightmap::Heightmap()
 	: minZ(0),
@@ -191,6 +191,7 @@ int Heightmap::getProximityVertexDim()
 
 void Heightmap::getProximityVerticies(const glm::vec3& position, std::vector<Vertex>& verticies)
 {
+	JAS_PROFILER_SAMPLE_FUNCTION();
 	float xDistance = position.x - this->origin.x;
 	float zDistance = position.z - this->origin.z;
 

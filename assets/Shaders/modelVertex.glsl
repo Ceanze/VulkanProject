@@ -20,7 +20,8 @@ layout(set=0, binding = 1) readonly buffer TransformData
 
 layout(location = 0) out vec3 fragNormal;
 layout(location = 1) out vec2 fragUv;
-
+layout(location = 2) out vec3 fragPos;
+layout(location = 3) out vec3 camPos;
 
 layout(push_constant) uniform PushConstantsVert
 {
@@ -30,10 +31,13 @@ layout(push_constant) uniform PushConstantsVert
 layout(set=0, binding = 2) uniform Camera
 {
     mat4 vp;
-};
+    vec3 pos;
+} camera;
 
 void main() {
-    gl_Position = vp * modelTransform[gl_InstanceIndex] * transform * vec4(vertices[gl_VertexIndex].inPosition.xyz, 1.0);
+    gl_Position = camera.vp * modelTransform[gl_InstanceIndex] * transform * vec4(vertices[gl_VertexIndex].inPosition.xyz, 1.0);
+    fragPos = gl_Position.xyz;
     fragNormal = normalize((modelTransform[gl_InstanceIndex] * transform * vec4(vertices[gl_VertexIndex].inNormal.xyz, 0.0)).xyz);
     fragUv = vertices[gl_VertexIndex].inUv.xy;
+    camPos = camera.pos;
 }

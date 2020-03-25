@@ -71,6 +71,7 @@ private:
 	struct CameraData
 	{
 		glm::mat4 vp;
+		glm::vec3 pos;
 	};
 
 	struct WorldData

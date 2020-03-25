@@ -586,11 +586,15 @@ void ProjectFinalNaive::transferInitalData()
 
 void ProjectFinalNaive::transferVertexData()
 {
+	JAS_PROFILER_SAMPLE_SCOPE("Transfer vertex data check");
 	glm::vec3 camPos = this->camera->getPosition();
 	glm::ivec2 currRegion = this->heightmap.getRegionFromPos(camPos);
 	glm::ivec2 diff = this->lastRegionIndex - currRegion;
 	if (abs(diff.x) > this->transferThreshold || abs(diff.y) > this->transferThreshold) {
 		if (ThreadDispatcher::finished()) {
+			//VulkanProfiler::get().setupTimers(&this->graphicsPools[MAIN_THREAD]);
+			//Instrumentation::g_runProfilingSample = true;
+			//JAS_INFO("Start profiling");
 			this->lastRegionIndex = currRegion;
 			// Transfer proximity verticies to device
 			uint32_t id = ThreadDispatcher::dispatch([&, camPos]() {
@@ -659,6 +663,7 @@ void ProjectFinalNaive::transferToDevice(Buffer* buffer, Buffer* stagingBuffer, 
 
 void ProjectFinalNaive::verticesToDevice(Buffer* buffer, const std::vector<Heightmap::Vertex>& verticies)
 {
+	JAS_PROFILER_SAMPLE_FUNCTION();
 	transferToDevice(buffer, &this->buffers[BUFFER_VERT_STAGING], &this->memories[MEMORY_VERT_STAGING], vertices.data(), vertices.size() * sizeof(Heightmap::Vertex));
 }
 
@@ -667,7 +672,6 @@ void ProjectFinalNaive::secRecordFrustum(uint32_t frameIndex, CommandBuffer* buf
 	JAS_PROFILER_SAMPLE_FUNCTION();
 	buffer->begin(0, &inheritanceInfo);
 	VulkanProfiler::get().startIndexedTimestamp("Frustum", buffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, frameIndex);
-	std::this_thread::sleep_for(std::chrono::duration(std::chrono::milliseconds(1)));
 	buffer->cmdBindPipeline(&getPipeline(PIPELINE_FRUSTUM));
 	std::vector<VkDescriptorSet> sets = { this->descManagers[PIPELINE_FRUSTUM].getSet(frameIndex, 0) };
 	std::vector<uint32_t> offsets;
