@@ -130,7 +130,7 @@ void ProjectFinal::setupHeightmap()
 
 	float scale = 2.0f;
 	this->heightmap.setVertexDist(scale);
-	this->heightmap.setProximitySize(80);
+	this->heightmap.setProximitySize(20);
 	this->heightmap.setMaxZ(20.f);
 	this->heightmap.setMinZ(0.f);
 
@@ -153,7 +153,7 @@ void ProjectFinal::setupHeightmap()
 
 	// Set data used for transfer
 	this->lastRegionIndex = this->heightmap.getRegionFromPos(this->camera->getPosition());
-	this->transferThreshold = 5;
+	this->transferThreshold = 1;
 
 	this->regionCount = this->heightmap.getProximityRegionCount();
 
@@ -699,9 +699,11 @@ void ProjectFinal::verticesToDevice(Buffer* buffer, const std::vector<Heightmap:
 	transferToDevice(buffer, &this->buffers[BUFFER_VERT_STAGING], &this->memories[MEMORY_VERT_STAGING], vertices.data(), vertices.size() * sizeof(Heightmap::Vertex));
 }
 
-void ProjectFinal::secRecordTransfer(uint32_t frameIndex, CommandBuffer* buffer, VkCommandBufferInheritanceInfo inheritanceInfo, Buffer& stage, Buffer& Device)
+void ProjectFinal::secRecordTransfer(uint32_t frameIndex, CommandBuffer* buffer, VkCommandBufferInheritanceInfo inheritanceInfo, Buffer& stage, Buffer& Device, void* data)
 {
+	JAS_PROFILER_SAMPLE_FUNCTION();
 	buffer->begin(0, &inheritanceInfo);
+	vkCmdUpdateBuffer(buffer->getCommandBuffer(), stage.getBuffer(), 0, stage.getSize(), data);
 
 	// Copy vertex data.
 	VkBufferCopy region = {};
@@ -718,7 +720,6 @@ void ProjectFinal::secRecordFrustum(uint32_t frameIndex, CommandBuffer* buffer, 
 	JAS_PROFILER_SAMPLE_FUNCTION();
 	buffer->begin(0, &inheritanceInfo);
 	VulkanProfiler::get().startIndexedTimestamp("Frustum", buffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, frameIndex);
-	std::this_thread::sleep_for(std::chrono::duration(std::chrono::milliseconds(1)));
 	buffer->cmdBindPipeline(&getPipeline(PIPELINE_FRUSTUM));
 	std::vector<VkDescriptorSet> sets = { this->descManagers[PIPELINE_FRUSTUM].getSet(frameIndex, 0) };
 	std::vector<uint32_t> offsets;
@@ -733,7 +734,6 @@ void ProjectFinal::secRecordSkybox(uint32_t frameIndex, CommandBuffer* buffer, V
 	JAS_PROFILER_SAMPLE_FUNCTION();
 	buffer->begin(VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, &inheritanceInfo);
 	VulkanProfiler::get().startIndexedTimestamp("Skybox", buffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, frameIndex);
-	std::this_thread::sleep_for(std::chrono::duration(std::chrono::milliseconds(1)));
 	this->skybox.draw(buffer, frameIndex);
 	VulkanProfiler::get().endIndexedTimestamp("Skybox", buffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, frameIndex);
 	buffer->end();
@@ -744,7 +744,6 @@ void ProjectFinal::secRecordHeightmap(uint32_t frameIndex, CommandBuffer* buffer
 	JAS_PROFILER_SAMPLE_FUNCTION();
 	buffer->begin(VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, &inheritanceInfo);
 	VulkanProfiler::get().startIndexedTimestamp("Heightmap", buffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, frameIndex);
-	std::this_thread::sleep_for(std::chrono::duration(std::chrono::milliseconds(1)));
 	buffer->cmdBindPipeline(&getPipeline(PIPELINE_GRAPHICS));
 	std::vector<VkDescriptorSet> sets = { this->descManagers[PIPELINE_GRAPHICS].getSet(frameIndex, 0) };
 	std::vector<uint32_t> offsets;
@@ -760,7 +759,6 @@ void ProjectFinal::secRecordModels(uint32_t frameIndex, CommandBuffer* buffer, V
 	JAS_PROFILER_SAMPLE_FUNCTION();
 	buffer->begin(VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, &inheritanceInfo);
 	VulkanProfiler::get().startIndexedTimestamp("Models", buffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, frameIndex);
-	std::this_thread::sleep_for(std::chrono::duration(std::chrono::milliseconds(1)));
 	buffer->cmdBindPipeline(&getPipeline(PIPELINE_MODELS));
 	std::vector<uint32_t> offsets;
 	std::vector<VkDescriptorSet> sets = { this->descManagers[PIPELINE_MODELS].getSet(frameIndex, 0) };
@@ -805,15 +803,16 @@ void ProjectFinal::record(uint32_t frameIndex)
 	// Transfer
 	secondaryBuffer = 0;
 
-	// Transfer Transforms
+	// Transfer camera vp
 	buffer = this->transferSecondary[frameIndex][secondaryBuffer++];
 	t = nextThread();
 	for (int i = 0; i < jobCount; i++)
-		ThreadManager::addWork(t, [=]() { secRecordTransfer(frameIndex, buffer, inheritInfo, this->buffers[BUFFER_CAMERA_STAGE], this->buffers[BUFFER_CAMERA]); });
+		ThreadManager::addWork(t, [=]() { secRecordTransfer(frameIndex, buffer, inheritInfo, this->buffers[BUFFER_CAMERA_STAGE], this->buffers[BUFFER_CAMERA], (void*)&this->camera->getMatrix()[0]); });
 
+	// Transfer camera vp
 	buffer = this->transferSecondary[frameIndex][secondaryBuffer++];
 	for (int i = 0; i < jobCount; i++)
-		ThreadManager::addWork(t, [=]() { secRecordTransfer(frameIndex, buffer, inheritInfo, this->buffers[BUFFER_PLANES_STAGE], this->buffers[BUFFER_PLANES]); });
+		ThreadManager::addWork(t, [=]() { secRecordTransfer(frameIndex, buffer, inheritInfo, this->buffers[BUFFER_PLANES_STAGE], this->buffers[BUFFER_PLANES], (void*)&this->camera->getPlanes()[0]); });
 
 	// Graphics
 	secondaryBuffer = 0;
@@ -891,9 +890,6 @@ void ProjectFinal::record(uint32_t frameIndex)
 		JAS_PROFILER_SAMPLE_SCOPE("Record primary transfer " + std::to_string(frameIndex));
 		buffer = this->transferPrimary[frameIndex];
 		buffer->begin(0, nullptr);
-
-		vkCmdUpdateBuffer(buffer->getCommandBuffer(), this->buffers[BUFFER_CAMERA_STAGE].getBuffer(), 0, this->buffers[BUFFER_CAMERA_STAGE].getSize(), (void*)&this->camera->getMatrix()[0]);
-		vkCmdUpdateBuffer(buffer->getCommandBuffer(), this->buffers[BUFFER_PLANES_STAGE].getBuffer(), 0, this->buffers[BUFFER_PLANES_STAGE].getSize(), (void*)&this->camera->getPlanes()[0]);
 
 		vkCommands.clear();
 		for (size_t i = 0; i < this->transferSecondary[frameIndex].size(); i++)

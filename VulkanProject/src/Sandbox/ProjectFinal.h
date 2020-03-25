@@ -119,7 +119,7 @@ private:
 	void transferToDevice(Buffer* buffer, Buffer* stagingBuffer, Memory* stagingMemory, void* data, uint32_t size);
 	void verticesToDevice(Buffer* buffer, const std::vector<Heightmap::Vertex>& verticies);
 	
-	void secRecordTransfer(uint32_t frameIndex, CommandBuffer* buffer, VkCommandBufferInheritanceInfo inheritanceInfo, Buffer& stage, Buffer& Device);
+	void secRecordTransfer(uint32_t frameIndex, CommandBuffer* buffer, VkCommandBufferInheritanceInfo inheritanceInfo, Buffer& stage, Buffer& Device, void* data);
 
 	void secRecordFrustum(uint32_t frameIndex, CommandBuffer* buffer, VkCommandBufferInheritanceInfo inheritanceInfo);
 	void secRecordSkybox(uint32_t frameIndex, CommandBuffer* buffer,VkCommandBufferInheritanceInfo inheritanceInfo);
