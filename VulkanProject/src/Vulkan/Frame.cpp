@@ -58,7 +58,7 @@ void Frame::submit(VkQueue queue, CommandBuffer** commandBuffers)
 		waitStages.push_back(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
 	}
 	if (this->queueFlags & VK_QUEUE_COMPUTE_BIT) {
-		waitSemaphores.push_back(this->computeSemaphores);
+		waitSemaphores.push_back(this->computeSemaphores[this->currentFrame]);
 		waitStages.push_back(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
 	}
 
@@ -88,14 +88,12 @@ void Frame::submitCompute(VkQueue queue, CommandBuffer* commandBuffer)
 {
 	JAS_PROFILER_SAMPLE_FUNCTION();
 
-
-
 	VkSubmitInfo computeSubmitInfo = { };
 	computeSubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 	std::vector<VkPipelineStageFlags> waitStages;
 	std::vector<VkSemaphore> waitSemaphores;
 	if (this->queueFlags & VK_QUEUE_TRANSFER_BIT) {
-		waitSemaphores.push_back(this->transferSemaphore);
+		waitSemaphores.push_back(this->transferSemaphores[this->currentFrame]);
 		waitStages.push_back(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
 	}
 	computeSubmitInfo.waitSemaphoreCount = waitSemaphores.size();
@@ -106,7 +104,7 @@ void Frame::submitCompute(VkQueue queue, CommandBuffer* commandBuffer)
 	computeSubmitInfo.commandBufferCount = buff.size();
 	computeSubmitInfo.pCommandBuffers = buff.data();
 	computeSubmitInfo.signalSemaphoreCount = 1;
-	computeSubmitInfo.pSignalSemaphores = &this->computeSemaphores;
+	computeSubmitInfo.pSignalSemaphores = &this->computeSemaphores[this->currentFrame];
 
 
 	ERROR_CHECK(vkQueueSubmit(queue, 1, &computeSubmitInfo, VK_NULL_HANDLE), "Failed to submit compute queue!");
@@ -124,7 +122,7 @@ void Frame::submitTransfer(VkQueue queue, CommandBuffer* commandBuffer)
 	transferSubmitInfo.commandBufferCount = buff.size();
 	transferSubmitInfo.pCommandBuffers = buff.data();
 	transferSubmitInfo.signalSemaphoreCount = 1;
-	transferSubmitInfo.pSignalSemaphores = &this->transferSemaphore;
+	transferSubmitInfo.pSignalSemaphores = &this->transferSemaphores[this->currentFrame];
 
 	ERROR_CHECK(vkQueueSubmit(queue, 1, &transferSubmitInfo, VK_NULL_HANDLE), "Failed to submit transfer queue!");
 }
@@ -202,6 +200,8 @@ void Frame::createSyncObjects()
 {
 	this->imageAvailableSemaphores.resize(this->framesInFlight);
 	this->renderFinishedSemaphores.resize(this->framesInFlight);
+	this->computeSemaphores.resize(this->framesInFlight);
+	this->transferSemaphores.resize(this->framesInFlight);
 	this->inFlightFences.resize(this->framesInFlight);
 	this->imagesInFlight.resize(this->numImages, VK_NULL_HANDLE);
 
@@ -216,9 +216,9 @@ void Frame::createSyncObjects()
 		ERROR_CHECK(vkCreateSemaphore(Instance::get().getDevice(), &SemaCreateInfo, nullptr, &this->imageAvailableSemaphores[i]), "Failed to create graphics semaphore");
 		ERROR_CHECK(vkCreateSemaphore(Instance::get().getDevice(), &SemaCreateInfo, nullptr, &this->renderFinishedSemaphores[i]), "Failed to create graphics semaphore");
 		ERROR_CHECK(vkCreateFence(Instance::get().getDevice(), &fenceCreateInfo, nullptr, &this->inFlightFences[i]), "Failed to create graphics fence");
+		ERROR_CHECK(vkCreateSemaphore(Instance::get().getDevice(), &SemaCreateInfo, nullptr, &this->computeSemaphores[i]), "Failed to create compute semaphore");
+		ERROR_CHECK(vkCreateSemaphore(Instance::get().getDevice(), &SemaCreateInfo, nullptr, &this->transferSemaphores[i]), "Failed to create transform semaphore");
 	}
-	ERROR_CHECK(vkCreateSemaphore(Instance::get().getDevice(), &SemaCreateInfo, nullptr, &this->computeSemaphores), "Failed to create compute semaphore");
-	ERROR_CHECK(vkCreateSemaphore(Instance::get().getDevice(), &SemaCreateInfo, nullptr, &this->transferSemaphore), "Failed to create transform semaphore");
 
 	// Compute
 	ERROR_CHECK(vkCreateFence(Instance::get().getDevice(), &fenceCreateInfo, nullptr, &this->computeFence), "Failed to create graphics fence");
@@ -229,9 +229,9 @@ void Frame::destroySyncObjects()
 	for (uint32_t i = 0; i < this->framesInFlight; i++) {
 		vkDestroySemaphore(Instance::get().getDevice(), this->imageAvailableSemaphores[i], nullptr);
 		vkDestroySemaphore(Instance::get().getDevice(), this->renderFinishedSemaphores[i], nullptr);
+		vkDestroySemaphore(Instance::get().getDevice(), this->computeSemaphores[i], nullptr);
+		vkDestroySemaphore(Instance::get().getDevice(), this->transferSemaphores[i], nullptr);
 		vkDestroyFence(Instance::get().getDevice(), this->inFlightFences[i], nullptr);
 	}
-	vkDestroySemaphore(Instance::get().getDevice(), this->computeSemaphores, nullptr);
-	vkDestroySemaphore(Instance::get().getDevice(), this->transferSemaphore, nullptr);
 	vkDestroyFence(Instance::get().getDevice(), this->computeFence, nullptr);
 }

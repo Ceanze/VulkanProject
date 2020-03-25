@@ -126,7 +126,7 @@ void ProjectFinal::cleanup()
 
 void ProjectFinal::setupHeightmap()
 {
-	this->regionSize = 16;
+	this->regionSize = 8;
 
 	float scale = 2.0f;
 	this->heightmap.setVertexDist(scale);
@@ -153,7 +153,7 @@ void ProjectFinal::setupHeightmap()
 
 	// Set data used for transfer
 	this->lastRegionIndex = this->heightmap.getRegionFromPos(this->camera->getPosition());
-	this->transferThreshold = 1;
+	this->transferThreshold = 5;
 
 	this->regionCount = this->heightmap.getProximityRegionCount();
 

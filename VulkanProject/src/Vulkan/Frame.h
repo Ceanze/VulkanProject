@@ -37,8 +37,8 @@ private:
 
 	std::vector<VkSemaphore> imageAvailableSemaphores;
 	std::vector<VkSemaphore> renderFinishedSemaphores;
-	VkSemaphore computeSemaphores;
-	VkSemaphore transferSemaphore;
+	std::vector<VkSemaphore> computeSemaphores;
+	std::vector<VkSemaphore> transferSemaphores;
 
 	VkFence computeFence;
 	std::vector<VkFence> inFlightFences;
