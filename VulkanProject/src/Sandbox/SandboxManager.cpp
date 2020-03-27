@@ -23,7 +23,7 @@ void SandboxManager::init()
 {
 	Logger::init();
 
-	this->window.init(1280, 720, "Vulkan Project", false);
+	this->window.init(1280, 720, "Vulkan Project", FULLSCREEN);
 
 	Instance::get().init(&this->window);
 	this->swapChain.init(this->window.getWidth(), this->window.getHeight());

@@ -4,8 +4,6 @@
 #include "glm/gtx/norm.hpp"
 #include "Input.h"
 
-#define FRUSTUM_SHRINK_FACTOR -5.f
-
 Camera::Camera(float aspect, float fov, const glm::vec3& position, const glm::vec3& target, float speed, float hasteSpeed, bool gravityOn)
 	: position(position), target(target), speed(speed), hasteSpeed(hasteSpeed), globalUp(0.f, 1.f, 0.f), aspect(aspect), gravityOn(gravityOn)
 {

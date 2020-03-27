@@ -32,7 +32,7 @@ void ProjectFinalNaive::init()
 	setupMemories();
 	setupDescManagers();
 	setupCommandBuffers();
-
+#ifdef JAS_DEBUG
 	VulkanProfiler::get().init(&this->graphicsPools[MAIN_THREAD], 10, 60, VulkanProfiler::TimeUnit::MICRO);
 	VulkanProfiler::get().createTimestamps(6 + (FUNC_COUNT_COMPUTE + FUNC_COUNT_GRAPHICS) * 3);
 	VulkanProfiler::get().addIndexedTimestamps("Graphics", 3, this->graphicsPrimary.data());
@@ -40,6 +40,7 @@ void ProjectFinalNaive::init()
 	VulkanProfiler::get().addIndexedTimestamps("Skybox", 3, this->graphicsPrimary.data());
 	VulkanProfiler::get().addIndexedTimestamps("Heightmap", 3, this->graphicsPrimary.data());
 	VulkanProfiler::get().addIndexedTimestamps("Frustum", 3, this->graphicsPrimary.data());
+#endif
 
 	transferInitalData();
 }
@@ -109,13 +110,13 @@ void ProjectFinalNaive::cleanup()
 
 void ProjectFinalNaive::setupHeightmap()
 {
-	this->regionSize = 8;
+	this->regionSize = REGION_SIZE;
 
-	float scale = 2.0f;
+	float scale = VERTEX_DISTANCE;
 	this->heightmap.setVertexDist(scale);
-	this->heightmap.setProximitySize(20);
-	this->heightmap.setMaxZ(20.f);
-	this->heightmap.setMinZ(0.f);
+	this->heightmap.setProximitySize(PROXIMITY_SIZE);
+	this->heightmap.setMaxZ(MAX_HEIGHT);
+	this->heightmap.setMinZ(MIN_HEIGHT);
 
 	int width, height;
 	int channels;
@@ -131,11 +132,11 @@ void ProjectFinalNaive::setupHeightmap()
 	}
 
 	float th = this->heightmap.getTerrainHeight(0, 0);
-	this->camera = new Camera(getWindow()->getAspectRatio(), 45.f, { 0.f, th, 0.f }, { 0.f, th, 1.f }, 10.0f, 10.0f, true);
+	this->camera = new Camera(getWindow()->getAspectRatio(), 45.f, { 0.f, th, 0.f }, { 0.f, th, 1.f }, CAMERA_SPEED, CAMERA_SPRINT_SPEED_MULTIPLIER, true);
 
 	// Set data used for transfer
 	this->lastRegionIndex = this->heightmap.getRegionFromPos(this->camera->getPosition());
-	this->transferThreshold = 1;
+	this->transferThreshold = TRANSFER_PROXIMITY_THRESHOLD;
 
 	this->regionCount = this->heightmap.getProximityRegionCount();
 
@@ -155,19 +156,15 @@ void ProjectFinalNaive::setupModels()
 {
 	GLTFLoader::initDefaultData(&this->graphicsPools[MAIN_THREAD]);
 
-	this->treeCount = 100000;
-	// This can now be done in another thread.
+	this->treeCount = TREE_COUNT;
+
 	const std::string filePath = "..\\assets\\Models\\Tree\\tree.glb";
-	//const std::string filePath = "..\\assets\\Models\\Sponza\\glTF\\Sponza.gltf";
 
 	GLTFLoader::StagingBuffers stagingBuffers;
 	GLTFLoader::prepareStagingBuffer(filePath, &this->models[MODEL_TREE], &stagingBuffers);
 	stagingBuffers.initMemory();
 	GLTFLoader::transferToModel(&this->graphicsPools[MAIN_THREAD], &this->models[MODEL_TREE], &stagingBuffers);
 	stagingBuffers.cleanup();
-
-	//this->isTransferDone = false;
-	//this->thread = new std::thread(&TransferTest::loadingThread, this);
 
 	ModelRenderer::get().init();
 }
@@ -328,7 +325,6 @@ void ProjectFinalNaive::setupMemories()
 	this->memories[MEMORY_HOST_VISIBLE].init(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 	this->memories[MEMORY_DEVICE_LOCAL].init(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 	this->memories[MEMORY_VERT_STAGING].init(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-	//this->memories[MEMORY_TEXTURE].init(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT); Can not be done here
 }
 
 void ProjectFinalNaive::setupDescManagers()
@@ -476,7 +472,7 @@ void ProjectFinalNaive::setupGraphicsPipeline()
 
 	getPipeline(PIPELINE_GRAPHICS).setDescriptorLayouts(this->descManagers[PIPELINE_GRAPHICS].getLayouts());
 	getPipeline(PIPELINE_GRAPHICS).setGraphicsPipelineInfo(getSwapChain()->getExtent(), &this->renderPass);
-	//getPipeline(PIPELINE_GRAPHICS).setWireframe(true);
+	getPipeline(PIPELINE_GRAPHICS).setWireframe(WIREFRAME);
 	getPipeline(PIPELINE_GRAPHICS).init(Pipeline::Type::GRAPHICS, &getShader(PIPELINE_GRAPHICS));
 }
 
@@ -486,6 +482,7 @@ void ProjectFinalNaive::setupModelsPipeline()
 	getPipeline(PIPELINE_MODELS).setPushConstants(pushConstants);
 	getPipeline(PIPELINE_MODELS).setDescriptorLayouts(this->descManagers[PIPELINE_MODELS].getLayouts());
 	getPipeline(PIPELINE_MODELS).setGraphicsPipelineInfo(getSwapChain()->getExtent(), &this->renderPass);
+	getPipeline(PIPELINE_MODELS).setWireframe(WIREFRAME);
 	getPipeline(PIPELINE_MODELS).init(Pipeline::Type::GRAPHICS, &getShader(PIPELINE_MODELS));
 }
 
@@ -505,8 +502,6 @@ void ProjectFinalNaive::transferInitalData()
 			indirectData[i].firstInstance = i;
 		}
 
-		//transferToDevice(&this->buffers[BUFFER_INDIRECT_DRAW], &stagingBuffer, &stagingMemory, indirectData.data(), indirectData.size());
-
 		stagingMemory.directTransfer(&stagingBuffer, indirectData.data(), indirectData.size(), 0);
 
 		CommandBuffer* cbuff = this->graphicsPools[MAIN_THREAD].beginSingleTimeCommand();
@@ -517,9 +512,6 @@ void ProjectFinalNaive::transferInitalData()
 		region.dstOffset = 0;
 		region.size = indirectData.size();
 		cbuff->cmdCopyBuffer(stagingBuffer.getBuffer(), this->buffers[BUFFER_INDIRECT_DRAW].getBuffer(), 1, &region);
-
-	/*	cbuff->releaseBuffer(&this->buffers[BUFFER_INDIRECT_DRAW], VK_ACCESS_TRANSFER_READ_BIT, Instance::get().getGraphicsQueue().queueIndex, Instance::get().getComputeQueue().queueIndex,
-			VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT);*/
 
 		this->graphicsPools[MAIN_THREAD].endSingleTimeCommand(cbuff);
 
@@ -604,8 +596,6 @@ void ProjectFinalNaive::transferVertexData()
 	glm::ivec2 diff = this->lastRegionIndex - currRegion;
 	if (abs(diff.x) > this->transferThreshold || abs(diff.y) > this->transferThreshold) {
 		if (ThreadDispatcher::finished()) {
-			//Instrumentation::g_runProfilingSample = true;
-			//JAS_INFO("Start profiling");
 			this->lastRegionIndex = currRegion;
 			// Transfer proximity verticies to device
 			uint32_t id = ThreadDispatcher::dispatch([&, camPos]() {
@@ -693,6 +683,9 @@ void ProjectFinalNaive::secRecordFrustum(uint32_t frameIndex, CommandBuffer* buf
 	JAS_PROFILER_SAMPLE_FUNCTION();
 	buffer->begin(0, &inheritanceInfo);
 	VulkanProfiler::get().startIndexedTimestamp("Frustum", buffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, frameIndex);
+#if SIMULATED_JOB_SIZE > 0
+	std::this_thread::sleep_for(std::chrono::duration(std::chrono::microseconds(SIMULATED_JOB_SIZE)));
+#endif
 	buffer->cmdBindPipeline(&getPipeline(PIPELINE_FRUSTUM));
 	std::vector<VkDescriptorSet> sets = { this->descManagers[PIPELINE_FRUSTUM].getSet(frameIndex, 0) };
 	std::vector<uint32_t> offsets;
@@ -707,6 +700,9 @@ void ProjectFinalNaive::secRecordSkybox(uint32_t frameIndex, CommandBuffer* buff
 	JAS_PROFILER_SAMPLE_FUNCTION();
 	buffer->begin(VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, &inheritanceInfo);
 	VulkanProfiler::get().startIndexedTimestamp("Skybox", buffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, frameIndex);
+#if SIMULATED_JOB_SIZE > 0
+	std::this_thread::sleep_for(std::chrono::duration(std::chrono::microseconds(SIMULATED_JOB_SIZE)));
+#endif
 	this->skybox.draw(buffer, frameIndex);
 	VulkanProfiler::get().endIndexedTimestamp("Skybox", buffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, frameIndex);
 	buffer->end();
@@ -717,6 +713,9 @@ void ProjectFinalNaive::secRecordHeightmap(uint32_t frameIndex, CommandBuffer* b
 	JAS_PROFILER_SAMPLE_FUNCTION();
 	buffer->begin(VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, &inheritanceInfo);
 	VulkanProfiler::get().startIndexedTimestamp("Heightmap", buffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, frameIndex);
+#if SIMULATED_JOB_SIZE > 0
+	std::this_thread::sleep_for(std::chrono::duration(std::chrono::microseconds(SIMULATED_JOB_SIZE)));
+#endif
 	buffer->cmdBindPipeline(&getPipeline(PIPELINE_GRAPHICS));
 	std::vector<VkDescriptorSet> sets = { this->descManagers[PIPELINE_GRAPHICS].getSet(frameIndex, 0) };
 	std::vector<uint32_t> offsets;
@@ -732,6 +731,9 @@ void ProjectFinalNaive::secRecordModels(uint32_t frameIndex, CommandBuffer* buff
 	JAS_PROFILER_SAMPLE_FUNCTION();
 	buffer->begin(VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, &inheritanceInfo);
 	VulkanProfiler::get().startIndexedTimestamp("Models", buffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, frameIndex);
+#if SIMULATED_JOB_SIZE > 0
+	std::this_thread::sleep_for(std::chrono::duration(std::chrono::microseconds(SIMULATED_JOB_SIZE)));
+#endif
 	buffer->cmdBindPipeline(&getPipeline(PIPELINE_MODELS));
 	std::vector<uint32_t> offsets;
 	std::vector<VkDescriptorSet> sets = { this->descManagers[PIPELINE_MODELS].getSet(frameIndex, 0) };
@@ -762,7 +764,7 @@ void ProjectFinalNaive::record(uint32_t frameIndex)
 	inheritInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
 	CommandBuffer* buffer;
 
-	const int jobCount = 1;
+	const int jobCount = SIMULATED_JOB_COUNT;
 
 	// Frustum compute
 	buffer = this->computeSecondary[frameIndex][secondaryBuffer++];
@@ -773,13 +775,11 @@ void ProjectFinalNaive::record(uint32_t frameIndex)
 	secondaryBuffer = 0;
 	// Transfer camera vp
 	buffer = this->transferSecondary[frameIndex][secondaryBuffer++];
-	for (int i = 0; i < jobCount; i++)
-		secRecordTransfer(frameIndex, buffer, inheritInfo, this->buffers[BUFFER_CAMERA_STAGE], this->buffers[BUFFER_CAMERA], (void*)&this->camera->getMatrix()[0]);
+	secRecordTransfer(frameIndex, buffer, inheritInfo, this->buffers[BUFFER_CAMERA_STAGE], this->buffers[BUFFER_CAMERA], (void*)&this->camera->getMatrix()[0]);
 
 	// Frustum planes
 	buffer = this->transferSecondary[frameIndex][secondaryBuffer++];
-	for (int i = 0; i < jobCount; i++)
-		secRecordTransfer(frameIndex, buffer, inheritInfo, this->buffers[BUFFER_PLANES_STAGE], this->buffers[BUFFER_PLANES], (void*)&this->camera->getPlanes()[0]);
+	secRecordTransfer(frameIndex, buffer, inheritInfo, this->buffers[BUFFER_PLANES_STAGE], this->buffers[BUFFER_PLANES], (void*)&this->camera->getPlanes()[0]);
 
 
 	// Graphics
@@ -818,9 +818,6 @@ void ProjectFinalNaive::record(uint32_t frameIndex)
 	cubemapUboData.view[3][2] = 0.0f;
 
 	vkCmdUpdateBuffer(buffer->getCommandBuffer(), this->skybox.getBuffer()->getBuffer(), 0, this->skybox.getBuffer()->getSize(), (void*)&cubemapUboData);
-	//buffer->acquireBuffer(&this->buffers[BUFFER_INDIRECT_DRAW], VK_ACCESS_INDIRECT_COMMAND_READ_BIT,
-	//	Instance::get().getComputeQueue().queueIndex, Instance::get().getGraphicsQueue().queueIndex,
-	//	VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT);
 
 	std::vector<VkClearValue> clearValues = {};
 	VkClearValue value;
@@ -851,31 +848,8 @@ void ProjectFinalNaive::record(uint32_t frameIndex)
 	buffer->cmdEndRenderPass();
 	VulkanProfiler::get().endIndexedTimestamp("Graphics", buffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, frameIndex);
 
-	//buffer->releaseBuffer(&this->buffers[BUFFER_INDIRECT_DRAW], VK_ACCESS_INDIRECT_COMMAND_READ_BIT,
-	//	VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
-	//	VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
-
 
 	buffer->end();
-
-	// Compute
-	//buffer = this->computePrimary[frameIndex];
-	//buffer->begin(0, nullptr);
-
-	//buffer->acquireBuffer(&this->buffers[BUFFER_INDIRECT_DRAW], VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
-	//	Instance::get().getGraphicsQueue().queueIndex, Instance::get().getComputeQueue().queueIndex,
-	//	VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
-
-	//vkCommands.clear();
-	//for (size_t i = 0; i < this->computeSecondary[frameIndex].size(); i++)
-	//	vkCommands.push_back(this->computeSecondary[frameIndex][i]->getCommandBuffer());
-	//buffer->cmdExecuteCommands(vkCommands.size(), vkCommands.data());
-
-	//buffer->releaseBuffer(&this->buffers[BUFFER_INDIRECT_DRAW], VK_ACCESS_SHADER_WRITE_BIT,
-	//	Instance::get().getComputeQueue().queueIndex, Instance::get().getGraphicsQueue().queueIndex,
-	//	VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT);
-
-	//buffer->end();
 }
 
 void ProjectFinalNaive::updateDescManagers()

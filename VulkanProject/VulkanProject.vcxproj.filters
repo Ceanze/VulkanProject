@@ -75,30 +75,6 @@
     <ClInclude Include="src\Sandbox\SandboxManager.h">
       <Filter>Sandbox</Filter>
     </ClInclude>
-    <ClInclude Include="src\Sandbox\Tests\ComputeTest\ComputeTest.h">
-      <Filter>Sandbox\Tests\ComputeTest</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Sandbox\Tests\ComputeTransferTest.h">
-      <Filter>Sandbox\Tests</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Sandbox\Tests\CubemapTest.h">
-      <Filter>Sandbox\Tests</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Sandbox\Tests\GLTFTest.h">
-      <Filter>Sandbox\Tests</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Sandbox\Tests\HeightmapTest.h">
-      <Filter>Sandbox\Tests</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Sandbox\Tests\NoThreadingTest.h">
-      <Filter>Sandbox\Tests</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Sandbox\Tests\RenderTest.h">
-      <Filter>Sandbox\Tests</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Sandbox\Tests\TransferTest.h">
-      <Filter>Sandbox\Tests</Filter>
-    </ClInclude>
     <ClInclude Include="src\Sandbox\VKSandboxBase.h">
       <Filter>Sandbox</Filter>
     </ClInclude>
@@ -182,6 +158,7 @@
     </ClInclude>
     <ClInclude Include="src\jaspch.h" />
     <ClInclude Include="src\Models\Model\Material.h" />
+    <ClInclude Include="src\Config.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Core\CPUProfiler.cpp">
@@ -222,30 +199,6 @@
     </ClCompile>
     <ClCompile Include="src\Sandbox\SandboxManager.cpp">
       <Filter>Sandbox</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Sandbox\Tests\ComputeTest\ComputeTest.cpp">
-      <Filter>Sandbox\Tests\ComputeTest</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Sandbox\Tests\ComputeTransferTest.cpp">
-      <Filter>Sandbox\Tests</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Sandbox\Tests\CubemapTest.cpp">
-      <Filter>Sandbox\Tests</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Sandbox\Tests\GLTFTest.cpp">
-      <Filter>Sandbox\Tests</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Sandbox\Tests\HeightmapTest.cpp">
-      <Filter>Sandbox\Tests</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Sandbox\Tests\NoThreadingTest.cpp">
-      <Filter>Sandbox\Tests</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Sandbox\Tests\RenderTest.cpp">
-      <Filter>Sandbox\Tests</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Sandbox\Tests\TransferTest.cpp">
-      <Filter>Sandbox\Tests</Filter>
     </ClCompile>
     <ClCompile Include="src\Sandbox\VKSandboxBase.cpp">
       <Filter>Sandbox</Filter>

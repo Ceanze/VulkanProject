@@ -102,6 +102,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="src\Config.h" />
     <ClInclude Include="src\Core\CPUProfiler.h" />
     <ClInclude Include="src\Core\Camera.h" />
     <ClInclude Include="src\Core\Heightmap\Heightmap.h" />
@@ -116,14 +117,6 @@
     <ClInclude Include="src\Sandbox\ProjectFinal.h" />
     <ClInclude Include="src\Sandbox\ProjectFinalNaive.h" />
     <ClInclude Include="src\Sandbox\SandboxManager.h" />
-    <ClInclude Include="src\Sandbox\Tests\ComputeTest\ComputeTest.h" />
-    <ClInclude Include="src\Sandbox\Tests\ComputeTransferTest.h" />
-    <ClInclude Include="src\Sandbox\Tests\CubemapTest.h" />
-    <ClInclude Include="src\Sandbox\Tests\GLTFTest.h" />
-    <ClInclude Include="src\Sandbox\Tests\HeightmapTest.h" />
-    <ClInclude Include="src\Sandbox\Tests\NoThreadingTest.h" />
-    <ClInclude Include="src\Sandbox\Tests\RenderTest.h" />
-    <ClInclude Include="src\Sandbox\Tests\TransferTest.h" />
     <ClInclude Include="src\Sandbox\VKSandboxBase.h" />
     <ClInclude Include="src\Threading\ThreadDispatcher.h" />
     <ClInclude Include="src\Threading\ThreadManager.h" />
@@ -168,14 +161,6 @@
     <ClCompile Include="src\Sandbox\ProjectFinal.cpp" />
     <ClCompile Include="src\Sandbox\ProjectFinalNaive.cpp" />
     <ClCompile Include="src\Sandbox\SandboxManager.cpp" />
-    <ClCompile Include="src\Sandbox\Tests\ComputeTest\ComputeTest.cpp" />
-    <ClCompile Include="src\Sandbox\Tests\ComputeTransferTest.cpp" />
-    <ClCompile Include="src\Sandbox\Tests\CubemapTest.cpp" />
-    <ClCompile Include="src\Sandbox\Tests\GLTFTest.cpp" />
-    <ClCompile Include="src\Sandbox\Tests\HeightmapTest.cpp" />
-    <ClCompile Include="src\Sandbox\Tests\NoThreadingTest.cpp" />
-    <ClCompile Include="src\Sandbox\Tests\RenderTest.cpp" />
-    <ClCompile Include="src\Sandbox\Tests\TransferTest.cpp" />
     <ClCompile Include="src\Sandbox\VKSandboxBase.cpp" />
     <ClCompile Include="src\Threading\ThreadDispatcher.cpp" />
     <ClCompile Include="src\Threading\ThreadManager.cpp" />

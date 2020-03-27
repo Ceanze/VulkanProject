@@ -12,8 +12,6 @@ uint32_t ThreadDispatcher::workID;
 
 void ThreadDispatcher::init(uint32_t maxThreads)
 {
-	std::cout << "Init ThreadDispatcher" << std::endl;
-
 	threads.resize(maxThreads);
 	for (size_t i = 0; i < maxThreads; i++)
 		threads[i] = std::thread(ThreadDispatcher::threadLoop);
@@ -104,7 +102,6 @@ void ThreadDispatcher::shutdown()
 	{
 		if (threads[i].joinable())
 		{
-			printf("Destructor: Joining thread %zu until completion\n", i);
 			threads[i].join();
 		}
 	}

@@ -4,29 +4,47 @@
 #include <crtdbg.h>
 
 #include "Sandbox/SandboxManager.h"
-#include "Sandbox/Tests/HeightmapTest.h"
-#include "Sandbox/Tests/RenderTest.h"
-#include "Sandbox/Tests/ComputeTest/ComputeTest.h"
-#include "Sandbox/Tests/GLTFTest.h"
-//#include "Sandbox/Tests/ThreadingTest.h"
-#include "Sandbox/Tests/NoThreadingTest.h"
-#include "Sandbox/Tests/TransferTest.h"
-#include "Sandbox/Tests/CubemapTest.h"
-#include "Sandbox/Tests/ComputeTransferTest.h"
 #include "Sandbox/ProjectFinal.h"
 #include "Sandbox/ProjectFinalNaive.h"
 
 #include "Core/CPUProfiler.h"
 
+	/*
+		---------------Controls---------------
+			WASD:	Move camera
+			Mouse:	Look around
+			R:		Start frame profiling
+			C:		Toggle camera
+			F:		Toggle gravity
+			ESC:	Exit
+
+		----------Implementation--------------
+			Change parameters in the Config.h
+
+			Change MULTI_THREADED to false
+			to run the single threaded
+			implementation.
+
+		------------Information--------------
+			- Program can be closed with ESCAPE
+	*/
+
+#include "Config.h"
+
 int main(int argv, char* argc[])
 {
+#ifdef JAS_DEBUG
 	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+#endif 
 
-
-	JAS_PROFILER_BEGIN_SESSION("Profiling", "results.json");
+	JAS_PROFILER_BEGIN_SESSION("Profiling", PROFILER_JSON_FILE_NAME);
 
 	SandboxManager sm;
+#if MULTI_THREADED
+	sm.set(new ProjectFinal());
+#else
 	sm.set(new ProjectFinalNaive());
+#endif
 	sm.init();
 	sm.run();
 	sm.cleanup();

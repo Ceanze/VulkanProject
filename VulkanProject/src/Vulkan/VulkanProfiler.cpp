@@ -30,6 +30,7 @@ void VulkanProfiler::init(CommandPool* pool, uint32_t plotDataCount, float updat
 
 void VulkanProfiler::cleanup()
 {
+#ifdef JAS_DEBUG
 	saveResults("GPUresults.json");
 
 	if (this->timestampQueryPool != VK_NULL_HANDLE)
@@ -46,6 +47,7 @@ void VulkanProfiler::cleanup()
 	this->graphicsPipelineStat.clear();
 	this->graphicsPipelineStatNames.clear();
 	this->computePipelineStat.clear();
+#endif
 }
 
 const std::unordered_map<std::string, std::vector<VulkanProfiler::Timestamp>>& VulkanProfiler::getResults()
@@ -240,7 +242,9 @@ void VulkanProfiler::startTimestamp(std::string name, CommandBuffer* commandBuff
 
 void VulkanProfiler::startIndexedTimestamp(std::string name, CommandBuffer* commandBuffer, VkPipelineStageFlagBits pipelineStage, uint32_t index)
 {
+#ifdef JAS_DEBUG
 	commandBuffer->cmdWriteTimestamp(pipelineStage, this->timestampQueryPool, (uint32_t)this->timestamps[name][index].start);
+#endif 
 }
 
 void VulkanProfiler::startComputePipelineStat(CommandBuffer* commandBuffer)
@@ -260,7 +264,9 @@ void VulkanProfiler::endTimestamp(std::string name, CommandBuffer* commandBuffer
 
 void VulkanProfiler::endIndexedTimestamp(std::string name, CommandBuffer* commandBuffer, VkPipelineStageFlagBits pipelineStage, uint32_t index)
 {
+#ifdef JAS_DEBUG
 	commandBuffer->cmdWriteTimestamp(pipelineStage, this->timestampQueryPool, (uint32_t)this->timestamps[name][index].end);
+#endif
 }
 
 void VulkanProfiler::endComputePipelineStat(CommandBuffer* commandBuffer)
@@ -275,6 +281,7 @@ void VulkanProfiler::endGraphicsPipelineStat(CommandBuffer* commandBuffer)
 
 void VulkanProfiler::getBufferTimestamps(CommandBuffer* buffer)
 {
+#ifdef JAS_DEBUG	
 	Instance& instance = Instance::get();
 	double timestampPeriod = instance.getPhysicalDeviceProperties().limits.timestampPeriod;
 	uint32_t timestampValidBits = instance.getQueueProperties(instance.getGraphicsQueue().queueIndex).timestampValidBits;
@@ -309,6 +316,7 @@ void VulkanProfiler::getBufferTimestamps(CommandBuffer* buffer)
 			}
 		}
 	}
+#endif
 }
 
 void VulkanProfiler::getPipelineStats()
@@ -343,12 +351,15 @@ void VulkanProfiler::resetTimestamp(const std::string& name, CommandBuffer* comm
 
 void VulkanProfiler::resetIndexedTimestamp(const std::string& name, CommandBuffer* commandBuffer, uint32_t index)
 {
+#ifdef JAS_DEBUG
 	if (this->timestampQueryPool != VK_NULL_HANDLE)
 		commandBuffer->cmdResetQueryPool(this->timestampQueryPool, (uint32_t)this->timestamps[name][index].end, 2);
+#endif
 }
 
 void VulkanProfiler::resetBufferTimestamps(CommandBuffer* commandBuffer)
 {
+#ifdef JAS_DEBUG
 	if (this->timestampQueryPool != VK_NULL_HANDLE) {
 		for (auto& timestamp : this->timestamps) {
 			for (uint32_t i = 0; i < timestamp.second.size(); i++) {
@@ -357,12 +368,15 @@ void VulkanProfiler::resetBufferTimestamps(CommandBuffer* commandBuffer)
 			}
 		}
 	}
+#endif
 }
 
 void VulkanProfiler::resetAllTimestamps(CommandBuffer* commandBuffer)
 {
+#ifdef JAS_DEBUG
 	if (this->timestampQueryPool != VK_NULL_HANDLE)
 		commandBuffer->cmdResetQueryPool(this->timestampQueryPool, 0, this->timestampCount);
+#endif
 }
 
 void VulkanProfiler::resetPipelineStats(CommandBuffer* commandBuffer)

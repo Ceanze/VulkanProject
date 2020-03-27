@@ -24,10 +24,18 @@ private:
 };
 
 // Poly logger macros
-#define JAS_TRACE(...) Logger::getCoreLogger()->trace(__VA_ARGS__)
-#define JAS_INFO(...) Logger::getCoreLogger()->info(__VA_ARGS__)
-#define JAS_WARN(...) Logger::getCoreLogger()->warn(__VA_ARGS__)
-#define JAS_ERROR(...) Logger::getCoreLogger()->error(__VA_ARGS__)
-#define JAS_FATAL(...) Logger::getCoreLogger()->critical(__VA_ARGS__)
+#ifdef JAS_DEBUG
+	#define JAS_TRACE(...) Logger::getCoreLogger()->trace(__VA_ARGS__)
+	#define JAS_INFO(...) Logger::getCoreLogger()->info(__VA_ARGS__)
+	#define JAS_WARN(...) Logger::getCoreLogger()->warn(__VA_ARGS__)
+	#define JAS_ERROR(...) Logger::getCoreLogger()->error(__VA_ARGS__)
+	#define JAS_FATAL(...) Logger::getCoreLogger()->critical(__VA_ARGS__)
+#else
+	#define JAS_TRACE(...) 
+	#define JAS_INFO(...) 
+	#define JAS_WARN(...)
+	#define JAS_ERROR(...) 
+	#define JAS_FATAL(...) 
+#endif
 
 #pragma warning(pop)
