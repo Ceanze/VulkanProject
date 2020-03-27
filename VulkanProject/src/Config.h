@@ -2,8 +2,8 @@
 
 #define MULTI_THREADED true	
 
-#define WIREFRAME true			
-#define FULLSCREEN true
+#define WIREFRAME false			
+#define FULLSCREEN false
 
 #define SIMULATED_JOB_COUNT 1				// Secondary command buffer record repeats
 #define SIMULATED_JOB_SIZE 0				// Sleep time (microseconds)
